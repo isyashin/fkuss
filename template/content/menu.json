@@ -1,0 +1,149 @@
+{
+  "categories": [
+    {
+      "id": "khinkali",
+      "name": "Хинкали",
+      "dishes": [
+        {
+          "id": "khinkali-baranina",
+          "name": "Хинкали с бараниной",
+          "description": "5 штук, насыщенный бульон внутри",
+          "price": 320,
+          "image": "images/dishes/khinkali-baranina.webp",
+          "weight": "300 г",
+          "tags": ["hit"],
+          "modifiers": [{ "id": "extra-1", "name": "Добавка 1 шт", "price": 64 }],
+          "available": true
+        },
+        {
+          "id": "khinkali-syrom",
+          "name": "Хинкали с сыром",
+          "description": "5 штук, сулугуни и имеретинский сыр",
+          "price": 290,
+          "image": "images/dishes/khinkali-syrom.webp",
+          "weight": "280 г",
+          "tags": [],
+          "modifiers": [{ "id": "extra-1", "name": "Добавка 1 шт", "price": 58 }],
+          "available": true
+        },
+        {
+          "id": "khinkali-griby",
+          "name": "Хинкали с грибами",
+          "description": "5 штук, шампиньоны и лук",
+          "price": 270,
+          "image": "images/dishes/khinkali-griby.webp",
+          "weight": "280 г",
+          "tags": [],
+          "modifiers": [],
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "khachapuri",
+      "name": "Хачапури",
+      "dishes": [
+        {
+          "id": "khachapuri-adjarski",
+          "name": "Хачапури по-аджарски",
+          "description": "Лодочка с сыром, маслом и желтком",
+          "price": 490,
+          "image": "images/dishes/khachapuri-adjarski.webp",
+          "weight": "400 г",
+          "tags": ["hit"],
+          "modifiers": [{ "id": "double-cheese", "name": "Двойной сыр", "price": 90 }],
+          "available": true
+        },
+        {
+          "id": "khachapuri-imeretinski",
+          "name": "Хачапури по-имеретински",
+          "description": "Круглый, с имеретинским сыром",
+          "price": 420,
+          "image": "images/dishes/khachapuri-imeretinski.webp",
+          "weight": "450 г",
+          "tags": [],
+          "modifiers": [],
+          "available": true
+        },
+        {
+          "id": "khachapuri-megrelski",
+          "name": "Хачапури по-мегрельски",
+          "description": "С сыром внутри и сверху",
+          "price": 450,
+          "image": "images/dishes/khachapuri-megrelski.webp",
+          "weight": "480 г",
+          "tags": [],
+          "modifiers": [],
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "mangal",
+      "name": "Мангал",
+      "dishes": [
+        {
+          "id": "shashlik-baranina",
+          "name": "Шашлык из баранины",
+          "description": "Мякоть, маринад с луком и специями",
+          "price": 550,
+          "image": "images/dishes/shashlik-baranina.webp",
+          "weight": "200 г",
+          "tags": ["hit"],
+          "modifiers": [{ "id": "sauce", "name": "Соус на выбор", "price": 50 }],
+          "available": true
+        },
+        {
+          "id": "shashlik-kuritsa",
+          "name": "Шашлык из курицы",
+          "description": "Бедро, сацебели",
+          "price": 420,
+          "image": "images/dishes/shashlik-kuritsa.webp",
+          "weight": "200 г",
+          "tags": [],
+          "modifiers": [],
+          "available": true
+        },
+        {
+          "id": "lyulya",
+          "name": "Люля-кебаб",
+          "description": "Баранина, лаваш, зелень",
+          "price": 480,
+          "image": "images/dishes/lyulya.webp",
+          "weight": "220 г",
+          "tags": [],
+          "modifiers": [],
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "napitki",
+      "name": "Напитки",
+      "dishes": [
+        {
+          "id": "limonad-domashniy",
+          "name": "Лимонад домашний",
+          "description": "Тархун или цитрус",
+          "price": 150,
+          "image": "images/dishes/limonad.webp",
+          "weight": "0,5 л",
+          "tags": [],
+          "modifiers": [],
+          "available": true
+        },
+        {
+          "id": "chay-gorshochek",
+          "name": "Чай в горшочке",
+          "description": "Чёрный с чабрецом",
+          "price": 200,
+          "image": "images/dishes/chay.webp",
+          "weight": "0,6 л",
+          "tags": [],
+          "modifiers": [],
+          "available": true
+        }
+      ]
+    }
+  ]
+}

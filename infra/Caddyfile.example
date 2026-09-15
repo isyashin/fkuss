@@ -1,0 +1,27 @@
+# Caddyfile — шаблон для сервера (этап 11)
+# Субдомены: per-domain сертификаты автоматически (Let's Encrypt, HTTP/TLS-ALPN).
+# Собственные домены клиентов: on-demand TLS + ask-эндпоинт.
+
+{
+	# email для ACME-аккаунта Let's Encrypt
+	email admin@example.ru
+
+	# on-demand TLS для собственных доменов клиентов.
+	# ask-эндпоинт проверяет, что домен разрешён (реестр сайтов платформы).
+	on_demand_tls {
+		ask http://localhost:3100/api/tls-ask
+	}
+}
+
+# Пример: один сайт ресторана на субдомене
+#u-mamy.example.ru {
+#	reverse_proxy localhost:3001
+#}
+
+# Собственный домен клиента (on-demand TLS, ask проверит allowlist)
+#example-client.ru {
+#	tls {
+#		on_demand
+#	}
+#	reverse_proxy localhost:3001
+#}

@@ -1,0 +1,182 @@
+// Шаблон сайта ресторана — модель данных
+// Детали: docs/PLAN.md (этап 2), docs/ARCHITECTURE.md
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Category {
+  id       String  @id
+  name     String
+  position Int     @default(0)
+  dishes   Dish[]
+}
+
+model Dish {
+  id          String     @id
+  categoryId  String
+  category    Category   @relation(fields: [categoryId], references: [id])
+  name        String
+  description String     @default("")
+  price       Int        // рубли, целое
+  image       String     @default("")
+  weight      String     @default("")
+  tags        String[]
+  available   Boolean    @default(true)
+  position    Int        @default(0)
+  modifiers   Modifier[]
+}
+
+model Modifier {
+  id      String @id
+  dishId  String
+  dish    Dish   @relation(fields: [dishId], references: [id])
+  name    String
+  price   Int
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  phone     String   @default("")
+  name      String   @default("")
+  createdAt DateTime @default(now())
+  authCodes AuthCode[]
+  addresses Address[]
+  orders    Order[]
+  bonuses   BonusTransaction[]
+  bookings  Reservation[]
+  sessions  Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model AuthCode {
+  id        String   @id @default(cuid())
+  customerId String?
+  customer  Customer? @relation(fields: [customerId], references: [id])
+  email     String
+  code      String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  label      String  @default("")
+  street     String
+  entrance   String  @default("")
+  floor      String  @default("")
+  apartment  String  @default("")
+  comment    String  @default("")
+}
+
+model Order {
+  id             String   @id @default(cuid())
+  number         Int      @unique @default(autoincrement())
+  customerId     String?
+  customer       Customer? @relation(fields: [customerId], references: [id])
+  status         String   @default("new") // new | accepted | cooking | delivering | done | cancelled
+  type           String   // delivery | pickup
+  items          OrderItem[]
+  itemsTotal     Int      // пересчитано на сервере
+  deliveryPrice  Int      @default(0)
+  bonusSpent     Int      @default(0)
+  bonusAccrued   Int      @default(0)
+  total          Int
+  paymentMethod  String   @default("cash") // cash | online
+  paymentStatus  String   @default("none") // none | pending | paid | failed | refunded
+  paymentId      String?
+  customerName   String
+  customerPhone  String
+  addressText    String   @default("")
+  comment        String   @default("")
+  desiredTime    String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id])
+  dishId      String  // без FK: блюдо может быть удалено из меню, заказ — история
+  name        String  // снимок на момент заказа
+  price       Int     // снимок цены
+  quantity    Int
+  modifiers   Json    @default("[]")
+  total       Int
+}
+
+model BonusTransaction {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  orderId    String?
+  type       String   // accrual | spend | reversal | refund
+  amount     Int      // положительное — начисление/возврат, отрицательное — списание/сторно
+  comment    String   @default("")
+  createdAt  DateTime @default(now())
+}
+
+model Reservation {
+  id            String   @id @default(cuid())
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  status        String   @default("new") // new | confirmed | rejected | cancelled
+  date          String   // YYYY-MM-DD
+  time          String   // HH:MM
+  guests        Int
+  customerName  String
+  customerPhone String
+  comment       String   @default("")
+  createdAt     DateTime @default(now())
+}
+
+model Promo {
+  id         String  @id
+  title      String
+  text       String  @default("")
+  image      String  @default("")
+  activeFrom String?
+  activeTo   String?
+  position   Int     @default(0)
+}
+
+model GalleryImage {
+  id       String @id @default(cuid())
+  image    String
+  alt      String @default("")
+  position Int    @default(0)
+}
+
+model Page {
+  slug     String @id
+  title    String
+  body     String @default("")
+}
+
+model Settings {
+  key   String @id
+  value Json
+}
+
+model MetricsCounter {
+  date   String @id // YYYY-MM-DD
+  views  Int    @default(0)
+}

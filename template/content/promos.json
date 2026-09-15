@@ -1,0 +1,12 @@
+{
+  "promos": [
+    {
+      "id": "happy-hour",
+      "title": "Счастливые часы",
+      "text": "Скидка 20% на хинкали по будням с 12:00 до 16:00",
+      "image": "images/promos/happy-hour.webp",
+      "activeFrom": "2026-01-01",
+      "activeTo": null
+    }
+  ]
+}

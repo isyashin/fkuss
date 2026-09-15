@@ -1,0 +1,47 @@
+# Зависимости
+node_modules/
+.pnp
+.pnp.js
+
+# Сборка
+.next/
+out/
+dist/
+build/
+
+# Окружение и секреты — НИКОГДА не коммитить
+.env
+.env.*
+!.env.example
+secrets/
+
+# Базы данных (локальные)
+*.db
+*.db-journal
+
+# Логи
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenCode / IDE
+.opencode/local
+.vercel
+.turbo
+
+# Загрузки и бэкапы (данные ресторанов)
+backups/
+uploads/tmp/
+
+# Данные сайтов (контент реальных клиентов, живёт на сервере)
+sites/
+
+# Отчёты тестов
+test-results/
+playwright-report/
+
+# Сгенерированный Prisma Client
+**/src/generated/

@@ -1,0 +1,9 @@
+{
+  "preset": "warm",
+  "accent": "#b45309",
+  "fontHeading": "Playfair Display",
+  "fontBody": "Inter",
+  "radius": "soft",
+  "dark": false,
+  "homeBlocks": ["hero", "about", "popular", "promos", "gallery", "contacts"]
+}

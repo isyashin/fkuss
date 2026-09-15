@@ -1,0 +1,104 @@
+// Платформа владельца: биллинг сайтов, метрики. docs/BILLING.md
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Site {
+  slug        String   @id
+  name        String
+  port        Int      @unique
+  domains     String[]
+  state       String   @default("active") // active | grace | suspended
+  siteKey     String   @unique
+  tariffId    String?
+  tariff      Tariff?  @relation(fields: [tariffId], references: [id])
+  imageVersion String  @default("")
+  stateChangedAt DateTime @default(now())
+  exportRequestedAt DateTime?
+  lastMetricsAt  DateTime?
+  createdAt   DateTime @default(now())
+  ledger      BalanceTransaction[]
+  invoices    Invoice[]
+  payments    Payment[]
+  metrics     MetricSnapshot[]
+  owners      OwnerAccount[]
+}
+
+model Tariff {
+  id           String @id @default(cuid())
+  name         String
+  monthlyPrice Int    // ₽/мес
+  sites        Site[]
+}
+
+model BalanceTransaction {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [slug])
+  type      String   // charge | topup | adjustment
+  amount    Int      // копейки; charge отрицательный
+  comment   String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model Invoice {
+  id        Int      @id @default(autoincrement())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [slug])
+  amount    Int      // копейки
+  status    String   @default("issued") // issued | paid | cancelled
+  comment   String   @default("")
+  createdAt DateTime @default(now())
+  paidAt    DateTime?
+  payment   Payment?
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  siteId            String
+  site              Site     @relation(fields: [siteId], references: [slug])
+  invoiceId         Int?     @unique
+  invoice           Invoice? @relation(fields: [invoiceId], references: [id])
+  providerPaymentId String?
+  amount            Int      // копейки
+  status            String   @default("pending") // pending | paid | failed
+  createdAt         DateTime @default(now())
+}
+
+model MetricSnapshot {
+  id            String   @id @default(cuid())
+  siteId        String
+  site          Site     @relation(fields: [siteId], references: [slug])
+  date          String   // YYYY-MM-DD
+  ordersCount   Int      @default(0)
+  ordersSum     Int      @default(0) // копейки
+  bookingsCount Int      @default(0)
+  pageViews     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@unique([siteId, date])
+}
+
+model OwnerAccount {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [slug])
+  createdAt DateTime @default(now())
+}
+
+model OwnerAuthCode {
+  id        String    @id @default(cuid())
+  email     String
+  code      String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}

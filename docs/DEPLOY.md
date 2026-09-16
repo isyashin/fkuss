@@ -5,14 +5,24 @@
 Хост: `RESTOSITE` (192.168.88.153), Ubuntu 26.04, Docker 29, Caddy 2.6.
 Доступ по SSH-ключу (`secrets/server.env`).
 
+**Исходники — из git** (`https://github.com/isyashin/fkuss`, ветка main):
+
 ```
 /home/ilya/resto/
-├── template/               # исходники шаблона + compose (сайт u-mamy, :3000)
-├── platform/               # платформа владельца (:3100)
+├── src/                    # git clone fkuss (код: template/, platform/, scripts/)
+│   ├── template/.env       # env сайта u-mamy (не в git)
+│   └── platform/docker-compose.yml  # env-специфика платформы (не в git)
 ├── registry.json           # реестр сайтов: slug → порт, домены
 ├── sites/<slug>/           # compose + .env + content/ сайта
-├── scripts/                # deploy.sh, backup.sh, export-site.sh
-└── backups/                # дампы БД + content (14 последних)
+├── backups/                # дампы БД + content (14 последних)
+└── *.old-tar/              # архив до перехода на git-поток (можно удалить)
+```
+
+**Обновление всех сервисов одной командой:**
+
+```bash
+bash ~/resto/src/scripts/update.sh            # pull → build → restart
+bash ~/resto/src/scripts/update.sh --no-restart  # только сборка
 ```
 
 Работающие сервисы:

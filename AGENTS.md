@@ -76,7 +76,18 @@ npx tsx scripts/seed-test.ts       # тестовые тариф/сайт/вла
 scripts/deploy.sh <subdomain> [--domain=<домен>]   # деплой сайта (реестр портов, БД, compose)
 scripts/backup.sh                                   # бэкап всех тенантов (14 последних)
 scripts/export-site.sh <slug>                       # экспорт сайта для клиента
+scripts/update.sh [--no-restart]                    # git pull → сборка → рестарт всех сервисов
 ```
+
+## Git-поток
+
+Репозиторий: `https://github.com/isyashin/fkuss` (публичный, ветка main).
+
+- Код правится локально → коммит → пуш. docs/PLAN.md — в том же коммите.
+- На сервере исходники живут в `~/resto/src` (clone); обновление —
+  `update.sh` (pull → build → restart). tar-синк больше не используется.
+- Перед каждым коммитом: секреты только в `secrets/` и env-файлах —
+  репозиторий публичный, утечка невосполнима.
 
 ## Кастомные агенты и команды OpenCode
 

@@ -1,5 +1,26 @@
 # DEPLOY.md — сервер, домены, деплой, бэкапы
 
+## Продакшн (217.65.3.123, fkuss.ru)
+
+Хост: `fkuss`, Ubuntu 26.04, 8 CPU / 3,3 ГБ RAM / 15 ГБ диск.
+Доступ по SSH-ключу (`secrets/prod.env`). Домен проекта: `fkuss.ru`.
+
+- A-запись `fkuss.ru` → 217.65.3.123 — **уже настроена** (резолвится).
+- ⚠️ Wildcard `*.fkuss.ru` — **не настроен**. Нужно добавить у регистратора
+  DNS: A-запись `*.fkuss.ru` → 217.65.3.123. Она покроет и субдомены сайтов,
+  и `admin.fkuss.ru` (платформа).
+- git/SSH готовы; Docker/Caddy — ставить (см. чек-лист ниже).
+
+Чек-лист вывода в прод:
+1. DNS wildcard `*.fkuss.ru` → 217.65.3.123 (действие владельца у регистратора)
+2. Docker + Compose, Caddy, ufw (22/80/443), fail2ban
+3. `git clone` fkuss → `~/resto/src`; env-файлы из `secrets/` (не в git)
+4. Caddyfile: `*.fkuss.ru` → сайты, `admin.fkuss.ru` → платформа
+   (per-domain TLS автоматически, HTTP/TLS-ALPN через открытые 80/443)
+5. SMTP (DKIM/SPF/DMARC на fkuss.ru) → коды входа и уведомления
+6. Крон-джобы (метрики/биллинг/бэкап) по образцу dev-ВМ
+7. Первый сайт: `deploy.sh <slug>` → seed → проверка по HTTPS
+
 ## Текущее состояние (dev-ВМ, LAN)
 
 Хост: `RESTOSITE` (192.168.88.153), Ubuntu 26.04, Docker 29, Caddy 2.6.

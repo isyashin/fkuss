@@ -291,7 +291,9 @@
 - [x] Мультитенант на ВМ: общий образ resto-template, изолированные БД,
       volume content на сайт, лимиты CPU/RAM
 - [ ] Перенос на прод-VPS с публичным IP: DNS wildcard, реальный TLS,
-      SMTP (DKIM/SPF), ufw/fail2ban — ждёт прода
+      SMTP (DKIM/SPF), ufw/fail2ban — **сервер получен: 217.65.3.123 (fkuss.ru),
+      SSH по ключу работает, A-запись настроена; осталось: wildcard-DNS
+      (действие владельца), Docker/Caddy/SMTP**
 - [ ] Ask-эндпоинт TLS подключён к Caddy (готов: /api/tls-ask платформы)
 - Примечание: разработка и приёмка идут на ВМ в LAN; механика TLS
   описана в docs/DEPLOY.md и протестирована локально через Host-заголовки.

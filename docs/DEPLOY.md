@@ -12,8 +12,12 @@
 - git/SSH готовы; Docker/Caddy — ставить (см. чек-лист ниже).
 
 Чек-лист вывода в прод:
-1. DNS wildcard `*.fkuss.ru` → 217.65.3.123 (действие владельца у регистратора)
-2. Docker + Compose, Caddy, ufw (22/80/443), fail2ban
+1. DNS wildcard `*.fkuss.ru` → 217.65.3.123 — **[x] настроено и резолвится**
+2. Docker + Compose, Caddy, ufw (22/80/443), fail2ban — **[x] установлено:**
+   - Диск расширен: LVM LV 15 → 30 ГБ (был весь диск 32 ГБ, LV обрезан)
+   - Все обновления Ubuntu применены, `unattended-upgrades` активен
+   - ufw: только 22/80/443; fail2ban active
+   - Docker 29.1.3 + compose, Caddy 2.6.2, пользователь ilya в группе docker
 3. `git clone` fkuss → `~/resto/src`; env-файлы из `secrets/` (не в git)
 4. Caddyfile: `*.fkuss.ru` → сайты, `admin.fkuss.ru` → платформа
    (per-domain TLS автоматически, HTTP/TLS-ALPN через открытые 80/443)

@@ -37,7 +37,8 @@ backups/
 uploads/tmp/
 
 # Данные сайтов (контент реальных клиентов, живёт на сервере)
-sites/
+# Якорь на корень: иначе правило глотает platform/src/app/api/sites/
+/sites/
 
 # Отчёты тестов
 test-results/

@@ -64,3 +64,30 @@ export async function saveRestaurant(input: {
   revalidatePath("/");
   revalidatePath("/booking");
 }
+
+/** Загрузка логотипа завершена → обновить ссылку в restaurant и перегенерировать PWA-иконки */
+export async function afterLogoUpload(): Promise<void> {
+  if (!(await isAdmin())) throw new Error("Forbidden");
+  const prisma = getPrisma();
+  const row = await prisma.settings.findUnique({ where: { key: "restaurant" } });
+  const current = (row?.value ?? {}) as Record<string, unknown>;
+  await prisma.settings.upsert({
+    where: { key: "restaurant" },
+    create: { key: "restaurant", value: JSON.parse(JSON.stringify({ ...current, logo: "images/logo.png" })) },
+    update: { value: JSON.parse(JSON.stringify({ ...current, logo: "images/logo.png" })) },
+  });
+
+  const themeRow = await prisma.settings.findUnique({ where: { key: "theme" } });
+  const theme = (themeRow?.value ?? {}) as { accent?: string };
+  const { generateIcons } = await import("@/lib/pwa-icons");
+  const path = await import("node:path");
+  await generateIcons(
+    path.join(process.cwd(), "content"),
+    { name: (current.name as string) ?? "Ресторан", logo: "images/logo.png" },
+    theme.accent ?? "#b45309",
+  );
+
+  revalidatePath("/admin/restaurant");
+  revalidatePath("/");
+  revalidatePath("/manifest.webmanifest");
+}

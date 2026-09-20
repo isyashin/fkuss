@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveRestaurant } from "./actions";
+import { saveRestaurant, afterLogoUpload } from "./actions";
 import type { WeeklySchedule, DaySchedule, DayException } from "@/lib/hours";
 
 const DAYS: { key: string; label: string }[] = [
@@ -70,6 +70,29 @@ export function RestaurantAdmin({ initial }: { initial: FormState }) {
           <span className="text-sm text-muted">Адрес</span>
           <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={inputCls} />
         </label>
+        <div className="flex items-center gap-3">
+          <label className="min-h-11 px-4 inline-flex items-center rounded-full bg-accent text-white text-sm cursor-pointer">
+            Загрузить логотип (PWA)
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const fd = new FormData();
+                fd.append("file", file);
+                fd.append("section", "logo");
+                fd.append("name", "logo");
+                const response = await fetch("/api/admin/upload", { method: "POST", body: fd });
+                if (response.ok) {
+                  startTransition(() => afterLogoUpload());
+                }
+              }}
+            />
+          </label>
+          <span className="text-muted text-xs">иконки приложения перегенерируются автоматически</span>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-sm text-muted">WhatsApp (номер)</span>

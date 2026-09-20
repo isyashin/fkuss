@@ -4,6 +4,7 @@ import { getSiteRestaurant, getSiteTheme } from "@/lib/site";
 import { themeCssVars } from "@/lib/theme";
 import { SiteHeader } from "@/components/site-header";
 import { InstallPrompt } from "@/components/install-prompt";
+import { OfflineBanner } from "@/components/offline-banner";
 import "./globals.css";
 
 const headingFont = Playfair_Display({
@@ -18,9 +19,22 @@ const bodyFont = Inter({
 
 export async function generateMetadata(): Promise<Metadata> {
   const restaurant = await getSiteRestaurant();
+  let version = "1";
+  try {
+    const { readFile } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const raw = await readFile(path.join(process.cwd(), "content", "icons", "icons.json"), "utf-8");
+    version = (JSON.parse(raw) as { version?: string }).version ?? "1";
+  } catch {
+    // до первой генерации иконок
+  }
+
   return {
     title: restaurant.seo.title || restaurant.name,
     description: restaurant.seo.description,
+    icons: {
+      apple: `/content-asset/icons/apple-touch-icon.png?v=${version}`,
+    },
   };
 }
 
@@ -53,6 +67,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <SiteHeader />
         {children}
         <InstallPrompt />
+        <OfflineBanner />
       </body>
     </html>
   );

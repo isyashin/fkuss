@@ -197,6 +197,15 @@ async function main() {
 
   console.log("✓ Seed завершён");
 
+  // PWA-иконки из логотипа (или fallback платформы)
+  try {
+    const { generateIcons } = await import("../src/lib/pwa-icons");
+    const result = await generateIcons(CONTENT_DIR, restaurant, theme.accent);
+    console.log(`  PWA-иконки: ${result.icons.length}, версия ${result.version}`);
+  } catch (error) {
+    console.warn("  ! PWA-иконки не сгенерированы:", error instanceof Error ? error.message : error);
+  }
+
   // Бэкфилл -sm.webp для фото, у которых есть только полная версия
   try {
     const dishesDir = path.join(CONTENT_DIR, "images", "dishes");

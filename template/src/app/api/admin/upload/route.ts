@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   if (!(file instanceof File) || !file.type.startsWith("image/")) {
     return NextResponse.json({ error: "Нужен файл изображения" }, { status: 400 });
   }
-  if (!["dishes", "gallery", "promos", "background"].includes(section)) {
+  if (!["dishes", "gallery", "promos", "background", "logo"].includes(section)) {
     return NextResponse.json({ error: "Недопустимый раздел" }, { status: 400 });
   }
   if (!/^[a-z0-9-]+$/.test(name)) {
@@ -51,6 +51,13 @@ export async function POST(request: Request) {
       path.join(dir, `${name}.webp`),
       await sharp(buffer).resize(2400, 2400, { fit: "inside", withoutEnlargement: true }).webp({ quality: 80 }).toBuffer(),
     );
+  } else if (section === "logo") {
+    // Логотип — всегда images/logo.png (PNG для иконок)
+    const logoPath = path.join(process.cwd(), "content", "images", "logo.png");
+    await mkdir(path.dirname(logoPath), { recursive: true });
+    await writeFile(logoPath, await sharp(buffer).resize(1024, 1024, { fit: "inside" }).png().toBuffer());
+    const relPathLogo = "images/logo.png";
+    return NextResponse.json({ ok: true, path: relPathLogo });
   } else {
     await writeFile(
       path.join(dir, `${name}.webp`),

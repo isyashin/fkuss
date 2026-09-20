@@ -6,6 +6,7 @@ import type { Menu, Dish } from "@/lib/content";
 import type { ContentSettings } from "@/lib/content-schema";
 
 import { useCart, type CartModifier } from "@/lib/cart/store";
+import { validateModifierSelection } from "@/lib/order/modifier-validation";
 import { CartBar } from "@/components/cart/cart-bar";
 import { CartSheet } from "@/components/cart/cart-sheet";
 
@@ -141,9 +142,45 @@ function DishModal({
 }) {
   const [quantity, setQuantity] = useState(1);
   const [selectedModifiers, setSelectedModifiers] = useState<CartModifier[]>([]);
+  const [selectionError, setSelectionError] = useState("");
 
+  const groups = dish.groups ?? [];
   const modifiersTotal = selectedModifiers.reduce((s, m) => s + m.price, 0);
   const total = (dish.price + modifiersTotal) * quantity;
+
+  function toggleModifier(mod: CartModifier, maxSelected: number) {
+    setSelectedModifiers((prev) => {
+      const has = prev.some((sm) => sm.id === mod.id);
+      if (has) return prev.filter((sm) => sm.id !== mod.id);
+      if (maxSelected === 1) {
+        // radio: снимаем выбор остальных из этой же группы
+        const group = groups.find((g) => g.modifiers.some((m) => m.id === mod.id));
+        const groupIds = group ? group.modifiers.map((m) => m.id) : [];
+        return [...prev.filter((sm) => !groupIds.includes(sm.id)), mod];
+      }
+      return [...prev, mod];
+    });
+  }
+
+  function tryAdd() {
+    if (groups.length > 0) {
+      const result = validateModifierSelection(
+        groups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          minSelected: g.minSelected,
+          maxSelected: g.maxSelected,
+          modifierIds: g.modifiers.map((m) => m.id),
+        })),
+        selectedModifiers.map((m) => m.id),
+      );
+      if (!result.ok) {
+        setSelectionError(result.error);
+        return;
+      }
+    }
+    onAdd(selectedModifiers, quantity);
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal>
@@ -176,11 +213,7 @@ function DishModal({
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={() =>
-                          setSelectedModifiers((prev) =>
-                            checked ? prev.filter((sm) => sm.id !== m.id) : [...prev, m],
-                          )
-                        }
+                        onChange={() => toggleModifier(m, 99)}
                         className="w-5 h-5 accent-[var(--accent)]"
                       />
                       {m.name}
@@ -191,6 +224,38 @@ function DishModal({
               })}
             </div>
           )}
+
+          {groups.map((group) => (
+            <div key={group.id} className="mt-4 space-y-2">
+              <p className="font-medium">
+                {group.name}
+                {group.minSelected > 0 && <span className="text-accent text-sm ml-2">обязательно</span>}
+                {group.maxSelected > 1 && group.maxSelected < 99 && (
+                  <span className="text-muted text-sm ml-2">до {group.maxSelected}</span>
+                )}
+              </p>
+              {group.modifiers.map((m) => {
+                const checked = selectedModifiers.some((sm) => sm.id === m.id);
+                return (
+                  <label key={m.id} className="flex items-center justify-between min-h-11 gap-3 cursor-pointer">
+                    <span className="flex items-center gap-3">
+                      <input
+                        type={group.maxSelected === 1 ? "radio" : "checkbox"}
+                        name={group.maxSelected === 1 ? `group-${group.id}` : undefined}
+                        checked={checked}
+                        onChange={() => toggleModifier(m, group.maxSelected)}
+                        className="w-5 h-5 accent-[var(--accent)]"
+                      />
+                      {m.name}
+                    </span>
+                    <span className="text-muted">{m.price > 0 ? `+${m.price} ₽` : "0 ₽"}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ))}
+
+          {selectionError && <p className="mt-3 text-sm text-red-600">{selectionError}</p>}
 
           <div className="mt-5 flex items-center gap-3">
             <div className="flex items-center border border-foreground/20 rounded-full">
@@ -211,7 +276,7 @@ function DishModal({
               </button>
             </div>
             <button
-              onClick={() => onAdd(selectedModifiers, quantity)}
+              onClick={tryAdd}
               className="flex-1 min-h-12 rounded-full bg-accent text-white font-medium text-lg"
             >
               Добавить · {formatPrice(total)}

@@ -68,7 +68,7 @@ export async function POST(request: Request) {
   const dishIds = input.items.map((i) => i.dishId);
   const dishes = await prisma.dish.findMany({
     where: { id: { in: dishIds }, available: true },
-    include: { modifiers: true },
+    include: { modifiers: true, modifierGroups: { include: { modifiers: true } } },
   });
   const dishMap = new Map(dishes.map((d) => [d.id, d]));
 
@@ -87,9 +87,33 @@ export async function POST(request: Request) {
     if (!dish) {
       return NextResponse.json({ error: `Блюдо недоступно: ${item.dishId}` }, { status: 400 });
     }
+
+    // Выбранные модификаторы — только принадлежащие блюду
     const modifiers = item.modifierIds
       .map((mid) => dish.modifiers.find((m) => m.id === mid))
       .filter((m): m is NonNullable<typeof m> => Boolean(m));
+    if (modifiers.length !== item.modifierIds.length) {
+      return NextResponse.json({ error: `В «${dish.name}» выбрана недопустимая добавка` }, { status: 400 });
+    }
+
+    // min/max по группам
+    if (dish.modifierGroups.length > 0) {
+      const { validateModifierSelection } = await import("@/lib/order/modifier-validation");
+      const result = validateModifierSelection(
+        dish.modifierGroups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          minSelected: g.minSelected,
+          maxSelected: g.maxSelected,
+          modifierIds: g.modifiers.map((m) => m.id),
+        })),
+        modifiers.filter((m) => m.groupId !== null).map((m) => m.id),
+      );
+      if (!result.ok) {
+        return NextResponse.json({ error: `«${dish.name}»: ${result.error}` }, { status: 400 });
+      }
+    }
+
     const unitPrice = dish.price + modifiers.reduce((s, m) => s + m.price, 0);
     pricedItems.push({
       dishId: dish.id,

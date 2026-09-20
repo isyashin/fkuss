@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveSettings, saveTheme, savePricing } from "./actions";
+import { saveSettings, saveTheme, savePricing, saveBackground } from "./actions";
+import { contentAssetUrl } from "@/lib/assets";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { ThemeConfig } from "@/lib/content";
 
@@ -17,6 +18,13 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
   const [accent, setAccent] = useState(theme.accent);
   const [pricingMode, setPricingMode] = useState<"yandex" | "manual" | "coefficient">(settings.pricing.globalMode);
   const [pricingPercent, setPricingPercent] = useState(settings.pricing.globalPercent);
+  const [bg, setBg] = useState({
+    enabled: theme.background?.enabled ?? false,
+    image: theme.background?.image ?? "",
+    position: theme.background?.position ?? "center",
+    dimPercent: theme.background?.dimPercent ?? 40,
+    disableOnMobile: theme.background?.disableOnMobile ?? true,
+  });
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState("");
 
@@ -27,6 +35,7 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
       await saveSettings(s);
       await saveTheme({ preset, accent });
       await savePricing({ globalMode: pricingMode, globalPercent: pricingPercent });
+      await saveBackground(bg);
       setSaved("Сохранено ✓");
       setTimeout(() => setSaved(""), 3000);
     });
@@ -50,6 +59,90 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
           <label className="block">
             <span className="text-sm text-muted">Фирменный цвет</span>
             <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} className="mt-1 w-16 h-11 rounded" />
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl mb-3">Фоновое изображение</h2>
+        <div className="space-y-3">
+          <label className="flex items-center gap-3 min-h-11">
+            <input
+              type="checkbox"
+              checked={bg.enabled}
+              onChange={(e) => setBg({ ...bg, enabled: e.target.checked })}
+              className="w-5 h-5 accent-[var(--accent)]"
+            />
+            Фон включён
+          </label>
+
+          <div className="flex items-center gap-3">
+            <label className="min-h-11 px-4 inline-flex items-center rounded-full bg-accent text-white text-sm cursor-pointer">
+              {bg.image ? "Заменить изображение" : "Загрузить изображение"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  fd.append("section", "background");
+                  fd.append("name", `bg-${Date.now().toString(36)}`);
+                  const response = await fetch("/api/admin/upload", { method: "POST", body: fd });
+                  const data = await response.json();
+                  if (response.ok) setBg({ ...bg, image: data.path });
+                  else alert(data.error ?? "Ошибка загрузки");
+                }}
+              />
+            </label>
+            {bg.image && (
+              <button
+                onClick={() => setBg({ ...bg, image: "" })}
+                className="min-h-11 px-4 rounded-full border border-red-300 text-red-600 text-sm"
+              >
+                Удалить
+              </button>
+            )}
+          </div>
+
+          {bg.image && (
+            <div className="rounded-[var(--radius)] overflow-hidden border border-foreground/15 max-w-sm">
+              <img src={contentAssetUrl(bg.image)} alt="Фон — превью" className="w-full h-32 object-cover" />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-sm text-muted">Позиция</span>
+              <select value={bg.position} onChange={(e) => setBg({ ...bg, position: e.target.value as typeof bg.position })} className={inputCls}>
+                <option value="center">По центру</option>
+                <option value="top">Сверху</option>
+                <option value="bottom">Снизу</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm text-muted">Затемнение: {bg.dimPercent}%</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={bg.dimPercent}
+                onChange={(e) => setBg({ ...bg, dimPercent: Number(e.target.value) })}
+                className="mt-3 w-full accent-[var(--accent)]"
+              />
+            </label>
+          </div>
+
+          <label className="flex items-center gap-3 min-h-11">
+            <input
+              type="checkbox"
+              checked={bg.disableOnMobile}
+              onChange={(e) => setBg({ ...bg, disableOnMobile: e.target.checked })}
+              className="w-5 h-5 accent-[var(--accent)]"
+            />
+            Отключить фон на мобильных
           </label>
         </div>
       </section>
@@ -259,7 +352,7 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
         </label>
       </section>
 
-      <div className="flex items-center gap-3 sticky bottom-4">
+      <div className="flex items-center gap-3 bg-background/95 border-t border-foreground/10 py-3 mt-6">
         <button
           onClick={saveAll}
           disabled={pending}

@@ -134,6 +134,15 @@ export const themeSchema = z.object({
   radius: z.enum(["sharp", "soft", "round"]).default("soft"),
   dark: z.boolean().default(false),
   homeBlocks: z.array(z.string()).default(["hero", "about", "popular", "promos", "gallery", "contacts"]),
+  background: z
+    .object({
+      enabled: z.boolean().default(false),
+      image: imagePathSchema.or(z.literal("")),
+      position: z.enum(["center", "top", "bottom"]).default("center"),
+      dimPercent: z.number().min(0).max(100).default(40),
+      disableOnMobile: z.boolean().default(true),
+    })
+    .default({ enabled: false, image: "", position: "center", dimPercent: 40, disableOnMobile: true }),
 });
 
 export const settingsSchema = z.object({

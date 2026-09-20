@@ -18,11 +18,17 @@ export async function POST(request: Request) {
   if (!(file instanceof File) || !file.type.startsWith("image/")) {
     return NextResponse.json({ error: "Нужен файл изображения" }, { status: 400 });
   }
-  if (!["dishes", "gallery", "promos"].includes(section)) {
+  if (!["dishes", "gallery", "promos", "background"].includes(section)) {
     return NextResponse.json({ error: "Недопустимый раздел" }, { status: 400 });
   }
   if (!/^[a-z0-9-]+$/.test(name)) {
     return NextResponse.json({ error: "Недопустимое имя файла" }, { status: 400 });
+  }
+  if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
+    return NextResponse.json({ error: "SVG не принимается" }, { status: 400 });
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    return NextResponse.json({ error: "Файл больше 8 МБ" }, { status: 400 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -38,6 +44,12 @@ export async function POST(request: Request) {
     await writeFile(
       path.join(dir, `${name}.webp`),
       await sharp(buffer).resize(800, 800, { fit: "inside", withoutEnlargement: true }).webp({ quality: 82 }).toBuffer(),
+    );
+  } else if (section === "background") {
+    // Фон: широкий, качество поаккуратнее
+    await writeFile(
+      path.join(dir, `${name}.webp`),
+      await sharp(buffer).resize(2400, 2400, { fit: "inside", withoutEnlargement: true }).webp({ quality: 80 }).toBuffer(),
     );
   } else {
     await writeFile(

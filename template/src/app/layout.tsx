@@ -31,6 +31,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     .map(([key, value]) => `${key}: ${value}`)
     .join("; ");
 
+  const bg = theme.background;
+  const showBg = bg?.enabled && bg.image;
+  const bgStyle = showBg
+    ? `html body { background-image: linear-gradient(rgba(0,0,0,${(bg.dimPercent / 100).toFixed(2)}), rgba(0,0,0,${(bg.dimPercent / 100).toFixed(2)})), url('/content-asset/${bg.image}'); background-size: cover; background-position: ${bg.position === "top" ? "center top" : bg.position === "bottom" ? "center bottom" : "center"}; background-attachment: fixed; }` +
+      (bg.disableOnMobile
+        ? ` @media (max-width: 768px) { html body { background-image: none; } }`
+        : "")
+    : "";
+
   return (
     <html
       lang="ru"
@@ -38,7 +47,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       data-preset={theme.preset}
     >
       <head>
-        <style>{`:root { ${style} }`}</style>
+        <style>{`:root { ${style} }${bgStyle}`}</style>
       </head>
       <body className="min-h-full flex flex-col">
         <SiteHeader />

@@ -36,6 +36,44 @@ export async function saveTheme(theme: { preset: string; accent: string }): Prom
   revalidatePath("/menu");
 }
 
+export async function saveBackground(input: {
+  enabled: boolean;
+  image: string;
+  position: "center" | "top" | "bottom";
+  dimPercent: number;
+  disableOnMobile: boolean;
+}): Promise<void> {
+  await guard();
+  const prisma = getPrisma();
+  const row = await prisma.settings.findUnique({ where: { key: "theme" } });
+  const current = (row?.value ?? {}) as { background?: { image?: string } } & Record<string, unknown>;
+  const oldImage = current.background?.image;
+
+  await prisma.settings.upsert({
+    where: { key: "theme" },
+    create: { key: "theme", value: JSON.parse(JSON.stringify({ ...current, background: input })) },
+    update: { value: JSON.parse(JSON.stringify({ ...current, background: input })) },
+  });
+
+  // Старый файл удаляем ТОЛЬКО после успешной записи нового состояния
+  if (oldImage && oldImage !== input.image) {
+    try {
+      const { unlink } = await import("node:fs/promises");
+      const path = await import("node:path");
+      const abs = path.join(process.cwd(), "content", oldImage);
+      if (abs.startsWith(path.join(process.cwd(), "content"))) {
+        await unlink(abs).catch(() => {});
+      }
+    } catch {
+      // удаление старого файла не критично
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/menu");
+  revalidatePath("/admin/settings");
+}
+
 export async function savePricing(pricing: { globalMode: string; globalPercent: number }): Promise<void> {
   await guard();
   const prisma = getPrisma();

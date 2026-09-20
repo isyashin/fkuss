@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -11,8 +12,10 @@ interface BeforeInstallPromptEvent extends Event {
  * Кнопка «Установить приложение».
  * Android/Chrome — системный диалог (beforeinstallprompt).
  * iOS Safari — инструкция «Поделиться → На экран Домой» (программно нельзя).
+ * На админских страницах не показывается.
  */
 export function InstallPrompt() {
+  const pathname = usePathname();
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -34,7 +37,7 @@ export function InstallPrompt() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  if (hidden || isStandalone || (!deferred && !isIOS)) return null;
+  if (pathname.startsWith("/admin") || hidden || isStandalone || (!deferred && !isIOS)) return null;
 
   function dismiss() {
     localStorage.setItem("install-prompt-hidden", "1");

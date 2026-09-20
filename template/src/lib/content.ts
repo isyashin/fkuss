@@ -65,6 +65,14 @@ export interface Menu {
   categories: MenuCategory[];
 }
 
+export interface ThemeBackground {
+  enabled: boolean;
+  image: string;
+  position: "center" | "top" | "bottom";
+  dimPercent: number;
+  disableOnMobile: boolean;
+}
+
 export interface ThemeConfig {
   preset: "warm" | "minimal" | "elegant";
   accent: string;
@@ -73,6 +81,7 @@ export interface ThemeConfig {
   radius: "sharp" | "soft" | "round";
   dark: boolean;
   homeBlocks: string[];
+  background?: ThemeBackground;
 }
 
 export interface Promo {

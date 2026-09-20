@@ -1,26 +1,41 @@
-import { dishImageUrl } from "@/lib/assets";
 import Link from "next/link";
-import { getSiteRestaurant, getSiteMenu, getSitePromos, getSitePages, getSiteTheme, contentAssetUrl } from "@/lib/site";
+import { getSiteRestaurant, getSiteMenu, getSitePromos, getSitePages, getSiteTheme, getSiteSettings } from "@/lib/site";
+import { isOpenAt, resolveSchedule } from "@/lib/hours";
+import { MenuClient } from "@/components/menu/menu-client";
+import { getPrisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-function formatPrice(price: number): string {
-  return `${price.toLocaleString("ru-RU")} ₽`;
-}
-
 export default async function HomePage() {
-  const [restaurant, menu, promos, pages, theme] = await Promise.all([
+  const [restaurant, menu, promos, pages, theme, settings] = await Promise.all([
     getSiteRestaurant(),
     getSiteMenu(),
     getSitePromos(),
     getSitePages(),
     getSiteTheme(),
+    getSiteSettings(),
   ]);
 
+  const schedule = resolveSchedule(restaurant);
+  const now = new Date();
+  const open = isOpenAt(
+    schedule,
+    now.toISOString().slice(0, 10),
+    `${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`,
+  );
+
   const about = pages.pages.find((p) => p.slug === "about");
-  const popular = menu.categories
-    .flatMap((c) => c.dishes)
-    .filter((d) => d.tags.includes("hit") && d.available);
+  const banquetsSettings = (settings as { banquets?: { enabled?: boolean; title?: string } }).banquets;
+  let banquetsEnabled = banquetsSettings?.enabled === true;
+  if (banquetsEnabled) {
+    try {
+      const prisma = getPrisma();
+      banquetsEnabled = (await prisma.banquetHall.count()) > 0;
+    } catch {
+      // платформа/БД недоступна — считаем выключенным
+      banquetsEnabled = false;
+    }
+  }
 
   const blocks = theme.homeBlocks;
 
@@ -32,59 +47,34 @@ export default async function HomePage() {
             <h1 className="text-4xl md:text-5xl leading-tight">{restaurant.name}</h1>
             <p className="mt-3 text-muted text-lg capitalize">{restaurant.cuisine} кухня</p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-              <Link
-                href="/menu"
+              <a
+                href="#menu"
                 className="min-h-12 px-8 inline-flex items-center justify-center rounded-[var(--radius)] bg-accent text-white font-medium text-lg"
               >
-                Заказать
-              </Link>
-              <Link
-                href="/booking"
-                className="min-h-12 px-8 inline-flex items-center justify-center rounded-[var(--radius)] border border-foreground/20 font-medium text-lg"
-              >
-                Забронировать
-              </Link>
+                Заказать с доставкой
+              </a>
+              {banquetsEnabled && (
+                <Link
+                  href="/banquets"
+                  className="min-h-12 px-8 inline-flex items-center justify-center rounded-[var(--radius)] border border-foreground/20 font-medium text-lg"
+                >
+                  Банкеты
+                </Link>
+              )}
             </div>
           </section>
         )}
 
-        {blocks.includes("about") && about && (
-          <section className="mx-auto max-w-5xl px-4 py-8">
-            <h2 className="text-2xl mb-3">{about.title}</h2>
-            <p className="text-muted leading-relaxed max-w-2xl">{about.body}</p>
-          </section>
-        )}
-
-        {blocks.includes("popular") && popular.length > 0 && (
-          <section className="mx-auto max-w-5xl px-4 py-8">
-            <h2 className="text-2xl mb-4">Популярное</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {popular.map((dish) => (
-                <div key={dish.id} className="bg-card rounded-[var(--radius)] overflow-hidden shadow-sm">
-                   <div className="relative aspect-square bg-foreground/5">
-                     <img
-                       src={dishImageUrl(dish.image, "sm")}
-                       alt={dish.name}
-                       loading="lazy"
-                       decoding="async"
-                       className="absolute inset-0 w-full h-full object-cover"
-                     />
-                   </div>
-                  <div className="p-3">
-                    <p className="font-medium leading-snug">{dish.name}</p>
-                    <p className="text-muted text-sm mt-0.5">{dish.weight}</p>
-                    <p className="mt-2 font-semibold text-accent">{formatPrice(dish.price)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 text-center">
-              <Link href="/menu" className="min-h-11 px-6 inline-flex items-center justify-center rounded-[var(--radius)] border border-foreground/20">
-                Всё меню
-              </Link>
-            </div>
-          </section>
-        )}
+        {/* Полное меню сразу после первого экрана */}
+        <div id="menu" className="scroll-mt-16">
+          <MenuClient
+            menu={menu}
+            delivery={settings.delivery}
+            loyalty={settings.loyalty}
+            whatsapp={settings.channels.whatsapp}
+            isOpen={open}
+          />
+        </div>
 
         {blocks.includes("promos") && promos.promos.length > 0 && (
           <section className="mx-auto max-w-5xl px-4 py-8">
@@ -95,6 +85,13 @@ export default async function HomePage() {
                 <p className="text-muted mt-1">{promo.text}</p>
               </div>
             ))}
+          </section>
+        )}
+
+        {blocks.includes("about") && about && (
+          <section className="mx-auto max-w-5xl px-4 py-8">
+            <h2 className="text-2xl mb-3">{about.title}</h2>
+            <p className="text-muted leading-relaxed max-w-2xl">{about.body}</p>
           </section>
         )}
 

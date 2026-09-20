@@ -37,7 +37,7 @@ async function cleanup() {
     where: { OR: [{ source: "yandex" }, { id: { startsWith: "dish-manual" } }] },
   });
   await prisma.category.deleteMany({ where: { id: { startsWith: "ycat-" } } });
-  await prisma.settings.deleteMany({ where: { key: { in: ["syncState", "settings"] } } });
+  await prisma.settings.deleteMany({ where: { key: "syncState" } });
 }
 
 afterAll(async () => {

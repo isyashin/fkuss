@@ -220,6 +220,15 @@ model GalleryImage {
   position Int    @default(0)
 }
 
+model BanquetHall {
+  id          String @id
+  name        String
+  capacity    String @default("")
+  description String @default("")
+  image       String @default("")
+  position    Int    @default(0)
+}
+
 model Page {
   slug     String @id
   title    String

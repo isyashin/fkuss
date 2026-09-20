@@ -14,7 +14,7 @@ model Category {
   id         String  @id
   name       String
   position   Int     @default(0)
-  externalId String? // внешний ID Яндекс.Еды (сопоставление при синхронизации)
+  externalId String? @unique // внешний ID Яндекс.Еды (сопоставление при синхронизации)
   dishes     Dish[]
 }
 

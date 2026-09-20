@@ -31,20 +31,45 @@ template/
 ```
 src/
 ├── app/
-│   ├── (site)/            # витрина: главная, меню, акции, галерея, контакты
-│   ├── (site)/order/      # оформление заказа
-│   ├── (site)/booking/    # бронирование
+│   ├── (site)/            # витрина: главная (hero + полное меню), акции, контакты
+│   ├── banquets/          # банкеты (404 при выключенном разделе)
+│   ├── booking/           # бронирование
 │   ├── account/           # личный кабинет
-│   ├── admin/             # админка
-│   └── api/               # order, booking, auth, payments/webhook
-├── components/            # UI (shadcn/ui + кастомные)
+│   ├── admin/             # админка (заказы, брони, меню, акции, галерея,
+│   │                      # страницы, ресторан+часы, синхронизация, доставка,
+│   │                      # банкеты, настройки+тема/фон, подписка)
+│   └── api/               # order, booking(+slots), auth, payments/webhook,
+│                          # delivery/slots, jobs (sync-menu, report-metrics),
+│                          # admin (upload, dish-image), content-asset
+├── components/            # UI (menu-client, cart, booking, install-prompt,
+│                          # offline-banner)
 ├── lib/
+│   ├── yandex-eda/        # client.ts (timeout, нормализация) + sync.ts
+│   │                      # (upsert по externalId, атомарный lock, retry)
+│   ├── order/             # pricing.ts (расчёт заказа), price-resolver.ts
+│   │                      # (режимы цен), recompute.ts, modifier-validation.ts
+│   ├── delivery/          # slots.ts (окна с tz, валидация)
 │   ├── payments/          # PaymentProvider + yookassa + mock
 │   ├── notify/            # telegram, max, email
 │   ├── loyalty/           # бонусы (ledger)
-│   └── theme/             # токены и пресеты
+│   ├── pwa-icons.ts       # генерация иконок из логотипа + fallback
+│   ├── hours.ts           # часы работы (расписание + исключения)
+│   ├── site.ts            # данные витрины из БД с fallback на content/
+│   └── theme/             # токены и пресеты (+ фоновое изображение)
 └── styles/
 ```
+
+Ключевые потоки (по ТЗ):
+- **Синхронизация**: cron → /api/jobs/sync-menu → syncMenu → EDA API →
+  upsert по externalId; состояние в Settings(syncState); доступность блюда =
+  manualAvailable && yandexAvailable; после sync — recomputePrices.
+- **Цены**: settings.pricing (globalMode/globalPercent) + поля блюда
+  (priceMode/manualPrice/coefficientPercent) → price-resolver → Dish.price —
+  единственная цена для заказа и витрины.
+- **Доставка**: DeliveryOption → /api/delivery/slots → окна с tz → выбор в
+  корзине → серверная валидация + снимок в Order; зоны заменяются вариантами.
+- **Меню на главной**: hero → MenuClient (тот же компонент) → о нас/контакты;
+  /menu → redirect /#menu.
 
 ## Мультитенантность
 

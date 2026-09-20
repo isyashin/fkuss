@@ -35,7 +35,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
       headers: {
         "Content-Type": MIME[ext] ?? "application/octet-stream",
         "Content-Length": String(fileStat.size),
-        "Cache-Control": "public, max-age=3600",
+        // Картинки контента меняются редко; при замене меняется имя файла
+        "Cache-Control": "public, max-age=86400",
       },
     });
   } catch {

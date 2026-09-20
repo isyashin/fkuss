@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useCart } from "@/lib/cart/store";
-import { contentAssetUrl } from "@/lib/assets";
+import { dishImageUrl } from "@/lib/assets";
 import type { ContentSettings } from "@/lib/content-schema";
 
 function formatPrice(price: number): string {
@@ -112,7 +111,7 @@ export function CartSheet({
                 return (
                   <div key={`${item.dishId}:${item.modifiers.map((m) => m.id).join(",")}`} className="flex gap-3 items-center">
                     <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-foreground/5 shrink-0">
-                      <Image src={contentAssetUrl(item.image)} alt={item.name} fill sizes="64px" className="object-cover" />
+                      <img src={dishImageUrl(item.image, "sm")} alt={item.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium leading-snug">{item.name}</p>

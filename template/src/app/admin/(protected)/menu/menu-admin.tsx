@@ -1,9 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import Image from "next/image";
 import { addCategory, addDish, deleteDish, updateDish } from "./actions";
-import { contentAssetUrl } from "@/lib/assets";
+import { dishImageUrl } from "@/lib/assets";
 import type { Category, Dish } from "@/generated/prisma/client";
 
 export function MenuAdmin({ categories }: { categories: (Category & { dishes: Dish[] })[] }) {
@@ -63,7 +62,7 @@ function DishRow({ dish }: { dish: Dish }) {
         className="relative w-16 h-16 rounded-lg overflow-hidden bg-foreground/5 shrink-0"
       >
         {dish.image ? (
-          <Image src={contentAssetUrl(dish.image)} alt={dish.name} fill sizes="64px" className="object-cover" />
+          <img src={dishImageUrl(dish.image, "sm")} alt={dish.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center text-muted text-xs">+ фото</span>
         )}

@@ -2,8 +2,9 @@
  * seed.ts — наполнение БД из content/ с zod-валидацией.
  * Запуск: npm run seed
  * Идемпотентен: контентные таблицы полностью пересоздаются из content/.
+ * Заодно: бэкфилл карточных размеров (-sm.webp) для старых фото блюд.
  */
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
@@ -21,7 +22,8 @@ const CONTENT_DIR = process.env.CONTENT_DIR
   : path.join(process.cwd(), "content");
 
 async function readAndValidate<T>(file: string, schema: { parse: (v: unknown) => T }): Promise<T> {
-  const raw = await readFile(path.join(CONTENT_DIR, file), "utf-8");
+  // BOM (Windows-редакторы) срезаем — иначе JSON.parse падает
+  const raw = (await readFile(path.join(CONTENT_DIR, file), "utf-8")).replace(/^﻿/, "");
   try {
     return schema.parse(JSON.parse(raw));
   } catch (error) {
@@ -129,6 +131,29 @@ async function main() {
   });
 
   console.log("✓ Seed завершён");
+
+  // Бэкфилл -sm.webp для фото, у которых есть только полная версия
+  try {
+    const dishesDir = path.join(CONTENT_DIR, "images", "dishes");
+    const files = await readdir(dishesDir);
+    const fulls = files.filter((f) => f.endsWith(".webp") && !f.endsWith("-sm.webp"));
+    let generated = 0;
+    const sharp = (await import("sharp")).default;
+    for (const f of fulls) {
+      const smName = f.replace(/\.webp$/, "-sm.webp");
+      if (files.includes(smName)) continue;
+      const buffer = await readFile(path.join(dishesDir, f));
+      await writeFile(
+        path.join(dishesDir, smName),
+        await sharp(buffer).resize(400, 400, { fit: "inside", withoutEnlargement: true }).webp({ quality: 78 }).toBuffer(),
+      );
+      generated++;
+    }
+    if (generated > 0) console.log(`  Карточных размеров создано: ${generated}`);
+  } catch {
+    // нет папки с блюдами — не страшно
+  }
+
   await prisma.$disconnect();
 }
 

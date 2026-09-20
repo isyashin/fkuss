@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { dishImageUrl } from "@/lib/assets";
 import Link from "next/link";
 import { getSiteRestaurant, getSiteMenu, getSitePromos, getSitePages, getSiteTheme, contentAssetUrl } from "@/lib/site";
 
@@ -61,15 +61,15 @@ export default async function HomePage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {popular.map((dish) => (
                 <div key={dish.id} className="bg-card rounded-[var(--radius)] overflow-hidden shadow-sm">
-                  <div className="relative aspect-square bg-foreground/5">
-                    <Image
-                      src={contentAssetUrl(dish.image)}
-                      alt={dish.name}
-                      fill
-                      sizes="(max-width: 768px) 50vw, 33vw"
-                      className="object-cover"
-                    />
-                  </div>
+                   <div className="relative aspect-square bg-foreground/5">
+                     <img
+                       src={dishImageUrl(dish.image, "sm")}
+                       alt={dish.name}
+                       loading="lazy"
+                       decoding="async"
+                       className="absolute inset-0 w-full h-full object-cover"
+                     />
+                   </div>
                   <div className="p-3">
                     <p className="font-medium leading-snug">{dish.name}</p>
                     <p className="text-muted text-sm mt-0.5">{dish.weight}</p>

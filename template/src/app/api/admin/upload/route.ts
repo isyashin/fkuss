@@ -26,15 +26,26 @@ export async function POST(request: Request) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const webp = await sharp(buffer)
-    .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
-    .webp({ quality: 82 })
-    .toBuffer();
+  const dir = path.join(process.cwd(), "content", "images", section);
+  await mkdir(dir, { recursive: true });
+
+  if (section === "dishes") {
+    // Два размера: карточный (-sm 400px) и полный (800px)
+    await writeFile(
+      path.join(dir, `${name}-sm.webp`),
+      await sharp(buffer).resize(400, 400, { fit: "inside", withoutEnlargement: true }).webp({ quality: 78 }).toBuffer(),
+    );
+    await writeFile(
+      path.join(dir, `${name}.webp`),
+      await sharp(buffer).resize(800, 800, { fit: "inside", withoutEnlargement: true }).webp({ quality: 82 }).toBuffer(),
+    );
+  } else {
+    await writeFile(
+      path.join(dir, `${name}.webp`),
+      await sharp(buffer).resize(1600, 1600, { fit: "inside", withoutEnlargement: true }).webp({ quality: 82 }).toBuffer(),
+    );
+  }
 
   const relPath = `images/${section}/${name}.webp`;
-  const absPath = path.join(process.cwd(), "content", relPath);
-  await mkdir(path.dirname(absPath), { recursive: true });
-  await writeFile(absPath, webp);
-
   return NextResponse.json({ ok: true, path: relPath });
 }

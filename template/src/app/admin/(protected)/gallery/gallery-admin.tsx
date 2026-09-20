@@ -1,9 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import Image from "next/image";
 import { addGalleryImage, deleteGalleryImage } from "../content-actions";
-import { contentAssetUrl } from "@/lib/assets";
+import { dishImageUrl } from "@/lib/assets";
 import type { GalleryImage } from "@/generated/prisma/client";
 
 export function GalleryAdmin({ images }: { images: GalleryImage[] }) {
@@ -17,7 +16,7 @@ export function GalleryAdmin({ images }: { images: GalleryImage[] }) {
         {images.map((img) => (
           <div key={img.id} className="relative group">
             <div className="relative aspect-square rounded-[var(--radius)] overflow-hidden bg-foreground/5">
-              <Image src={contentAssetUrl(img.image)} alt={img.alt} fill sizes="25vw" className="object-cover" />
+              <img src={dishImageUrl(img.image, "sm")} alt={img.alt} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
             </div>
             <button
               disabled={pending}

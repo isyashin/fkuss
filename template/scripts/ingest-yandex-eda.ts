@@ -122,8 +122,16 @@ async function main() {
           const response = await fetch(url800, { headers: { "User-Agent": "Mozilla/5.0" } });
           if (response.ok) {
             const buffer = Buffer.from(await response.arrayBuffer());
-            const webp = await sharp(buffer).resize(800, 800, { fit: "inside" }).webp({ quality: 82 }).toBuffer();
-            await writeFile(path.join(outDir, "images", "dishes", `${id}.webp`), webp);
+            // Два размера: полный (модалка) и карточный (меню) — витрина отдаёт
+            // их напрямую, без runtime-оптимизации
+            await writeFile(
+              path.join(outDir, "images", "dishes", `${id}.webp`),
+              await sharp(buffer).resize(800, 800, { fit: "inside" }).webp({ quality: 82 }).toBuffer(),
+            );
+            await writeFile(
+              path.join(outDir, "images", "dishes", `${id}-sm.webp`),
+              await sharp(buffer).resize(400, 400, { fit: "inside" }).webp({ quality: 78 }).toBuffer(),
+            );
             image = `images/dishes/${id}.webp`;
             photoCount++;
           }

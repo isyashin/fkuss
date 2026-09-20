@@ -252,6 +252,14 @@ export async function syncMenu(prisma: PrismaLike, options: SyncOptions = {}): P
       lastError: undefined,
     });
 
+    // Пересчёт цен по настройкам после синхронизации
+    try {
+      const { recomputePrices } = await import("../order/recompute");
+      await recomputePrices(prisma as PrismaClient);
+    } catch {
+      // пересчёт не должен ронять синхронизацию
+    }
+
     return { ok: true, upserted, missing: missing.count };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

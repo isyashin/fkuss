@@ -35,3 +35,21 @@ export async function saveTheme(theme: { preset: string; accent: string }): Prom
   revalidatePath("/");
   revalidatePath("/menu");
 }
+
+export async function savePricing(pricing: { globalMode: string; globalPercent: number }): Promise<void> {
+  await guard();
+  const prisma = getPrisma();
+  const row = await prisma.settings.findUnique({ where: { key: "settings" } });
+  const current = (row?.value ?? {}) as Record<string, unknown>;
+  await prisma.settings.upsert({
+    where: { key: "settings" },
+    create: { key: "settings", value: JSON.parse(JSON.stringify({ ...current, pricing })) },
+    update: { value: JSON.parse(JSON.stringify({ ...current, pricing })) },
+  });
+  const { recomputePrices } = await import("@/lib/order/recompute");
+  await recomputePrices(prisma);
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/menu");
+  revalidatePath("/menu");
+  revalidatePath("/");
+}

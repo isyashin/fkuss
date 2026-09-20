@@ -10,11 +10,22 @@ async function guard() {
 
 export async function updateDish(
   id: string,
-  data: { name?: string; price?: number; description?: string; available?: boolean; weight?: string },
+  data: {
+    name?: string;
+    price?: number;
+    description?: string;
+    available?: boolean;
+    weight?: string;
+    priceMode?: "inherit" | "yandex" | "manual" | "coefficient";
+    manualPrice?: number | null;
+    coefficientPercent?: number | null;
+  },
 ): Promise<void> {
   await guard();
   const prisma = getPrisma();
   await prisma.dish.update({ where: { id }, data });
+  const { recomputePrices } = await import("@/lib/order/recompute");
+  await recomputePrices(prisma);
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
   revalidatePath("/");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveSettings, saveTheme } from "./actions";
+import { saveSettings, saveTheme, savePricing } from "./actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { ThemeConfig } from "@/lib/content";
 
@@ -15,6 +15,8 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
   const [s, setS] = useState(settings);
   const [preset, setPreset] = useState(theme.preset);
   const [accent, setAccent] = useState(theme.accent);
+  const [pricingMode, setPricingMode] = useState<"yandex" | "manual" | "coefficient">(settings.pricing.globalMode);
+  const [pricingPercent, setPricingPercent] = useState(settings.pricing.globalPercent);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState("");
 
@@ -24,6 +26,7 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
     startTransition(async () => {
       await saveSettings(s);
       await saveTheme({ preset, accent });
+      await savePricing({ globalMode: pricingMode, globalPercent: pricingPercent });
       setSaved("Сохранено ✓");
       setTimeout(() => setSaved(""), 3000);
     });
@@ -128,6 +131,34 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
             + Зона
           </button>
         </div>
+      </section>
+
+      <section>
+        <h2 className="text-xl mb-3">Ценообразование (общее)</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-sm text-muted">Режим цен меню</span>
+            <select value={pricingMode} onChange={(e) => setPricingMode(e.target.value as "yandex" | "manual" | "coefficient")} className={inputCls}>
+              <option value="yandex">Цена Яндекс.Еды</option>
+              <option value="manual">Ручные цены</option>
+              <option value="coefficient">Яндекс ± %</option>
+            </select>
+          </label>
+          {pricingMode === "coefficient" && (
+            <label className="block">
+              <span className="text-sm text-muted">Коэффициент, %</span>
+              <input
+                type="number"
+                value={pricingPercent}
+                onChange={(e) => setPricingPercent(Number(e.target.value))}
+                className={inputCls}
+              />
+            </label>
+          )}
+        </div>
+        <p className="text-muted text-xs mt-2">
+          Индивидуальный режим блюда приоритетнее общего. Коэффициент действует и на платные добавки без ручной цены.
+        </p>
       </section>
 
       <section>

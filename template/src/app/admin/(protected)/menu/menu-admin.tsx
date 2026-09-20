@@ -50,7 +50,15 @@ export function MenuAdmin({ categories }: { categories: (Category & { dishes: Di
 
 function DishRow({ dish }: { dish: Dish }) {
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: dish.name, price: dish.price, weight: dish.weight, description: dish.description });
+  const [form, setForm] = useState({
+    name: dish.name,
+    price: dish.price,
+    weight: dish.weight,
+    description: dish.description,
+    priceMode: dish.priceMode as "inherit" | "yandex" | "manual" | "coefficient",
+    manualPrice: dish.manualPrice,
+    coefficientPercent: dish.coefficientPercent,
+  });
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -102,20 +110,47 @@ function DishRow({ dish }: { dish: Dish }) {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="w-full min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
           />
-          <div className="flex gap-2">
-            <input
-              type="number"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-              className="w-28 min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
-            />
+          <div className="flex gap-2 items-center flex-wrap">
+            <select
+              value={form.priceMode}
+              onChange={(e) => setForm({ ...form, priceMode: e.target.value as typeof form.priceMode })}
+              className="min-h-11 px-2 rounded-[var(--radius)] border border-foreground/15"
+              title="Режим цены"
+            >
+              <option value="inherit">Общая настройка</option>
+              <option value="yandex" disabled={dish.yandexPrice === null}>Цена Яндекс.Еды</option>
+              <option value="manual">Ручная цена</option>
+              <option value="coefficient" disabled={dish.yandexPrice === null}>Яндекс ± %</option>
+            </select>
+            {form.priceMode === "manual" && (
+              <input
+                type="number"
+                min={0}
+                value={form.manualPrice ?? ""}
+                onChange={(e) => setForm({ ...form, manualPrice: e.target.value === "" ? null : Number(e.target.value) })}
+                placeholder="Ручная ₽"
+                className="w-28 min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
+              />
+            )}
+            {form.priceMode === "coefficient" && (
+              <input
+                type="number"
+                value={form.coefficientPercent ?? ""}
+                onChange={(e) => setForm({ ...form, coefficientPercent: e.target.value === "" ? null : Number(e.target.value) })}
+                placeholder="% (пусто = общий)"
+                className="w-36 min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
+              />
+            )}
             <input
               value={form.weight}
               onChange={(e) => setForm({ ...form, weight: e.target.value })}
               placeholder="Вес"
-              className="w-28 min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
+              className="w-24 min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
             />
           </div>
+          <p className="text-xs text-muted">
+            {dish.yandexPrice !== null ? `Яндекс: ${dish.yandexPrice} ₽ · ` : ""}Итог на витрине: {dish.price} ₽
+          </p>
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}

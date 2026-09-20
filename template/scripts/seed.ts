@@ -78,6 +78,26 @@ async function main() {
     await tx.page.deleteMany();
     await tx.settings.deleteMany();
 
+    // Дефолтный вариант доставки из зон (обратная совместимость, если пусто)
+    const optionsCount = await tx.deliveryOption.count();
+    if (optionsCount === 0 && settings.delivery.enabled && settings.delivery.zones.length > 0) {
+      const zone = settings.delivery.zones[0];
+      await tx.deliveryOption.create({
+        data: {
+          id: "courier-default",
+          name: "Курьер",
+          mode: "asap",
+          enabled: true,
+          days: [0, 1, 2, 3, 4, 5, 6],
+          hoursFrom: restaurant.workHours[0]?.from ?? "10:00",
+          hoursTo: restaurant.workHours[0]?.to ?? "23:00",
+          price: zone.price,
+          freeFrom: zone.freeFrom,
+          position: 0,
+        },
+      });
+    }
+
     for (const [ci, category] of menu.categories.entries()) {
       await tx.category.create({
         data: { id: category.id, name: category.name, position: ci },

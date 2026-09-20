@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/pages", label: "Страницы" },
   { href: "/admin/restaurant", label: "Ресторан" },
   { href: "/admin/sync", label: "Синхронизация" },
+  { href: "/admin/delivery", label: "Доставка" },
   { href: "/admin/settings", label: "Настройки" },
   { href: "/admin/billing", label: "Подписка" },
 ];

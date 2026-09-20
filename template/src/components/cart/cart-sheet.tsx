@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart/store";
 import { dishImageUrl } from "@/lib/assets";
 import type { ContentSettings } from "@/lib/content-schema";
@@ -34,11 +34,51 @@ export function CartSheet({
   const [zoneName, setZoneName] = useState(delivery.zones[0]?.name ?? "");
   const [form, setForm] = useState({ address: "", name: "", phone: "", email: "", comment: "", website: "" });
 
+  // Варианты доставки и окна (если настроены)
+  const [options, setOptions] = useState<{
+    id: string;
+    name: string;
+    mode: "asap" | "scheduled";
+    price: number;
+    freeFrom: number | null;
+    windows: { date: string; start: string; end: string }[];
+  }[]>([]);
+  const [deliveryOptionId, setDeliveryOptionId] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState("");
+  const [slotStart, setSlotStart] = useState("");
+
+  useEffect(() => {
+    fetch("/api/delivery/slots")
+      .then((r) => r.json())
+      .then((data) => {
+        const opts = data.options ?? [];
+        setOptions(opts);
+        if (opts.length > 0) setDeliveryOptionId(opts[0].id);
+      })
+      .catch(() => {});
+  }, []);
+
   const itemsTotal = total();
+  const selectedOption = options.find((o) => o.id === deliveryOptionId);
   const zone = delivery.zones.find((z) => z.name === zoneName);
   const deliveryPrice =
-    type === "pickup" ? 0 : zone ? (zone.freeFrom !== null && itemsTotal >= zone.freeFrom ? 0 : zone.price) : 0;
+    type === "pickup"
+      ? 0
+      : selectedOption
+        ? selectedOption.freeFrom !== null && itemsTotal >= selectedOption.freeFrom
+          ? 0
+          : selectedOption.price
+        : zone
+          ? zone.freeFrom !== null && itemsTotal >= zone.freeFrom
+            ? 0
+            : zone.price
+          : 0;
   const orderTotal = itemsTotal + deliveryPrice;
+
+  const optionDates = selectedOption
+    ? [...new Set(selectedOption.windows.map((w) => w.date))]
+    : [];
+  const optionSlots = selectedOption?.windows.filter((w) => w.date === deliveryDate) ?? [];
 
   async function submit() {
     setError("");
@@ -62,6 +102,13 @@ export function CartSheet({
           comment: form.comment,
           website: form.website, // honeypot
           bonusSpend: 0,
+          deliveryMode: selectedOption?.mode ?? "asap",
+          deliveryDate: selectedOption?.mode === "scheduled" ? deliveryDate : null,
+          deliverySlotStart: selectedOption?.mode === "scheduled" ? slotStart : null,
+          deliverySlotEnd: selectedOption?.mode === "scheduled"
+            ? optionSlots.find((s) => s.start === slotStart)?.end ?? null
+            : null,
+          deliveryOptionId: selectedOption?.id ?? null,
         }),
       });
       const data = await response.json();
@@ -174,7 +221,68 @@ export function CartSheet({
 
             {type === "delivery" && (
               <>
-                {delivery.zones.length > 1 && (
+                {options.length > 0 && (
+                  <label className="block">
+                    <span className="text-sm text-muted">Способ доставки</span>
+                    <select
+                      value={deliveryOptionId}
+                      onChange={(e) => {
+                        setDeliveryOptionId(e.target.value);
+                        setDeliveryDate("");
+                        setSlotStart("");
+                      }}
+                      className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+                    >
+                      {options.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name} — {o.mode === "asap" ? "как можно скорее" : "к выбранному времени"} ·{" "}
+                          {o.freeFrom !== null ? `бесплатно от ${o.freeFrom} ₽` : `${o.price} ₽`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {selectedOption?.mode === "scheduled" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block">
+                      <span className="text-sm text-muted">Дата</span>
+                      <select
+                        value={deliveryDate}
+                        onChange={(e) => {
+                          setDeliveryDate(e.target.value);
+                          setSlotStart("");
+                        }}
+                        className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+                      >
+                        <option value="">Выберите</option>
+                        {optionDates.map((d) => (
+                          <option key={d} value={d}>
+                            {new Date(`${d}T12:00:00`).toLocaleDateString("ru-RU", { day: "numeric", month: "short", weekday: "short" })}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-sm text-muted">Интервал</span>
+                      <select
+                        value={slotStart}
+                        onChange={(e) => setSlotStart(e.target.value)}
+                        disabled={!deliveryDate}
+                        className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+                      >
+                        <option value="">{deliveryDate ? "Выберите" : "Сначала дата"}</option>
+                        {optionSlots.map((s) => (
+                          <option key={s.start} value={s.start}>
+                            {s.start}–{s.end}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
+
+                {options.length === 0 && delivery.zones.length > 1 && (
                   <label className="block">
                     <span className="text-sm text-muted">Зона доставки</span>
                     <select
@@ -282,7 +390,13 @@ export function CartSheet({
               </button>
               <button
                 onClick={submit}
-                disabled={submitting || !form.name || !form.phone || (type === "delivery" && !form.address)}
+                disabled={
+                  submitting ||
+                  !form.name ||
+                  !form.phone ||
+                  (type === "delivery" && !form.address) ||
+                  (type === "delivery" && selectedOption?.mode === "scheduled" && (!deliveryDate || !slotStart))
+                }
                 className="flex-1 min-h-12 rounded-full bg-accent text-white font-medium text-lg disabled:opacity-50"
               >
                 {submitting ? "Отправляю…" : `Заказать · ${formatPrice(orderTotal)}`}

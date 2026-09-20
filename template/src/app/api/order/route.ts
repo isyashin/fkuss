@@ -27,6 +27,11 @@ const orderSchema = z.object({
   desiredTime: z.string().max(50).default(""),
   bonusSpend: z.number().int().min(0).default(0),
   paymentMethod: z.enum(["cash", "online"]).default("cash"),
+  deliveryMode: z.enum(["asap", "scheduled"]).default("asap"),
+  deliveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+  deliverySlotStart: z.string().regex(/^\d{2}:\d{2}$/).nullable().default(null),
+  deliverySlotEnd: z.string().regex(/^\d{2}:\d{2}$/).nullable().default(null),
+  deliveryOptionId: z.string().nullable().default(null),
   // honeypot: у людей пустое
   website: z.string().max(0).optional(),
 });
@@ -150,9 +155,45 @@ export async function POST(request: Request) {
     // нет сессии — анонимный заказ без бонусов
   }
 
+  // Варианты доставки с интервалами: если есть включённые — цена и время от них,
+  // зоны не применяются (единое начисление, без двойной платы)
+  const options =
+    input.type === "delivery"
+      ? await prisma.deliveryOption.findMany({ where: { enabled: true }, orderBy: { position: "asc" } })
+      : [];
+  const option = options.length > 0 ? (options.find((o) => o.id === input.deliveryOptionId) ?? options[0]) : null;
+  const tz = (settings as { timezone?: string }).timezone ?? "Europe/Moscow";
+  const now = new Date();
+  let desiredTimeText = input.desiredTime;
+
+  if (option) {
+    if (option.mode === "asap") {
+      desiredTimeText = "как можно скорее";
+    } else {
+      // scheduled: окно обязательно и валидируется сервером
+      if (!input.deliveryDate || !input.deliverySlotStart || !input.deliverySlotEnd) {
+        return NextResponse.json({ error: "Выберите дату и интервал доставки" }, { status: 400 });
+      }
+      const { isValidWindow } = await import("@/lib/delivery/slots");
+      const valid = isValidWindow(
+        option as unknown as import("@/lib/delivery/slots").DeliveryOptionRule,
+        input.deliveryDate,
+        input.deliverySlotStart,
+        input.deliverySlotEnd,
+        now,
+        tz,
+      );
+      if (!valid) {
+        return NextResponse.json({ error: "Выбранный интервал доставки недоступен" }, { status: 400 });
+      }
+      desiredTimeText = `${input.deliveryDate} ${input.deliverySlotStart}–${input.deliverySlotEnd}`;
+    }
+  }
+
   const calc = calculateOrder({
     items: pricedItems,
-    type: input.type,
+    // При наличии варианта зоны не участвуют: считаем позиции как pickup
+    type: option ? "pickup" : input.type,
     zoneName: input.zoneName,
     zones: settings.delivery.zones,
     minOrder: input.type === "delivery" ? settings.delivery.minOrder : 0,
@@ -161,10 +202,29 @@ export async function POST(request: Request) {
     maxSpendPercent: settings.loyalty.maxSpendPercent,
     cashbackPercent: settings.loyalty.cashbackPercent,
   });
-
   if (!calc.ok) {
     return NextResponse.json({ error: calc.reason }, { status: 400 });
   }
+
+  let deliveryPriceFinal = calc.deliveryPrice;
+  let deliveryOptionName: string | null = null;
+  if (option) {
+    const { deliveryPrice } = await import("@/lib/delivery/slots");
+    deliveryPriceFinal = deliveryPrice(
+      option as unknown as import("@/lib/delivery/slots").DeliveryOptionRule,
+      calc.itemsTotal,
+    );
+    deliveryOptionName = option.name;
+  }
+  const totalFinal = calc.total - calc.deliveryPrice + deliveryPriceFinal;
+  const bonusAccruedFinal =
+    deliveryPriceFinal !== calc.deliveryPrice
+      ? (await import("@/lib/order/pricing")).calculateBonusAccrual(
+          calc.itemsTotal + deliveryPriceFinal,
+          settings.loyalty.cashbackPercent,
+          calc.bonusSpent,
+        )
+      : calc.bonusAccrued;
 
   const order = await prisma.order.create({
     data: {
@@ -172,17 +232,23 @@ export async function POST(request: Request) {
       type: input.type,
       status: "new",
       itemsTotal: calc.itemsTotal,
-      deliveryPrice: calc.deliveryPrice,
+      deliveryPrice: deliveryPriceFinal,
       bonusSpent: calc.bonusSpent,
-      bonusAccrued: calc.bonusAccrued,
-      total: calc.total,
+      bonusAccrued: bonusAccruedFinal,
+      total: totalFinal,
       paymentMethod: input.paymentMethod,
       paymentStatus: input.paymentMethod === "online" ? "pending" : "none",
       customerName: input.customerName,
       customerPhone: input.customerPhone,
       addressText: input.address,
       comment: input.comment,
-      desiredTime: input.desiredTime,
+      desiredTime: desiredTimeText,
+      deliveryMode: input.type === "delivery" ? input.deliveryMode : null,
+      deliveryDate: input.type === "delivery" ? input.deliveryDate : null,
+      deliverySlotStart: input.type === "delivery" ? input.deliverySlotStart : null,
+      deliverySlotEnd: input.type === "delivery" ? input.deliverySlotEnd : null,
+      deliveryTz: input.type === "delivery" ? ((settings as { timezone?: string }).timezone ?? "Europe/Moscow") : null,
+      deliveryOptionName,
       items: {
         create: orderLines.map((l) => ({
           dishId: l.dishId,
@@ -266,9 +332,9 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     orderNumber: order.number,
-    total: calc.total,
+    total: totalFinal,
     itemsTotal: calc.itemsTotal,
-    deliveryPrice: calc.deliveryPrice,
+    deliveryPrice: deliveryPriceFinal,
     bonusSpent: calc.bonusSpent,
     confirmationUrl,
   });

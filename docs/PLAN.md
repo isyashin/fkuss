@@ -360,5 +360,48 @@
 - Мониторинг ресурсов сервера в админке платформы: нагрузка общая и по
   каждому сайту с историей (когда расширять). Текст issue:
   `docs/issues/monitoring-host-metrics.md`
+
+### Производительность (2026-09-16)
+- [x] Медленная загрузка картинок меню («десятки секунд») исправлена:
+      причина — runtime-оптимизатор Next.js (`/_next/image`) с sharp на каждый
+      первый просмотр каждого блюда на контейнере с лимитом 1 CPU.
+      Фикс: прегенерированные размеры (400px карточка + 800px модалка) при
+      инжесте/загрузке админки/бэкфилле в seed; витрина отдаёт WebP напрямую
+      (plain img + lazy), content-asset с Cache-Control 1 день.
+      Замер после: 20 карточек параллельно ~1,1 с (было десятки секунд
+      на холодном кэше).
+
+## ТЗ: синхронизация и развитие витрины (текущая работа)
+
+Полное ТЗ: `docs/TZ-RESTAURANT-ENHANCEMENTS.md`. Приёмка: отдельный агент
+по `docs/TEST-PLAN-RESTAURANT-ENHANCEMENTS.md` (ворота A–F). Пуш в git
+разрешён после каждого зелёного этапа. Деплой на прод — после приёмки
+тестировщиком.
+
+### Этап ТЗ-1 — Модели и миграция [x]
+- [x] Dish: source, externalId (unique), yandexPrice, manualPrice, priceMode,
+      coefficientPercent, manualAvailable, yandexAvailable, lastSyncedAt
+- [x] ModifierGroup (min/max/позиция) + Modifier: groupId, externalId,
+      yandexPrice, manualPrice; Category.externalId
+- [x] Order: deliveryMode, deliveryDate, слоты, tz, название варианта
+      (desiredTime сохранено для совместимости); DeliveryOption
+- [x] Settings(zod): sync (enabled/placeSlug/interval), pricing
+      (globalMode/globalPercent)
+- [x] Миграция на копии buxara_mig: 132 блюда, 2 заказа, снимки цен целы,
+      дефолты безопасные; применена на resto и buxara
+- [x] Откат: дамп БД + схема из git-тега до миграции (prisma db push)
+- [x] zod-схемы (groups в menu, sync/pricing в settings), seed (группы,
+      externalId из dish-<num>/mod-<num> → source=yandex), тестовый
+      контент с группой «Соусы» (min 0, max 3)
+- [x] CONTENT-SCHEMA.md обновлён; 55 vitest + 16 E2E зелёные
+
+### Этап ТЗ-2 — Синхронизация Яндекс.Еды [ ]
+### Этап ТЗ-3 — Цены [ ]
+### Этап ТЗ-4 — Модификаторы/соусы [ ]
+### Этап ТЗ-5 — Доставка с интервалами [ ]
+### Этап ТЗ-6 — Главная + банкеты [ ]
+### Этап ТЗ-7 — Фон [ ]
+### Этап ТЗ-8 — PWA-иконки и офлайн [ ]
+### Этап ТЗ-9 — Регресс, сборка, доки [ ]
 - Тарифная модель: фикс ₽/мес на сайт? От количества заказов? Пробный период?
   Цены и градации — решает владелец, в шаблоне: гибкая таблица тарифов.

@@ -69,6 +69,15 @@ export const modifierSchema = z.object({
   price: priceSchema,
 });
 
+export const modifierGroupSchema = z.object({
+  id: idSchema,
+  name: z.string().min(1),
+  position: z.number().int().min(0).default(0),
+  minSelected: z.number().int().min(0).default(0),
+  maxSelected: z.number().int().min(1).default(1),
+  modifiers: z.array(modifierSchema).min(1),
+});
+
 export const dishSchema = z.object({
   id: idSchema,
   name: z.string().min(1),
@@ -78,6 +87,7 @@ export const dishSchema = z.object({
   weight: z.string().default(""),
   tags: z.array(z.string()).default([]),
   modifiers: z.array(modifierSchema).default([]),
+  groups: z.array(modifierGroupSchema).default([]),
   available: z.boolean().default(true),
 });
 
@@ -174,6 +184,19 @@ export const settingsSchema = z.object({
     cashbackPercent: z.number().min(0).max(100).default(5),
     maxSpendPercent: z.number().min(0).max(100).default(20),
   }),
+  pricing: z
+    .object({
+      globalMode: z.enum(["yandex", "manual", "coefficient"]).default("yandex"),
+      globalPercent: z.number().min(-100).max(500).default(0),
+    })
+    .default({ globalMode: "yandex", globalPercent: 0 }),
+  sync: z
+    .object({
+      enabled: z.boolean().default(false),
+      placeSlug: z.string().default(""),
+      intervalMinutes: z.number().int().min(5).max(1440).default(60),
+    })
+    .default({ enabled: false, placeSlug: "", intervalMinutes: 60 }),
   booking: z.object({
     enabled: z.boolean().default(true),
     slotMinutes: z.number().int().min(15).max(180).default(30),

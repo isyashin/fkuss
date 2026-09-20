@@ -59,7 +59,15 @@ export async function getSiteMenu(): Promise<Menu> {
     const prisma = getPrisma();
     const categories = await prisma.category.findMany({
       orderBy: { position: "asc" },
-      include: { dishes: { orderBy: { position: "asc" }, include: { modifiers: true } } },
+      include: {
+        dishes: {
+          orderBy: { position: "asc" },
+          include: {
+            modifiers: true,
+            modifierGroups: { orderBy: { position: "asc" }, include: { modifiers: true } },
+          },
+        },
+      },
     });
     if (categories.length > 0) {
       return {
@@ -75,6 +83,13 @@ export async function getSiteMenu(): Promise<Menu> {
             weight: d.weight,
             tags: d.tags,
             modifiers: d.modifiers.map((m) => ({ id: m.id, name: m.name, price: m.price })),
+            groups: d.modifierGroups.map((g) => ({
+              id: g.id,
+              name: g.name,
+              minSelected: g.minSelected,
+              maxSelected: g.maxSelected,
+              modifiers: g.modifiers.map((m) => ({ id: m.id, name: m.name, price: m.price })),
+            })),
             available: d.available,
           })),
         })),

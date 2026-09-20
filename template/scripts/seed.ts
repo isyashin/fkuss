@@ -71,6 +71,7 @@ async function main() {
     // Контентные таблицы пересоздаём из content/.
     // Заказы/клиентов/бонусы НЕ трогаем — это бизнес-данные.
     await tx.modifier.deleteMany();
+    await tx.modifierGroup.deleteMany();
     await tx.dish.deleteMany();
     await tx.category.deleteMany();
     await tx.promo.deleteMany();
@@ -82,6 +83,9 @@ async function main() {
         data: { id: category.id, name: category.name, position: ci },
       });
       for (const [di, dish] of category.dishes.entries()) {
+        // Внешние ID инжеста (dish-<num>, mod-<num>) → source=yandex
+        const extMatch = dish.id.match(/^dish-(\d+)$/);
+        const externalId = extMatch ? extMatch[1] : null;
         await tx.dish.create({
           data: {
             id: dish.id,
@@ -94,11 +98,52 @@ async function main() {
             tags: dish.tags,
             available: dish.available,
             position: di,
+            source: externalId ? "yandex" : "manual",
+            externalId,
+            yandexAvailable: dish.available,
+            manualAvailable: true,
+            yandexPrice: externalId ? dish.price : null,
             modifiers: {
-              create: dish.modifiers.map((m) => ({ id: `${dish.id}:${m.id}`, name: m.name, price: m.price })),
+              create: dish.modifiers.map((m) => {
+                const mExt = m.id.match(/^mod-(\d+)$/);
+                return {
+                  id: `${dish.id}:${m.id}`,
+                  externalId: mExt ? mExt[1] : null,
+                  name: m.name,
+                  price: m.price,
+                  yandexPrice: mExt ? m.price : null,
+                };
+              }),
             },
           },
         });
+
+        // Группы модификаторов (с min/max)
+        for (const [gi, group] of dish.groups.entries()) {
+          await tx.modifierGroup.create({
+            data: {
+              id: `${dish.id}:${group.id}`,
+              dish: { connect: { id: dish.id } },
+              name: group.name,
+              position: group.position ?? gi,
+              minSelected: group.minSelected,
+              maxSelected: group.maxSelected,
+              modifiers: {
+                create: group.modifiers.map((m) => {
+                  const mExt = m.id.match(/^mod-(\d+)$/);
+                  return {
+                    id: `${dish.id}:${group.id}:${m.id}`,
+                    dish: { connect: { id: dish.id } },
+                    externalId: mExt ? mExt[1] : null,
+                    name: m.name,
+                    price: m.price,
+                    yandexPrice: mExt ? m.price : null,
+                  };
+                }),
+              },
+            },
+          });
+        }
       }
     }
 

@@ -11,33 +11,64 @@ datasource db {
 }
 
 model Category {
-  id       String  @id
-  name     String
-  position Int     @default(0)
-  dishes   Dish[]
+  id         String  @id
+  name       String
+  position   Int     @default(0)
+  externalId String? // внешний ID Яндекс.Еды (сопоставление при синхронизации)
+  dishes     Dish[]
 }
 
 model Dish {
-  id          String     @id
-  categoryId  String
-  category    Category   @relation(fields: [categoryId], references: [id])
+  id                String     @id
+  categoryId        String
+  category          Category   @relation(fields: [categoryId], references: [id])
+  name              String
+  description       String     @default("")
+  price             Int        // рассчитанная цена (только она видна серверу заказа)
+  image             String     @default("")
+  weight            String     @default("")
+  tags              String[]
+  available         Boolean    @default(true) // вычисленная: manualAvailable && yandexAvailable (для yandex-блюд)
+  position          Int        @default(0)
+  // Источник и синхронизация
+  source            String     @default("manual") // manual | yandex
+  externalId        String?    @unique // внешний ID Яндекс.Еды
+  lastSyncedAt      DateTime?
+  // Доступность
+  manualAvailable   Boolean    @default(true) // ручной рубильник админа
+  yandexAvailable   Boolean    @default(true) // доступность по данным Яндекс.Еды
+  // Цены
+  yandexPrice       Int?       // базовая цена из Яндекс.Еды
+  manualPrice       Int?       // ручная цена админа
+  priceMode         String     @default("inherit") // inherit | yandex | manual | coefficient
+  coefficientPercent Int?      // индивидуальный коэффициент в %
+  modifierGroups    ModifierGroup[]
+  modifiers         Modifier[]
+}
+
+model ModifierGroup {
+  id          String   @id
+  dishId      String
+  dish        Dish     @relation(fields: [dishId], references: [id])
+  externalId  String?
   name        String
-  description String     @default("")
-  price       Int        // рубли, целое
-  image       String     @default("")
-  weight      String     @default("")
-  tags        String[]
-  available   Boolean    @default(true)
-  position    Int        @default(0)
+  position    Int      @default(0)
+  minSelected Int      @default(0)
+  maxSelected Int      @default(1)
   modifiers   Modifier[]
 }
 
 model Modifier {
-  id      String @id
-  dishId  String
-  dish    Dish   @relation(fields: [dishId], references: [id])
-  name    String
-  price   Int
+  id          String  @id
+  dishId      String
+  dish        Dish    @relation(fields: [dishId], references: [id])
+  groupId     String?
+  group       ModifierGroup? @relation(fields: [groupId], references: [id])
+  externalId  String?
+  name        String
+  price       Int     // рассчитанная цена
+  yandexPrice Int?
+  manualPrice Int?
 }
 
 model Customer {
@@ -106,9 +137,33 @@ model Order {
   customerPhone  String
   addressText    String   @default("")
   comment        String   @default("")
-  desiredTime    String   @default("")
+  desiredTime    String   @default("") // человекочитаемый текст (обратная совместимость)
+  // Структурированная доставка (новое; старые заказы не меняем)
+  deliveryMode   String?  // asap | scheduled
+  deliveryDate   String?  // локальная дата YYYY-MM-DD
+  deliverySlotStart String? // HH:MM
+  deliverySlotEnd   String? // HH:MM
+  deliveryTz        String? // часовой пояс ресторана
+  deliveryOptionName String? // название выбранного варианта
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model DeliveryOption {
+  id             String  @id
+  name           String
+  mode           String  // asap | scheduled
+  enabled        Boolean @default(true)
+  days           Int[]   // 0..6 (вс..сб)
+  hoursFrom      String  @default("10:00")
+  hoursTo        String  @default("23:00")
+  slotMinutes    Int     @default(60)
+  minAheadMinutes Int    @default(60)
+  daysAhead      Int     @default(7)
+  price          Int     @default(0)
+  freeFrom       Int?    // порог бесплатности
+  exceptions     String[] // даты YYYY-MM-DD закрытых дней
+  position       Int     @default(0)
 }
 
 model OrderItem {

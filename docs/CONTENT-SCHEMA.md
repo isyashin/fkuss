@@ -40,6 +40,19 @@
           "modifiers": [
             { "id": "extra", "name": "Добавка 1 шт", "price": 64 }
           ],
+          "groups": [
+            {
+              "id": "sauces",
+              "name": "Соусы",
+              "position": 0,
+              "minSelected": 0,
+              "maxSelected": 3,
+              "modifiers": [
+                { "id": "sauce-tomat", "name": "Томатный", "price": 50 },
+                { "id": "sauce-adjika", "name": "Аджика", "price": 60 }
+              ]
+            }
+          ],
           "available": true
         }
       ]
@@ -100,6 +113,8 @@
   },
   "payment": { "provider": "none", "shopIdRef": "YOOKASSA_SHOP_ID", "secretRef": "YOOKASSA_SECRET" },
   "loyalty": { "cashbackPercent": 5, "maxSpendPercent": 20 },
+  "pricing": { "globalMode": "yandex", "globalPercent": 0 },
+  "sync": { "enabled": false, "placeSlug": "", "intervalMinutes": 60 },
   "booking": { "enabled": true, "slotMinutes": 30, "maxGuestsPerSlot": 20, "minHoursAhead": 2 },
   "captcha": { "provider": "none" }
 }

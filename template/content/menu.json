@@ -90,7 +90,21 @@
           "image": "images/dishes/shashlik-baranina.webp",
           "weight": "200 г",
           "tags": ["hit"],
-          "modifiers": [{ "id": "sauce", "name": "Соус на выбор", "price": 50 }],
+          "modifiers": [],
+          "groups": [
+            {
+              "id": "sauces",
+              "name": "Соусы",
+              "position": 0,
+              "minSelected": 0,
+              "maxSelected": 3,
+              "modifiers": [
+                { "id": "sauce-tomat", "name": "Томатный", "price": 50 },
+                { "id": "sauce-satsebeli", "name": "Сацебели", "price": 50 },
+                { "id": "sauce-adjika", "name": "Аджика", "price": 60 }
+              ]
+            }
+          ],
           "available": true
         },
         {

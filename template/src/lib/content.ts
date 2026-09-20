@@ -34,6 +34,14 @@ export interface Modifier {
   price: number;
 }
 
+export interface ModifierGroup {
+  id: string;
+  name: string;
+  minSelected: number;
+  maxSelected: number;
+  modifiers: Modifier[];
+}
+
 export interface Dish {
   id: string;
   name: string;
@@ -43,6 +51,7 @@ export interface Dish {
   weight: string;
   tags: string[];
   modifiers: Modifier[];
+  groups?: ModifierGroup[];
   available: boolean;
 }
 

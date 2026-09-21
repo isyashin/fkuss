@@ -1,4 +1,5 @@
 import { getPrisma } from "@/lib/db";
+import { applyPaidTopup } from "@/lib/billing-ledger";
 import { notFound, redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -21,23 +22,11 @@ export default async function MockPaymentPage({
   const prisma = getPrisma();
   const payment = await prisma.payment.findFirst({ where: { invoiceId } });
   if (payment && payment.status !== "paid") {
-    await prisma.$transaction([
-      prisma.payment.update({ where: { id: payment.id }, data: { status: "paid" } }),
-      prisma.invoice.update({ where: { id: invoiceId }, data: { status: "paid", paidAt: new Date() } }),
-      prisma.balanceTransaction.create({
-        data: {
-          siteId: payment.siteId,
-          type: "topup",
-          amount: payment.amount,
-          dedupeKey: `topup:${payment.id}`,
-          comment: `Оплата счёта №${invoiceId} (тест)`,
-        },
-      }),
-      prisma.site.updateMany({
-        where: { slug: payment.siteId, state: { in: ["grace", "suspended"] } },
-        data: { state: "active", stateChangedAt: new Date() },
-      }),
-    ]);
+    await applyPaidTopup(
+      prisma,
+      invoiceId,
+      payment.providerPaymentId ?? `mock_invoice-${invoiceId}`,
+    );
   }
 
   // Куда вернуть пользователя: next из параметров (http/https) или кабинет

@@ -21,10 +21,16 @@ test("владелец входит и пополняет баланс", async (
   // Пополнение через mock-провайдер
   const balanceBefore = await page.locator("p.text-3xl").textContent();
   await page.locator('input[type="number"]').fill("1000");
+  const mockNavigation = page.waitForRequest(
+    (request) => new URL(request.url()).pathname === "/payment/mock",
+    { timeout: 20_000 },
+  );
   await page.getByRole("button", { name: "Пополнить" }).click();
 
-  // mock-страница «оплачивает» и редиректит в кабинет; ждём окончания навигации
-  await page.waitForURL("**/cabinet", { timeout: 20000 }).catch(() => {});
+  // Сначала ждём фактического перехода к mock-провайдеру. Иначе WebKit успевает
+  // выполнить следующий page.goto ещё до ответа server action и отменяет оплату.
+  await mockNavigation;
+  await page.waitForURL("**/cabinet", { timeout: 20_000 });
   await page.waitForLoadState("networkidle").catch(() => {});
 
   const toNumber = (text: string | null) => Number(text?.replace(/[^\d.]/g, "")) || 0;

@@ -3,8 +3,10 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { calculateOrder, type OrderItemInput } from "@/lib/order/pricing";
+import { lockAndCheckBonusBalance } from "@/lib/order/bonus-lock";
 import { getSiteSettings } from "@/lib/site";
 import { getPaymentProvider } from "@/lib/payments";
+import type { PaymentProvider } from "@/lib/payments/types";
 
 const orderSchema = z.object({
   items: z
@@ -68,6 +70,19 @@ export async function POST(request: Request) {
 
   const prisma = getPrisma();
   const settings = await getSiteSettings();
+
+  // Проверяем конфигурацию онлайн-оплаты до создания заказа и списания бонусов.
+  let paymentProvider: PaymentProvider | null = null;
+  if (input.paymentMethod === "online") {
+    try {
+      paymentProvider = getPaymentProvider(settings.payment.provider);
+    } catch {
+      return NextResponse.json({ error: "Онлайн-оплата временно недоступна" }, { status: 503 });
+    }
+    if (!paymentProvider) {
+      return NextResponse.json({ error: "Онлайн-оплата не настроена" }, { status: 400 });
+    }
+  }
 
   // Цены — только из БД
   const dishIds = input.items.map((i) => i.dishId);
@@ -169,18 +184,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Самовывоз временно недоступен" }, { status: 400 });
   }
 
-  const options =
+  const configuredOptions =
     input.type === "delivery"
-      ? await prisma.deliveryOption.findMany({ where: { enabled: true }, orderBy: { position: "asc" } })
+      ? await prisma.deliveryOption.findMany({ orderBy: { position: "asc" } })
       : [];
 
-  let option = options.length > 0 ? (options.find((o) => o.id === input.deliveryOptionId) ?? null) : null;
-  // BUG-012: неизвестный ID варианта — отказ, а не подмена первым
-  if (input.type === "delivery" && options.length > 0 && input.deliveryOptionId && !option) {
-    return NextResponse.json({ error: "Неизвестный вариант доставки" }, { status: 400 });
-  }
-  if (input.type === "delivery" && options.length > 0 && !option) {
-    option = options[0];
+  // Если варианты настроены, клиент обязан выбрать существующий включённый
+  // вариант. Нельзя подменять отсутствующий/выключенный ID первым вариантом.
+  const option =
+    configuredOptions.length > 0
+      ? (configuredOptions.find((o) => o.id === input.deliveryOptionId && o.enabled) ?? null)
+      : null;
+  if (input.type === "delivery" && configuredOptions.length > 0 && !option) {
+    return NextResponse.json({ error: "Выберите доступный вариант доставки" }, { status: 400 });
   }
 
   const tz = (settings as { timezone?: string }).timezone ?? "Europe/Moscow";
@@ -189,14 +205,17 @@ export async function POST(request: Request) {
 
   if (option) {
     // Снимок режима — из найденной опции, не из тела запроса
+    if (option.mode !== "asap" && option.mode !== "scheduled") {
+      return NextResponse.json({ error: "Некорректный режим доставки" }, { status: 400 });
+    }
     const { restaurantLocal } = await import("@/lib/delivery/slots");
     const local = restaurantLocal(now, tz);
-    const dayOk = option.days.includes(local.day) && !option.exceptions.includes(local.date);
-    if (!dayOk) {
-      return NextResponse.json({ error: "Доставка в выбранный день недоступна" }, { status: 400 });
-    }
 
     if (option.mode === "asap") {
+      const dayOk = option.days.includes(local.day) && !option.exceptions.includes(local.date);
+      if (!dayOk) {
+        return NextResponse.json({ error: "Доставка в выбранный день недоступна" }, { status: 400 });
+      }
       // BUG-012: ASAP проверяем часы варианта
       const [fh, fm] = option.hoursFrom.split(":").map(Number);
       const [th, tm] = option.hoursTo.split(":").map(Number);
@@ -269,12 +288,8 @@ export async function POST(request: Request) {
   try {
     order = await prisma.$transaction(async (tx) => {
       if (customerId && calc.bonusSpent > 0) {
-        const agg = await tx.bonusTransaction.aggregate({
-          where: { customerId },
-          _sum: { amount: true },
-        });
-        const balanceNow = agg._sum.amount ?? 0;
-        if (balanceNow < calc.bonusSpent) {
+        const enough = await lockAndCheckBonusBalance(tx, customerId, calc.bonusSpent);
+        if (!enough) {
           throw new Error("BONUS_BALANCE_RACE");
         }
       }
@@ -296,10 +311,12 @@ export async function POST(request: Request) {
           addressText: input.address,
           comment: input.comment,
           desiredTime: desiredTimeText,
-          deliveryMode: input.type === "delivery" ? input.deliveryMode : null,
-          deliveryDate: input.type === "delivery" ? input.deliveryDate : null,
-          deliverySlotStart: input.type === "delivery" ? input.deliverySlotStart : null,
-          deliverySlotEnd: input.type === "delivery" ? input.deliverySlotEnd : null,
+          deliveryMode: input.type === "delivery" ? (option?.mode ?? null) : null,
+          deliveryDate: input.type === "delivery" && option?.mode === "scheduled" ? input.deliveryDate : null,
+          deliverySlotStart:
+            input.type === "delivery" && option?.mode === "scheduled" ? input.deliverySlotStart : null,
+          deliverySlotEnd:
+            input.type === "delivery" && option?.mode === "scheduled" ? input.deliverySlotEnd : null,
           deliveryTz: input.type === "delivery" ? ((settings as { timezone?: string }).timezone ?? "Europe/Moscow") : null,
           deliveryOptionName,
           items: {
@@ -343,10 +360,6 @@ export async function POST(request: Request) {
   // Онлайн-оплата: создаём платёж у провайдера
   let confirmationUrl: string | null = null;
   if (input.paymentMethod === "online") {
-    const provider = getPaymentProvider(settings.payment.provider);
-    if (!provider) {
-      return NextResponse.json({ error: "Онлайн-оплата не настроена" }, { status: 400 });
-    }
     const canonical = settings.domains.canonical;
     const baseUrl = canonical.startsWith("http") ? canonical : `https://${canonical}`;
     const { paymentAmountForOrder } = await import("@/lib/order/pricing");
@@ -356,7 +369,7 @@ export async function POST(request: Request) {
       bonusSpent: calc.bonusSpent,
     });
     try {
-      const payment = await provider.createPayment({
+      const payment = await paymentProvider!.createPayment({
         orderId: order.id,
         orderNumber: order.number,
         amount,

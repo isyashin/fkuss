@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSessionOwner } from "@/lib/owner-auth";
+import { exportRequestData } from "@/lib/export-access";
 import { getPrisma } from "@/lib/db";
 
 /** Помечает сайт как «запрошен экспорт»; обрабатывает cron на хосте. */
@@ -12,7 +13,7 @@ export async function requestExportAction(slug: string): Promise<void> {
   const prisma = getPrisma();
   await prisma.site.update({
     where: { slug },
-    data: { exportRequestedAt: new Date() },
+    data: exportRequestData(new Date()),
   });
   revalidatePath("/cabinet");
 }

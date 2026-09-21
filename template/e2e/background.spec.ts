@@ -33,7 +33,7 @@ test("VIS-01/03: загрузка фона через админку, приме
   await expect(page.getByText("Сохранено ✓")).toBeVisible({ timeout: 15000 });
 
   // Фон включён, но на мобильных отключён по умолчанию → выключаем этот флаг и проверяем
-  const isMobile = test.info().project.name === "mobile";
+  const isMobile = test.info().project.name.includes("mobile");
   if (isMobile) {
     await page.goto("/admin/settings");
     await page.getByLabel("Отключить фон на мобильных").uncheck();

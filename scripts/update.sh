@@ -6,6 +6,22 @@ set -euo pipefail
 SRC="${RESTO_SRC:-$HOME/resto/src}"
 BASE="${RESTO_BASE:-$HOME/resto}"
 
+install_site_jobs() {
+  local site_dir="$1"
+  local slug
+  local port
+  slug=$(basename "${site_dir%/}")
+  port=$(python3 - "$BASE/registry.json" "$slug" <<'PY'
+import json, sys
+try:
+    print(json.load(open(sys.argv[1]))["sites"][sys.argv[2]]["port"])
+except (FileNotFoundError, KeyError, TypeError):
+    sys.exit(1)
+PY
+)
+  "$SRC/scripts/install-site-jobs.sh" "$slug" "$port" "$site_dir/.env"
+}
+
 echo "== git pull =="
 git -C "$SRC" pull --ff-only
 
@@ -40,5 +56,11 @@ if [ "${1:-}" != "--no-restart" ]; then
     [ -f "$site/docker-compose.yml" ] && (cd "$site" && docker compose up -d)
   done
 fi
+
+echo "== cron-задачи сайтов =="
+chmod 750 "$SRC/scripts/run-site-job.sh" "$SRC/scripts/install-site-jobs.sh"
+for site in "$BASE"/sites/*/; do
+  [ -f "$site/.env" ] && install_site_jobs "$site"
+done
 
 echo "✓ Обновление завершено: $(git -C "$SRC" log --oneline -1)"

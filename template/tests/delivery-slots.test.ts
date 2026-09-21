@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateWindows, isValidWindow, type DeliveryOptionRule } from "@/lib/delivery/slots";
+import { deliveryPrice, generateWindows, isValidWindow, type DeliveryOptionRule } from "@/lib/delivery/slots";
 
 const option = (over: Partial<DeliveryOptionRule> = {}): DeliveryOptionRule => ({
   name: "Курьер",
@@ -84,5 +84,21 @@ describe("isValidWindow", () => {
 
   it("слот в день-исключение отклоняется", () => {
     expect(isValidWindow(option({ exceptions: ["2026-09-17"] }), "2026-09-17", "12:00", "13:00", NOW, TZ)).toBe(false);
+  });
+
+  it("предзаказ на разрешённый завтра принимается, даже если сегодня закрыто", () => {
+    const rule = option({ days: [4, 5] }); // сегодня среда закрыта, завтра четверг открыт
+    expect(isValidWindow(rule, "2026-09-17", "12:00", "13:00", NOW, TZ)).toBe(true);
+  });
+});
+
+describe("deliveryPrice", () => {
+  it("использует серверный порог бесплатной доставки", () => {
+    expect(deliveryPrice(option({ price: 300, freeFrom: 2000 }), 1999)).toBe(300);
+    expect(deliveryPrice(option({ price: 300, freeFrom: 2000 }), 2000)).toBe(0);
+  });
+
+  it("не считает доставку бесплатной без настроенного порога", () => {
+    expect(deliveryPrice(option({ price: 300, freeFrom: null }), 10000)).toBe(300);
   });
 });

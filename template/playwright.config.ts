@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  globalTeardown: "./e2e/global-teardown.ts",
   timeout: 60_000,
   fullyParallel: false,
   workers: 1, // Один сайт на все тесты: параллельные прогоны ломают общее состояние
@@ -22,8 +23,12 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "mobile",
-      use: { ...devices["iPhone 13"] }, // мобильная эмуляция по умолчанию
+      name: "mobile-360",
+      use: { ...devices["Desktop Chrome"], viewport: { width: 360, height: 800 } },
+    },
+    {
+      name: "webkit-mobile",
+      use: { ...devices["iPhone 13"] },
     },
     {
       name: "desktop",

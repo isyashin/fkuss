@@ -2,6 +2,11 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { dailyChargeKopecks, daysLeft, nextState, shouldNotify } from "./billing";
+import {
+  claimLowBalanceNotification,
+  isUniqueConstraintError,
+  lowBalanceNotificationKey,
+} from "./billing-ledger";
 
 const GRACE_DAYS = 3;
 
@@ -31,8 +36,7 @@ export async function runBillingDaily(): Promise<string[]> {
           },
         });
       } catch (error) {
-        const isUnique = error instanceof Error && error.message.includes("dedupeKey");
-        if (!isUnique) throw error;
+        if (!isUniqueConstraintError(error)) throw error;
         // уже списано сегодня — пропускаем
       }
     }
@@ -61,37 +65,29 @@ export async function runBillingDaily(): Promise<string[]> {
     }
 
     const days = daysLeft(balance, daily);
-    // Пороги считаются только после последнего пополнения:
-    // после topup цикл уведомлений начинается заново
+    // Уникальный ключ включает последнее пополнение: новый topup начинает
+    // новый цикл порогов, а параллельные cron не дублируют уведомление.
     const lastTopup = await prisma.balanceTransaction.findFirst({
       where: { siteId: site.slug, type: "topup" },
       orderBy: { createdAt: "desc" },
+      select: { id: true },
     });
-    const notifyEntries = await prisma.balanceTransaction.findMany({
-      where: {
-        siteId: site.slug,
-        type: "adjustment",
-        comment: { startsWith: "notify:" },
-        ...(lastTopup ? { createdAt: { gt: lastTopup.createdAt } } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    const alreadySent = notifyEntries.length
-      ? notifyEntries[0].comment.replace("notify:", "").split(",").map(Number)
-      : [];
-    const threshold = shouldNotify(days, alreadySent);
+    const threshold = shouldNotify(days, []);
     if (threshold !== null) {
-      await prisma.balanceTransaction.create({
-        data: {
-          siteId: site.slug,
-          type: "adjustment",
-          amount: 0,
-          comment: `notify:${[...alreadySent, threshold].join(",")}`,
-        },
-      });
-      const { notifyLowBalance } = await import("./platform-notify");
-      await notifyLowBalance(site.slug, days, balance).catch(() => {});
-      log.push(`${site.slug}: уведомление «осталось ${days} дн.»`);
+      const cycleId = lastTopup?.id ?? "initial";
+      const claimed = await claimLowBalanceNotification(prisma, site.slug, cycleId, threshold);
+      if (claimed) {
+        try {
+          const { notifyLowBalance } = await import("./platform-notify");
+          await notifyLowBalance(site.slug, days, balance);
+          log.push(`${site.slug}: уведомление «осталось ${days} дн.»`);
+        } catch {
+          // Доставка не удалась — снимаем claim, чтобы следующий cron повторил.
+          await prisma.balanceTransaction.deleteMany({
+            where: { dedupeKey: lowBalanceNotificationKey(site.slug, cycleId, threshold) },
+          });
+        }
+      }
     }
   }
 

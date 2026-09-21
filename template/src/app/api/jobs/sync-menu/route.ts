@@ -2,6 +2,26 @@ import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/db";
 import { syncMenu } from "@/lib/yandex-eda/sync";
 
+const DEFAULT_SYNC_INTERVAL_MINUTES = 60;
+
+/** Решение о запуске всегда принимается сервером, а не cron или клиентом. */
+export function isSyncDue(
+  lastSuccess: string | undefined,
+  intervalMinutes: number | undefined,
+  now = Date.now(),
+): boolean {
+  if (!lastSuccess) return true;
+
+  const lastSuccessMs = Date.parse(lastSuccess);
+  if (!Number.isFinite(lastSuccessMs)) return true;
+
+  const interval =
+    Number.isInteger(intervalMinutes) && intervalMinutes! >= 5 && intervalMinutes! <= 1440
+      ? intervalMinutes!
+      : DEFAULT_SYNC_INTERVAL_MINUTES;
+  return now - lastSuccessMs >= interval * 60_000;
+}
+
 /** Синхронизация меню с Яндекс.Едой по cron: POST /api/jobs/sync-menu + X-Cron-Secret */
 export async function POST(request: Request) {
   const secret = request.headers.get("x-cron-secret");
@@ -22,18 +42,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "placeSlug не задан" }, { status: 400 });
   }
 
-  // BUG-006: уважаем intervalMinutes — пропускаем, если с последнего успеха
-  // прошло меньше интервала
+  // intervalMinutes — серверный gate: частый cron не меняет частоту синхронизации.
   const stateRow = await prisma.settings.findUnique({ where: { key: "syncState" } });
   const state = (stateRow?.value ?? {}) as { lastSuccess?: string };
-  const interval = settings.sync.intervalMinutes ?? 60;
-  if (state.lastSuccess) {
-    const ageMs = Date.now() - new Date(state.lastSuccess).getTime();
-    if (ageMs < interval * 60_000) {
-      return NextResponse.json({ ok: true, skipped: `интервал ${interval} мин не прошёл` });
-    }
+  const interval = settings.sync.intervalMinutes ?? DEFAULT_SYNC_INTERVAL_MINUTES;
+  if (!isSyncDue(state.lastSuccess, interval)) {
+    return NextResponse.json({ ok: true, skipped: `интервал ${interval} мин не прошёл` });
   }
 
+  // syncMenu удерживает атомарную блокировку syncState, поэтому cron и ручной
+  // запуск не смогут синхронизировать один tenant параллельно.
   const result = await syncMenu(prisma);
   return NextResponse.json(result, { status: result.ok ? 200 : 502 });
 }

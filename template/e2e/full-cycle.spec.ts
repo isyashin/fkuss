@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 test("цикл бонусов: заказ → выполнение → кэшбэк виден в кабинете", async ({ page, request }, testInfo) => {
   // 1. Вход по email-коду (dev). Отдельный rate-limit бакет — иначе 5/час на IP
   const email = `e2e-loyalty-${testInfo.project.name}-${Date.now()}@example.com`;
-  const authIp = { "x-forwarded-for": `10.99.11.${testInfo.project.name === "mobile" ? 1 : 2}` };
+  const authIp = { "x-forwarded-for": `10.99.11.${testInfo.project.name === "webkit-mobile" ? 3 : testInfo.project.name.includes("mobile") ? 1 : 2}` };
   const codeResponse = await request.post("/api/auth/request-code", { data: { email }, headers: authIp });
   const { devCode } = await codeResponse.json();
   const verifyResponse = await request.post("/api/auth/verify", { data: { email, code: devCode } });
@@ -14,7 +14,7 @@ test("цикл бонусов: заказ → выполнение → кэшб�
 
   // Отдельный rate-limit бакет на проект (заказ идёт через браузерный fetch)
   await page.setExtraHTTPHeaders({
-    "x-forwarded-for": `10.99.9.${testInfo.project.name === "mobile" ? 1 : 2}`,
+    "x-forwarded-for": `10.99.9.${testInfo.project.name === "webkit-mobile" ? 3 : testInfo.project.name.includes("mobile") ? 1 : 2}`,
   });
 
   // 2. Заказ с этим email

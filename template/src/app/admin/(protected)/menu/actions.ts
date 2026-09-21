@@ -4,21 +4,22 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getPrisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin-auth";
+import { parseAdminInput, adminIdSchema, adminMoneySchema, adminPercentSchema, adminShortTextSchema, adminTextSchema } from "@/lib/admin-validation";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Forbidden");
 }
 
 const updateDishSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  price: z.number().int().min(0).max(1000000).optional(),
-  description: z.string().max(2000).optional(),
+  name: adminShortTextSchema.optional(),
+  price: adminMoneySchema.optional(),
+  description: adminTextSchema.max(2000).optional(),
   available: z.boolean().optional(),
   manualAvailable: z.boolean().optional(),
   weight: z.string().max(50).optional(),
   priceMode: z.enum(["inherit", "yandex", "manual", "coefficient"]).optional(),
-  manualPrice: z.number().int().min(0).max(1000000).nullable().optional(),
-  coefficientPercent: z.number().min(-100).max(500).nullable().optional(),
+  manualPrice: adminMoneySchema.nullable().optional(),
+  coefficientPercent: adminPercentSchema.nullable().optional(),
 });
 
 export async function updateDish(
@@ -36,6 +37,7 @@ export async function updateDish(
   },
 ): Promise<void> {
   await guard();
+  parseAdminInput(adminIdSchema, id);
   const parsed = updateDishSchema.parse(data);
   const prisma = getPrisma();
   const { manualAvailable, ...rest } = parsed;
@@ -65,6 +67,7 @@ export async function addDish(input: {
   weight?: string;
 }): Promise<string> {
   await guard();
+  parseAdminInput(z.object({ categoryId: adminIdSchema, name: adminShortTextSchema, price: adminMoneySchema, description: adminTextSchema.max(2000).optional(), weight: z.string().max(50).optional() }), input);
   const prisma = getPrisma();
   const id = `${input.categoryId}-${Date.now().toString(36)}`;
   await prisma.dish.create({
@@ -86,6 +89,7 @@ export async function addDish(input: {
 
 export async function deleteDish(id: string): Promise<void> {
   await guard();
+  parseAdminInput(adminIdSchema, id);
   const prisma = getPrisma();
   // BUG-022: сначала модификаторы (в т.ч. групповые), потом группы, потом блюдо
   const groups = await prisma.modifierGroup.findMany({ where: { dishId: id }, select: { id: true } });
@@ -102,6 +106,7 @@ export async function deleteDish(id: string): Promise<void> {
 
 export async function addCategory(name: string): Promise<void> {
   await guard();
+  parseAdminInput(adminShortTextSchema, name);
   const prisma = getPrisma();
   const id = `cat-${Date.now().toString(36)}`;
   const max = await prisma.category.aggregate({ _max: { position: true } });

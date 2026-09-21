@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPrisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
+import { createReservationWithCapacity } from "@/lib/booking/capacity";
 
 const bookingSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -70,24 +71,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // BUG-013: вместимость слота: сумма гостей на дату+время ≤ maxGuestsPerSlot
-  const prisma = getPrisma();
-  const slotLoad = await prisma.reservation.aggregate({
-    where: {
-      date: parsed.data.date,
-      time: parsed.data.time,
-      status: { in: ["new", "confirmed"] },
-    },
-    _sum: { guests: true },
-  });
-  const taken = slotLoad._sum.guests ?? 0;
-  if (taken + parsed.data.guests > settings.booking.maxGuestsPerSlot) {
-    return NextResponse.json(
-      { error: "На это время мест больше нет — выберите другое время" },
-      { status: 400 },
-    );
-  }
-
   // Привязка к авторизованному гостю (если сессия есть)
   let customerId: string | null = null;
   try {
@@ -98,18 +81,32 @@ export async function POST(request: Request) {
     // анонимная бронь
   }
 
-  const reservation = await prisma.reservation.create({
-    data: {
-      customerId,
-      date: parsed.data.date,
-      time: parsed.data.time,
-      guests: parsed.data.guests,
-      customerName: parsed.data.customerName,
-      customerPhone: parsed.data.customerPhone,
-      comment: parsed.data.comment,
-      status: "new",
-    },
-  });
+  // BUG-013: lock, aggregate and create must share one transaction.
+  const prisma = getPrisma();
+  const reservation = await prisma.$transaction(async (tx) =>
+    createReservationWithCapacity(
+      tx,
+      { date: parsed.data.date, time: parsed.data.time, guests: parsed.data.guests },
+      settings.booking.maxGuestsPerSlot,
+      {
+        customerId,
+        date: parsed.data.date,
+        time: parsed.data.time,
+        guests: parsed.data.guests,
+        customerName: parsed.data.customerName,
+        customerPhone: parsed.data.customerPhone,
+        comment: parsed.data.comment,
+        status: "new",
+      },
+    ),
+  );
+
+  if (!reservation) {
+    return NextResponse.json(
+      { error: "На это время мест больше нет — выберите другое время" },
+      { status: 400 },
+    );
+  }
 
   try {
     const { notifyNewBooking } = await import("@/lib/notify");

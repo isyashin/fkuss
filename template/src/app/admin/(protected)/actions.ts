@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin-auth";
 import { accrueOrderBonus, reverseOrderBonus } from "@/lib/loyalty";
+import { parseAdminInput, adminIdSchema } from "@/lib/admin-validation";
+import { z } from "zod";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Forbidden");
@@ -20,6 +22,8 @@ const ORDER_FLOW: Record<string, string[]> = {
 
 export async function setOrderStatus(orderId: string, status: string): Promise<void> {
   await guard();
+  parseAdminInput(adminIdSchema, orderId);
+  parseAdminInput(z.enum(["accepted", "cancelled", "cooking", "delivering", "done"]), status);
   const prisma = getPrisma();
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new Error("Заказ не найден");
@@ -38,6 +42,8 @@ export async function setOrderStatus(orderId: string, status: string): Promise<v
 
 export async function setBookingStatus(id: string, status: string): Promise<void> {
   await guard();
+  parseAdminInput(adminIdSchema, id);
+  parseAdminInput(z.enum(["confirmed", "rejected", "cancelled"]), status);
   if (!["confirmed", "rejected", "cancelled"].includes(status)) {
     throw new Error("Недопустимый статус брони");
   }

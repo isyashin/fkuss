@@ -1,0 +1,94 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  template:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: template_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d template_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/template_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: template/package-lock.json
+      - run: npm ci
+        working-directory: template
+      - run: npx prisma generate
+        working-directory: template
+      - run: npx prisma migrate deploy
+        working-directory: template
+      - run: npm test
+        working-directory: template
+      - run: npm run lint
+        working-directory: template
+      - run: npm run build
+        working-directory: template
+      - run: npm run seed
+        working-directory: template
+      - run: npx playwright install --with-deps chromium webkit
+        working-directory: template
+      - run: npx playwright test
+        working-directory: template
+
+  platform:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: platform_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d platform_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/platform_test
+      PLATFORM_DATABASE_URL: postgresql://test:test@localhost:5432/platform_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+      - run: npm ci
+        working-directory: platform
+      - run: npx prisma generate
+        working-directory: platform
+      - run: npx prisma migrate deploy
+        working-directory: platform
+      - run: npm test
+        working-directory: platform
+      - run: npm run lint
+        working-directory: platform
+      - run: npm run build
+        working-directory: platform
+      - run: npx tsx scripts/seed-test.ts
+        working-directory: platform
+      - run: npx playwright install --with-deps chromium webkit
+        working-directory: platform
+      - run: npx playwright test
+        working-directory: platform

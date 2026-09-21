@@ -1,12 +1,50 @@
 /** Владелец сайта: вход по email-коду (коды в БД — надёжно между процессами). */
 import { cookies } from "next/headers";
-import { randomInt } from "node:crypto";
+import { randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { getPrisma } from "./db";
 import type { OwnerAccount } from "@/generated/prisma/client";
 
 const CODE_TTL_MS = 10 * 60 * 1000;
 const SESSION_COOKIE = "platform_owner";
 const SESSION_TTL = 30 * 24 * 3600;
+const SESSION_TTL_MS = SESSION_TTL * 1000;
+
+function sessionSecret(): string {
+  const secret = process.env.SESSION_SECRET ?? process.env.PLATFORM_ADMIN_PASSWORD;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET или PLATFORM_ADMIN_PASSWORD не задан");
+  }
+  return "platform-owner-development-only";
+}
+
+function signSession(payload: string): string {
+  return createHmac("sha256", sessionSecret()).update(payload).digest("hex");
+}
+
+function packSession(id: string): string {
+  const payload = `${id}.${Date.now()}`;
+  return `${payload}.${signSession(payload)}`;
+}
+
+function unpackSession(value: string | undefined): string | null {
+  if (!value) return null;
+  const [id, issuedAtRaw, signature, ...rest] = value.split(".");
+  if (!id || !issuedAtRaw || !signature || rest.length > 0) return null;
+
+  const issuedAt = Number(issuedAtRaw);
+  if (!Number.isSafeInteger(issuedAt)) return null;
+  const age = Date.now() - issuedAt;
+  if (age < 0 || age > SESSION_TTL_MS) return null;
+
+  const expected = signSession(`${id}.${issuedAtRaw}`);
+  if (signature.length !== expected.length) return null;
+  try {
+    return timingSafeEqual(Buffer.from(signature), Buffer.from(expected)) ? id : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function requestOwnerCode(email: string): Promise<{ devCode?: string }> {
   const prisma = getPrisma();
@@ -63,7 +101,7 @@ export async function verifyOwnerCode(
   if (!owner) return { ok: false, reason: "Аккаунт не найден" };
 
   const jar = await cookies();
-  jar.set(SESSION_COOKIE, owner.id, {
+  jar.set(SESSION_COOKIE, packSession(owner.id), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production" && process.env.INSECURE_HTTP !== "1",
@@ -75,7 +113,7 @@ export async function verifyOwnerCode(
 
 export async function getSessionOwner(): Promise<OwnerAccount | null> {
   const jar = await cookies();
-  const id = jar.get(SESSION_COOKIE)?.value;
+  const id = unpackSession(jar.get(SESSION_COOKIE)?.value);
   if (!id) return null;
   return getPrisma().ownerAccount.findUnique({ where: { id } });
 }

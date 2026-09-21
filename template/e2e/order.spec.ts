@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 
 test("гость заказывает блюдо с главной через корзину", async ({ page }, testInfo) => {
   await page.setExtraHTTPHeaders({
-    "x-forwarded-for": `10.99.10.${testInfo.project.name === "mobile" ? 1 : 2}`,
+    "x-forwarded-for": `10.99.10.${testInfo.project.name === "webkit-mobile" ? 3 : testInfo.project.name.includes("mobile") ? 1 : 2}`,
   });
   await page.goto("/menu");
 

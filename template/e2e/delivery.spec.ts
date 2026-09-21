@@ -2,7 +2,8 @@ import { test, expect } from "@playwright/test";
 
 // Полный путь доставки: админ создаёт scheduled-вариант через UI, гость заказывает
 function ip(project: string, n: number) {
-  return { "x-forwarded-for": `10.99.8.${project === "mobile" ? 1 : 2}${n}` };
+  const projectOctet = project === "mobile-360" ? 1 : project === "webkit-mobile" ? 2 : 3;
+  return { "x-forwarded-for": `10.99.8.${projectOctet}${n}` };
 }
 
 test("админ создаёт scheduled-вариант, гость заказывает с интервалом", async ({ page, request }, testInfo) => {

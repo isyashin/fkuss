@@ -132,7 +132,7 @@ export function CartSheet({
       }
       // Онлайн-оплата: уходим на страницу оплаты провайдера
       if (data.confirmationUrl) {
-        window.location.href = data.confirmationUrl;
+        globalThis.location.assign(data.confirmationUrl);
         return;
       }
       const text = [

@@ -21,6 +21,7 @@ model Site {
   imageVersion String  @default("")
   stateChangedAt DateTime @default(now())
   exportRequestedAt DateTime?
+  exportReadyPath  String? // путь к готовому архиву экспорта (воркер заполняет)
   lastMetricsAt  DateTime?
   createdAt   DateTime @default(now())
   ledger      BalanceTransaction[]

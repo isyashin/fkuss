@@ -23,12 +23,11 @@ export function InstallPrompt() {
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("install-prompt-hidden") === "1") {
-      setHidden(true);
-      return;
-    }
-    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
-    setIsStandalone(window.matchMedia("(display-mode: standalone)").matches);
+    queueMicrotask(() => {
+      setHidden(localStorage.getItem("install-prompt-hidden") === "1");
+      setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
+      setIsStandalone(window.matchMedia("(display-mode: standalone)").matches);
+    });
     const handler = (event: Event) => {
       event.preventDefault();
       setDeferred(event as BeforeInstallPromptEvent);

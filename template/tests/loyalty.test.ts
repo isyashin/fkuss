@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { accrueOrderBonus, reverseOrderBonus, getBonusBalance } from "@/lib/loyalty";
@@ -39,7 +39,6 @@ async function cleanup(customerId: string) {
 }
 
 describe("loyalty ledger", () => {
-  let customerId: string;
 
   afterAll(async () => {
     await prisma.$disconnect();
@@ -47,7 +46,6 @@ describe("loyalty ledger", () => {
 
   it("начисление при переводе заказа в «выполнен»", async () => {
     const { customer, order } = await makeOrder();
-    customerId = customer.id;
     await accrueOrderBonus(prisma, order.id);
     const balance = await getBonusBalance(prisma, customer.id);
     expect(balance).toBe(50);

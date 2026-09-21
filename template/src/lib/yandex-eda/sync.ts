@@ -250,7 +250,6 @@ export async function syncMenu(prisma: PrismaLike, options: SyncOptions = {}): P
     options.placeSlug ??
     settings.sync?.placeSlug ??
     ((await getSettingsValue(prisma, "restaurant")).syncPlaceSlug as string | undefined);
-  const state = (await getSettingsValue(prisma, SYNC_KEY)) as SyncStateValue;
 
   if (!placeSlug) {
     return { ok: false, error: "Не задан placeSlug Яндекс.Еды в настройках" };

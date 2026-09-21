@@ -70,6 +70,8 @@ fi
 
 # 4. Compose сайта
 mkdir -p "$SITE_DIR/content"
+# BUG-016: bind mount должен быть доступен пользователю контейнера (app uid=100/gid=101)
+chown -R 100:101 "$SITE_DIR/content"
 cat > "$SITE_DIR/docker-compose.yml" <<EOF
 services:
   app:

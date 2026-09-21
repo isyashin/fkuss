@@ -1,22 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+function subscribeOnline(callback: () => void): () => void {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
 
 /** Без сети — понятная плашка. Устаревшее меню не показываем (кэша нет). */
 export function OfflineBanner() {
-  const [offline, setOffline] = useState(false);
-
-  useEffect(() => {
-    setOffline(!navigator.onLine);
-    const goOffline = () => setOffline(true);
-    const goOnline = () => setOffline(false);
-    window.addEventListener("offline", goOffline);
-    window.addEventListener("online", goOnline);
-    return () => {
-      window.removeEventListener("offline", goOffline);
-      window.removeEventListener("online", goOnline);
-    };
-  }, []);
+  const offline = useSyncExternalStore(
+    subscribeOnline,
+    () => !navigator.onLine,
+    () => false,
+  );
 
   if (!offline) return null;
 

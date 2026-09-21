@@ -11,7 +11,7 @@ export async function OwnerDashboard({ ownerId }: { ownerId: string }) {
   });
   if (!owner) return <p className="text-zinc-500">Аккаунт не найден.</p>;
 
-  const site = owner.site;
+  const site = owner.site as typeof owner.site & { exportReadyPath?: string | null };
   const [balanceAgg, metrics, invoices] = await Promise.all([
     prisma.balanceTransaction.aggregate({ where: { siteId: site.slug }, _sum: { amount: true } }),
     prisma.metricSnapshot.findMany({
@@ -74,7 +74,16 @@ export async function OwnerDashboard({ ownerId }: { ownerId: string }) {
         <p className="text-sm text-zinc-500 mb-3">
           Архив контента и базы данных сайта. Ссылка придёт на email после подготовки.
         </p>
-        <ExportButton slug={site.slug} requested={Boolean(site.exportRequestedAt)} />
+        {site.exportReadyPath ? (
+          <a
+            href="/api/export/download"
+            className="inline-flex min-h-11 px-5 items-center rounded-full bg-zinc-900 text-white text-sm font-medium"
+          >
+            Скачать архив ({site.exportReadyPath.split("/").pop()})
+          </a>
+        ) : (
+          <ExportButton slug={site.slug} requested={Boolean(site.exportRequestedAt)} />
+        )}
       </section>
     </div>
   );

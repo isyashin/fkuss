@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart/store";
+import { useMounted } from "@/lib/use-mounted";
 
 /** Sticky нижняя панель корзины — всегда под пальцем на мобильном */
 export function CartBar({ onOpen }: { onOpen: () => void }) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const count = useCart((s) => s.count());
   const total = useCart((s) => s.total());
 
-  useEffect(() => setMounted(true), []);
   if (!mounted || count === 0) return null;
 
   return (

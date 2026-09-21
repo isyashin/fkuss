@@ -9,19 +9,25 @@ export function BookingForm({ booking }: { booking: ContentSettings["booking"] }
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [error, setError] = useState("");
-
-  const minDate = new Date(Date.now() + booking.minHoursAhead * 3600_000).toISOString().slice(0, 10);
+  // Минимальная дата — через ленивый инициализатор (один раз, без impure-в-render)
+  const [minDate] = useState(
+    () => new Date(Date.now() + booking.minHoursAhead * 3600_000).toISOString().slice(0, 10),
+  );
 
   // Загружаем слоты при выборе даты
   useEffect(() => {
     if (!form.date) return;
-    setSlotsLoading(true);
-    setForm((f) => ({ ...f, time: "" }));
-    fetch(`/api/booking/slots?date=${form.date}`)
+    const controller = new AbortController();
+    queueMicrotask(() => {
+      setSlotsLoading(true);
+      setForm((f) => ({ ...f, time: "" }));
+    });
+    fetch(`/api/booking/slots?date=${form.date}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => setSlots(data.slots ?? []))
       .catch(() => setSlots([]))
       .finally(() => setSlotsLoading(false));
+    return () => controller.abort();
   }, [form.date]);
 
   async function submit() {

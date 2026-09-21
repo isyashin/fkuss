@@ -102,7 +102,7 @@ export function isOpenAt(schedule: WeeklySchedule, date: string, time: string): 
 
   const t = toMinutes(time);
   const from = toMinutes(day.from);
-  let to = toMinutes(day.to);
+  const to = toMinutes(day.to);
   if (to <= from) {
     // ночной режим: открыто если t >= from ИЛИ t < to
     return t >= from || t < to;

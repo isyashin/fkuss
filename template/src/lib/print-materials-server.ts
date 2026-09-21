@@ -1,8 +1,9 @@
-import { readFile } from "node:fs/promises";
+import { lstat, readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument } from "pdf-lib";
 import QRCode from "qrcode";
 import sharp from "sharp";
+import { z } from "zod";
 import {
   PRINT_MATERIAL_SPECS,
   buildPrintMaterialSvg,
@@ -19,25 +20,54 @@ export interface PrintExportResult {
   extension: PrintExportFormat;
 }
 
+export const printRestaurantBrandSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  phone: z.string().trim().max(80),
+  address: z.string().trim().max(300),
+  logo: z.string().trim().max(500),
+});
+
+type PrintRestaurantBrand = z.infer<typeof printRestaurantBrandSchema>;
+
+const MAX_LOGO_BYTES = 8 * 1024 * 1024;
+const MAX_LOGO_PIXELS = 40_000_000;
+
 function mmToPoints(mm: number): number {
   return (mm / 25.4) * 72;
 }
 
-function contentPath(relativePath: string): string | null {
+async function contentPath(relativePath: string): Promise<string | null> {
   if (!relativePath) return null;
-  const root = path.resolve(process.cwd(), "content");
-  const absolute = path.resolve(root, relativePath);
-  const relative = path.relative(root, absolute);
-  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) return null;
-  return absolute;
+  try {
+    const root = await realpath(path.resolve(process.cwd(), "content"));
+    const candidate = path.resolve(root, relativePath);
+    const lexicalRelative = path.relative(root, candidate);
+    if (!lexicalRelative || lexicalRelative.startsWith("..") || path.isAbsolute(lexicalRelative)) {
+      return null;
+    }
+
+    const linkInfo = await lstat(candidate);
+    if (linkInfo.isSymbolicLink() || !linkInfo.isFile()) return null;
+    const resolved = await realpath(candidate);
+    const resolvedRelative = path.relative(root, resolved);
+    if (!resolvedRelative || resolvedRelative.startsWith("..") || path.isAbsolute(resolvedRelative)) {
+      return null;
+    }
+    const fileInfo = await stat(resolved);
+    if (fileInfo.size > MAX_LOGO_BYTES) return null;
+    return resolved;
+  } catch {
+    return null;
+  }
 }
 
 async function logoDataUrl(relativePath: string): Promise<string> {
-  const absolute = contentPath(relativePath);
+  const absolute = await contentPath(relativePath);
   if (!absolute) return "";
   try {
-    const source = await readFile(absolute);
-    const png = await sharp(source)
+    // content/ подключается bind-volume в runtime; не включаем его в standalone trace.
+    const source = await readFile(/* turbopackIgnore: true */ absolute);
+    const png = await sharp(source, { failOn: "error", limitInputPixels: MAX_LOGO_PIXELS })
       .resize(900, 900, { fit: "inside", withoutEnlargement: true })
       .png()
       .toBuffer();
@@ -49,14 +79,15 @@ async function logoDataUrl(relativePath: string): Promise<string> {
 
 async function renderArtwork(input: {
   design: PrintMaterialDesign;
-  restaurant: { name: string; phone: string; address: string; logo: string };
+  restaurant: PrintRestaurantBrand;
 }): Promise<{ svg: string; png: Buffer }> {
   const design = printMaterialDesignSchema.parse(input.design);
+  const restaurant = printRestaurantBrandSchema.parse(input.restaurant);
   const trackedUrl = buildTrackedQrUrl(design);
   const [qrDataUrl, embeddedLogo] = await Promise.all([
     QRCode.toDataURL(trackedUrl, {
       errorCorrectionLevel: "H",
-      margin: 2,
+      margin: 4,
       width: 1600,
       color: { dark: "#111111", light: "#ffffff" },
     }),
@@ -64,9 +95,9 @@ async function renderArtwork(input: {
   ]);
 
   const brand: PrintBrand = {
-    name: input.restaurant.name,
-    phone: input.restaurant.phone,
-    address: input.restaurant.address,
+    name: restaurant.name,
+    phone: restaurant.phone,
+    address: restaurant.address,
     logoUrl: embeddedLogo,
   };
   const svg = buildPrintMaterialSvg({ design, brand, qrDataUrl });
@@ -81,7 +112,7 @@ async function renderArtwork(input: {
 
 export async function exportPrintMaterial(input: {
   design: PrintMaterialDesign;
-  restaurant: { name: string; phone: string; address: string; logo: string };
+  restaurant: PrintRestaurantBrand;
   format: PrintExportFormat;
 }): Promise<PrintExportResult> {
   const design = printMaterialDesignSchema.parse(input.design);

@@ -48,4 +48,14 @@ describe("print material export", () => {
     expect(page.getWidth()).toBeCloseTo(expectedWidth, 4);
     expect(page.getHeight()).toBeCloseTo(expectedHeight, 4);
   });
+
+  it("отклоняет аномально большие брендовые поля до рендера", async () => {
+    await expect(
+      exportPrintMaterial({
+        design,
+        restaurant: { ...restaurant, name: "Р".repeat(201) },
+        format: "png",
+      }),
+    ).rejects.toThrow();
+  });
 });

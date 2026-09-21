@@ -135,6 +135,15 @@ export function createDefaultPrintMaterial(
   };
 }
 
+/** QR всегда ведёт на canonical текущего tenant-сайта, а не на URL из клиента. */
+export function withCanonicalQrUrl(
+  design: PrintMaterialDesign,
+  canonical: string,
+): PrintMaterialDesign {
+  const parsed = printMaterialDesignSchema.parse(design);
+  return { ...parsed, qrUrl: httpUrlSchema.parse(canonicalToPublicUrl(canonical)) };
+}
+
 export function normalizePrintMaterialsSettings(
   value: unknown,
   defaults: PrintMaterialsSettings,
@@ -198,12 +207,20 @@ function wrapText(value: string, maxChars: number, maxLines: number): string[] {
 
 function textLines(
   lines: string[],
-  options: { x: number; y: number; size: number; lineHeight: number; weight?: number; anchor?: "start" | "middle" },
+  options: {
+    x: number;
+    y: number;
+    size: number;
+    lineHeight: number;
+    weight?: number;
+    anchor?: "start" | "middle";
+    fill?: string;
+  },
 ): string {
   return lines
     .map(
       (line, index) =>
-        `<text x="${options.x}" y="${options.y + index * options.lineHeight}" font-size="${options.size}" font-weight="${options.weight ?? 400}" text-anchor="${options.anchor ?? "start"}">${escapeXml(line)}</text>`,
+        `<text x="${options.x}" y="${options.y + index * options.lineHeight}" font-size="${options.size}" font-weight="${options.weight ?? 400}" text-anchor="${options.anchor ?? "start"}"${options.fill ? ` fill="${options.fill}"` : ""}>${escapeXml(line)}</text>`,
     )
     .join("");
 }
@@ -240,9 +257,14 @@ function cardMarkup(design: PrintMaterialDesign, brand: PrintBrand, qrDataUrl: s
   const name = wrapText(brand.name, 25, 2);
   const headline = wrapText(design.headline, 25, 2);
   const subheadline = wrapText(design.subheadline, 34, 3);
-  const contacts = [design.showPhone ? brand.phone : "", design.showAddress ? brand.address : ""]
-    .filter(Boolean)
-    .join("  •  ");
+  const offer = wrapText(design.offer, 30, 2);
+  const contacts = wrapText(
+    [design.showPhone ? brand.phone : "", design.showAddress ? brand.address : ""]
+      .filter(Boolean)
+      .join("  •  "),
+    46,
+    2,
+  );
 
   return `
     ${logo}
@@ -250,26 +272,27 @@ function cardMarkup(design: PrintMaterialDesign, brand: PrintBrand, qrDataUrl: s
       ${textLines(name, { x: nameX, y: 10.5, size: 3.4, lineHeight: 3.8, weight: 700 })}
       ${textLines(headline, { x: left, y: 24, size: 5.1, lineHeight: 5.5, weight: 800 })}
       ${textLines(subheadline, { x: left, y: 36, size: 2.45, lineHeight: 3.1 })}
-      ${contacts ? `<text x="${left}" y="49" font-size="2.05">${escapeXml(contacts)}</text>` : ""}
+      ${textLines(contacts, { x: left, y: 45.2, size: 1.85, lineHeight: 2.4 })}
     </g>
     <rect x="${qrX - 1.5}" y="${qrY - 1.5}" width="${qrSize + 3}" height="${qrSize + 3}" rx="2" fill="#ffffff"/>
     <image href="${escapeXml(qrDataUrl)}" x="${qrX}" y="${qrY}" width="${qrSize}" height="${qrSize}"/>
     <text x="${qrX + qrSize / 2}" y="${qrY + qrSize + 5}" font-size="2.1" font-weight="700" text-anchor="middle" fill="${design.style === "contrast" ? "#ffffff" : design.textColor}">Сканируйте камерой</text>
-    ${design.offer ? `<text x="${qrX + qrSize / 2}" y="${qrY + qrSize + 8.3}" font-size="1.75" text-anchor="middle" fill="${design.style === "contrast" ? "#ffffff" : design.textColor}">${escapeXml(design.offer)}</text>` : ""}
+    ${textLines(offer, { x: qrX + qrSize / 2, y: qrY + qrSize + 8.3, size: 1.65, lineHeight: 2.1, anchor: "middle", fill: design.style === "contrast" ? "#ffffff" : design.textColor })}
   `;
 }
 
 function magnetMarkup(design: PrintMaterialDesign, brand: PrintBrand, qrDataUrl: string): string {
   const spec = PRINT_MATERIAL_SPECS.magnet;
   const center = spec.pageWidthMm / 2;
-  const logo = design.showLogo ? logoMarkup(brand, center - 5, 6, 10, design.accentColor) : "";
+  const logo = design.showLogo ? logoMarkup(brand, center - 4.5, 7, 9, design.accentColor) : "";
   const name = wrapText(brand.name, 30, 2);
   const headline = wrapText(design.headline, 27, 2);
   const subheadline = wrapText(design.subheadline, 42, 1);
-  const qrSize = 27;
+  const qrSize = 24;
   const qrX = center - qrSize / 2;
-  const qrY = 38;
-  const phone = design.showPhone && brand.phone ? brand.phone : "";
+  const qrY = 37;
+  const phone = design.showPhone && brand.phone ? wrapText(brand.phone, 32, 1) : [];
+  const offer = wrapText(design.offer, 32, phone.length > 0 ? 1 : 2);
 
   return `
     ${logo}
@@ -280,8 +303,8 @@ function magnetMarkup(design: PrintMaterialDesign, brand: PrintBrand, qrDataUrl:
     </g>
     <rect x="${qrX - 1.5}" y="${qrY - 1.5}" width="${qrSize + 3}" height="${qrSize + 3}" rx="2" fill="#ffffff"/>
     <image href="${escapeXml(qrDataUrl)}" x="${qrX}" y="${qrY}" width="${qrSize}" height="${qrSize}"/>
-    ${design.offer ? `<text x="${center}" y="69" font-size="1.9" text-anchor="middle" fill="${design.textColor}">${escapeXml(design.offer)}</text>` : ""}
-    ${phone ? `<text x="${center}" y="72" font-size="2.35" font-weight="700" text-anchor="middle" fill="${design.textColor}">${escapeXml(phone)}</text>` : ""}
+    ${textLines(offer, { x: center, y: 64.7, size: 1.45, lineHeight: 1.9, anchor: "middle", fill: design.textColor })}
+    ${textLines(phone, { x: center, y: 68, size: 2, lineHeight: 2.2, weight: 700, anchor: "middle", fill: design.textColor })}
   `;
 }
 

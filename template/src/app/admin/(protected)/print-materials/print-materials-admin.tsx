@@ -62,7 +62,7 @@ export function PrintMaterialsAdmin({
     let active = true;
     void QRCode.toDataURL(trackedUrl, {
       errorCorrectionLevel: "H",
-      margin: 2,
+      margin: 4,
       width: 900,
       color: { dark: "#111111", light: "#ffffff" },
     }).then((data) => {
@@ -249,14 +249,13 @@ export function PrintMaterialsAdmin({
               <p className="text-sm text-muted mt-1">Метки помогают отличить заказы с визитки от заказов с магнита.</p>
             </div>
             <label className="block">
-              <span className="text-sm text-muted">Адрес сайта</span>
+              <span className="text-sm text-muted">Адрес сайта (из настроек домена)</span>
               <input
                 type="url"
                 value={design.qrUrl}
-                maxLength={500}
-                onChange={(event) => update({ qrUrl: event.target.value })}
-                className={inputClass}
-                placeholder="https://restaurant.example"
+                readOnly
+                aria-readonly="true"
+                className={`${inputClass} opacity-75`}
               />
             </label>
             <label className="block">

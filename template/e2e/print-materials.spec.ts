@@ -11,6 +11,12 @@ test("ПМ-01: админ настраивает визитку и скачив�
   await expect(page.getByRole("tab", { name: /Визитка/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tab", { name: /Магнит/ })).toBeVisible();
   await expect(page.getByRole("img", { name: /Предпросмотр/ })).toBeVisible();
+  await expect(page.getByLabel(/Адрес сайта/)).toHaveAttribute("readonly", "");
+
+  await page.getByRole("tab", { name: /Магнит/ }).click();
+  await expect(page.getByRole("tab", { name: /Магнит/ })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("img", { name: /Магнит 70 × 70 мм/ })).toBeVisible();
+  await page.getByRole("tab", { name: /Визитка/ }).click();
 
   const headline = page.getByLabel("Заголовок");
   const originalHeadline = await headline.inputValue();

@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { isAdmin } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/db";
-import { printMaterialDesignSchema, type PrintMaterialDesign } from "@/lib/print-materials";
+import { getSiteSettings } from "@/lib/site";
+import {
+  printMaterialDesignSchema,
+  withCanonicalQrUrl,
+  type PrintMaterialDesign,
+} from "@/lib/print-materials";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Forbidden");
@@ -11,7 +16,9 @@ async function guard() {
 
 export async function savePrintMaterial(input: PrintMaterialDesign): Promise<void> {
   await guard();
-  const design = printMaterialDesignSchema.parse(input);
+  const parsed = printMaterialDesignSchema.parse(input);
+  const siteSettings = await getSiteSettings();
+  const design = withCanonicalQrUrl(parsed, siteSettings.domains.canonical);
   const prisma = getPrisma();
   const row = await prisma.settings.findUnique({ where: { key: "printMaterials" } });
   const current = row?.value && typeof row.value === "object" && !Array.isArray(row.value)

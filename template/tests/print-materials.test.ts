@@ -8,6 +8,7 @@ import {
   normalizePrintMaterialsSettings,
   printFileStem,
   printMaterialDesignSchema,
+  withCanonicalQrUrl,
 } from "../src/lib/print-materials";
 
 const input = { canonical: "orders.example.ru", accent: "#b45309" };
@@ -49,6 +50,16 @@ describe("print materials", () => {
     expect(magnetUrl.searchParams.get("utm_source")).toBe("fridge_magnet");
   });
 
+  it("заменяет клиентский QR URL на canonical текущего ресторана", () => {
+    const design = {
+      ...createDefaultPrintMaterial("card", input),
+      qrUrl: "https://example-attacker.test/phishing",
+    };
+    expect(withCanonicalQrUrl(design, "orders.example.ru").qrUrl).toBe(
+      "https://orders.example.ru",
+    );
+  });
+
   it("не принимает опасные протоколы и некорректную campaign", () => {
     const design = createDefaultPrintMaterial("card", input);
     expect(printMaterialDesignSchema.safeParse({ ...design, qrUrl: "javascript:alert(1)" }).success).toBe(false);
@@ -85,5 +96,41 @@ describe("print materials", () => {
     const design = createDefaultPrintMaterial("magnet", input);
     expect(printFileStem("У Мамы / Иваново", design)).toBe("restaurant-magnet-70x70mm");
     expect(printFileStem("u-mamy", design)).toBe("u-mamy-magnet-70x70mm");
+  });
+
+  it("держит текст магнита в безопасной зоне и сокращает длинный offer", () => {
+    const design = {
+      ...createDefaultPrintMaterial("magnet", input),
+      offer: "Очень длинное предложение для гостя, которое не должно выйти за край печатного макета",
+    };
+    const svg = buildPrintMaterialSvg({
+      design,
+      brand: { name: "Ресторан", phone: "+7 999 000-00-00", address: "Адрес", logoUrl: "" },
+      qrDataUrl: "data:image/png;base64,AA==",
+    });
+    const textBaselines = [...svg.matchAll(/<text[^>]* y="([\d.]+)"/g)].map((match) => Number(match[1]));
+    expect(Math.max(...textBaselines)).toBeLessThanOrEqual(69);
+    expect(svg).not.toContain(design.offer);
+    expect(svg).toContain("…");
+  });
+
+  it("сокращает длинные контакты визитки, не выпуская их за безопасную зону", () => {
+    const design = { ...createDefaultPrintMaterial("card", input), offer: "" };
+    const brand = {
+      name: "Ресторан",
+      phone: "+7 999 000-00-00, +7 999 111-11-11",
+      address: "Очень длинный адрес ресторана с корпусом, строением, этажом и подробным ориентиром для курьера",
+      logoUrl: "",
+    };
+    const svg = buildPrintMaterialSvg({
+      design,
+      brand,
+      qrDataUrl: "data:image/png;base64,AA==",
+    });
+
+    expect(svg).not.toContain(brand.address);
+    expect(svg).toContain("…");
+    const textBaselines = [...svg.matchAll(/<text[^>]* y="([\d.]+)"/g)].map((match) => Number(match[1]));
+    expect(Math.max(...textBaselines)).toBeLessThanOrEqual(49);
   });
 });

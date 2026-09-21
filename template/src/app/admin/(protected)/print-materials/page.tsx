@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/db";
 import {
   createDefaultPrintMaterial,
   normalizePrintMaterialsSettings,
+  withCanonicalQrUrl,
   type PrintBrand,
   type PrintMaterialsSettings,
 } from "@/lib/print-materials";
@@ -29,7 +30,11 @@ export default async function AdminPrintMaterialsPage() {
       accent: theme.accent,
     }),
   };
-  const initialSettings = normalizePrintMaterialsSettings(stored?.value, defaults);
+  const normalized = normalizePrintMaterialsSettings(stored?.value, defaults);
+  const initialSettings: PrintMaterialsSettings = {
+    card: withCanonicalQrUrl(normalized.card, siteSettings.domains.canonical),
+    magnet: withCanonicalQrUrl(normalized.magnet, siteSettings.domains.canonical),
+  };
   const brand: PrintBrand = {
     name: restaurant.name,
     phone: restaurant.phone,

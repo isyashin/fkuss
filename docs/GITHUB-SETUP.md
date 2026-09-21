@@ -24,6 +24,7 @@
 - Репозиторий публичный, основная ветка — `main`.
 - У `main` нет branch protection или ruleset.
 - GitHub Actions разрешены; workflow находится в `.github/workflows/test.yml`.
+- Полный workflow успешно пройден на `main`: GitHub Actions `35609347912`.
 - Токен workflows по умолчанию имеет только read-доступ — это правильно.
 - Actions не могут одобрять pull requests — это правильно.
 - Secret scanning и push protection включены; открытых secret alerts нет.

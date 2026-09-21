@@ -7,7 +7,7 @@ on:
 
 jobs:
   template:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17-alpine
@@ -24,8 +24,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/template_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -50,7 +50,7 @@ jobs:
         working-directory: template
 
   platform:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17-alpine
@@ -68,8 +68,8 @@ jobs:
       DATABASE_URL: postgresql://test:test@localhost:5432/platform_test
       PLATFORM_DATABASE_URL: postgresql://test:test@localhost:5432/platform_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm

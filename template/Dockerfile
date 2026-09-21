@@ -5,6 +5,16 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
+FROM node:22-alpine AS migrator
+# Образ для применения миграций: prisma migrate deploy.
+# Запуск: docker run --rm --network template_default -e DATABASE_URL=... <image>
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json ./
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+CMD ["npx", "prisma", "migrate", "deploy"]
+
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules

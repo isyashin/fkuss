@@ -9,11 +9,28 @@ BASE="${RESTO_BASE:-$HOME/resto}"
 echo "== git pull =="
 git -C "$SRC" pull --ff-only
 
-echo "== build образа шаблона =="
+echo "== build образа шаблона + migrator =="
 docker build -t resto-template:latest "$SRC/template"
+docker build --target migrator -t resto-template-migrator:latest "$SRC/template"
 
-echo "== build платформы =="
+echo "== build платформы + migrator =="
 docker compose -f "$SRC/platform/docker-compose.yml" build
+docker build --target migrator -t platform-migrator:latest "$SRC/platform"
+
+echo "== миграции БД =="
+# resto (u-mamy): DATABASE_URL из .env сайта
+RESTO_DB_URL=$(grep '^DATABASE_URL=' "$SRC/template/.env" | cut -d= -f2-)
+docker run --rm --network template_default -e DATABASE_URL="$RESTO_DB_URL" resto-template-migrator:latest
+# platform: DATABASE_URL из compose
+PLATFORM_DB_URL=$(grep 'DATABASE_URL:' "$SRC/platform/docker-compose.yml" | head -1 | awk '{print $2}')
+docker run --rm --network template_default -e DATABASE_URL="$PLATFORM_DB_URL" platform-migrator:latest
+# сайты: per-site DATABASE_URL из .env
+for site in "$BASE"/sites/*/; do
+  if [ -f "$site/.env" ]; then
+    SITE_DB_URL=$(grep '^DATABASE_URL=' "$site/.env" | cut -d= -f2-)
+    docker run --rm --network template_default -e DATABASE_URL="$SITE_DB_URL" resto-template-migrator:latest
+  fi
+done
 
 if [ "${1:-}" != "--no-restart" ]; then
   echo "== restart сервисов =="

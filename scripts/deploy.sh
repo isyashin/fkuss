@@ -109,7 +109,11 @@ EOF
   chmod 600 "$SITE_DIR/.env"
 fi
 
-# 6. Схема БД + запуск
+# 6. Схема БД (миграции) + запуск
+echo "== миграция схемы $SLUG =="
+SITE_DB_URL=$(grep '^DATABASE_URL=' "$SITE_DIR/.env" | cut -d= -f2-)
+docker run --rm --network template_default -e DATABASE_URL="$SITE_DB_URL" resto-template-migrator:latest
+
 cd "$SITE_DIR"
 docker compose up -d
 

@@ -16,11 +16,15 @@ export function CartSheet({
   delivery,
   loyalty,
   whatsapp,
+  paymentProvider = "none",
+  bonusBalance = 0,
   onClose,
 }: {
   delivery: ContentSettings["delivery"];
   loyalty: ContentSettings["loyalty"];
   whatsapp: ContentSettings["channels"]["whatsapp"];
+  paymentProvider?: string;
+  bonusBalance?: number;
   onClose: () => void;
 }) {
   const { items, setQuantity, clear, total } = useCart();
@@ -32,6 +36,8 @@ export function CartSheet({
 
   const [type, setType] = useState<"delivery" | "pickup">(delivery.enabled ? "delivery" : "pickup");
   const [zoneName, setZoneName] = useState(delivery.zones[0]?.name ?? "");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "online">("cash");
+  const [bonusSpend, setBonusSpend] = useState(0);
   const [form, setForm] = useState({ address: "", name: "", phone: "", email: "", comment: "", website: "" });
 
   // Варианты доставки и окна (если настроены)
@@ -74,6 +80,11 @@ export function CartSheet({
             : zone.price
           : 0;
   const orderTotal = itemsTotal + deliveryPrice;
+  const maxBonusSpend = Math.min(
+    Math.floor((itemsTotal * loyalty.maxSpendPercent) / 100),
+    bonusBalance,
+  );
+  const finalTotal = orderTotal - Math.min(bonusSpend, maxBonusSpend);
 
   const optionDates = selectedOption
     ? [...new Set(selectedOption.windows.map((w) => w.date))]
@@ -101,7 +112,8 @@ export function CartSheet({
           customerEmail: form.email,
           comment: form.comment,
           website: form.website, // honeypot
-          bonusSpend: 0,
+          bonusSpend,
+          paymentMethod,
           deliveryMode: selectedOption?.mode ?? "asap",
           deliveryDate: selectedOption?.mode === "scheduled" ? deliveryDate : null,
           deliverySlotStart: selectedOption?.mode === "scheduled" ? slotStart : null,
@@ -114,6 +126,11 @@ export function CartSheet({
       const data = await response.json();
       if (!response.ok) {
         setError(data.error ?? "Ошибка оформления");
+        return;
+      }
+      // Онлайн-оплата: уходим на страницу оплаты провайдера
+      if (data.confirmationUrl) {
+        window.location.href = data.confirmationUrl;
         return;
       }
       const text = [
@@ -373,12 +390,52 @@ export function CartSheet({
                 <span>Доставка</span>
                 <span>{deliveryPrice === 0 ? "бесплатно" : formatPrice(deliveryPrice)}</span>
               </div>
+              {bonusSpend > 0 && (
+                <div className="flex justify-between text-accent">
+                  <span>Бонусы</span>
+                  <span>−{Math.min(bonusSpend, maxBonusSpend)} ₽</span>
+                </div>
+              )}
               <div className="flex justify-between font-semibold text-lg pt-1">
                 <span>Итого</span>
-                <span>{formatPrice(orderTotal)}</span>
+                <span>{formatPrice(finalTotal)}</span>
               </div>
+
+              {bonusBalance > 0 && (
+                <label className="flex items-center justify-between gap-3 pt-1 text-sm">
+                  <span className="text-muted">Списать бонусы (доступно {bonusBalance} ₽)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={maxBonusSpend}
+                    value={bonusSpend || ""}
+                    placeholder="0"
+                    onChange={(e) =>
+                      setBonusSpend(Math.max(0, Math.min(Number(e.target.value) || 0, maxBonusSpend)))
+                    }
+                    className="w-24 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15 text-right"
+                  />
+                </label>
+              )}
+
+              {paymentProvider !== "none" && (
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setPaymentMethod("cash")}
+                    className={`flex-1 min-h-11 rounded-full text-sm font-medium ${paymentMethod === "cash" ? "bg-accent text-white" : "bg-card border border-foreground/15"}`}
+                  >
+                    При получении
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod("online")}
+                    className={`flex-1 min-h-11 rounded-full text-sm font-medium ${paymentMethod === "online" ? "bg-accent text-white" : "bg-card border border-foreground/15"}`}
+                  >
+                    Картой онлайн
+                  </button>
+                </div>
+              )}
               <p className="text-muted text-xs pt-1">
-                Оплата при получении. Бонусы: кэшбэк {loyalty.cashbackPercent}% после выполнения заказа.
+                {paymentMethod === "online" ? "Переход к оплате картой после оформления." : "Оплата при получении."} Кэшбэк {loyalty.cashbackPercent}% после выполнения заказа.
               </p>
             </div>
 
@@ -399,7 +456,7 @@ export function CartSheet({
                 }
                 className="flex-1 min-h-12 rounded-full bg-accent text-white font-medium text-lg disabled:opacity-50"
               >
-                {submitting ? "Отправляю…" : `Заказать · ${formatPrice(orderTotal)}`}
+                {submitting ? "Отправляю…" : paymentMethod === "online" ? `Оплатить · ${formatPrice(finalTotal)}` : `Заказать · ${formatPrice(finalTotal)}`}
               </button>
             </div>
           </div>

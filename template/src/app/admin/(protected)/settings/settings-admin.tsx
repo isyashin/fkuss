@@ -178,6 +178,25 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
               className={inputCls}
             />
           </label>
+          <label className="block">
+            <span className="text-sm text-muted">Часовой пояс ресторана</span>
+            <select
+              value={s.timezone}
+              onChange={(e) => setS({ ...s, timezone: e.target.value })}
+              className={inputCls}
+            >
+              <option value="Europe/Kaliningrad">Калининград (UTC+2)</option>
+              <option value="Europe/Moscow">Москва (UTC+3)</option>
+              <option value="Europe/Samara">Самара (UTC+4)</option>
+              <option value="Asia/Yekaterinburg">Екатеринбург (UTC+5)</option>
+              <option value="Asia/Omsk">Омск (UTC+6)</option>
+              <option value="Asia/Krasnoyarsk">Красноярск (UTC+7)</option>
+              <option value="Asia/Irkutsk">Иркутск (UTC+8)</option>
+              <option value="Asia/Yakutsk">Якутск (UTC+9)</option>
+              <option value="Asia/Vladivostok">Владивосток (UTC+10)</option>
+              <option value="Asia/Kamchatka">Камчатка (UTC+12)</option>
+            </select>
+          </label>
 
           {s.delivery.zones.map((zone, i) => (
             <div key={i} className="flex gap-2 items-center">
@@ -251,6 +270,25 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
         </div>
         <p className="text-muted text-xs mt-2">
           Индивидуальный режим блюда приоритетнее общего. Коэффициент действует и на платные добавки без ручной цены.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-xl mb-3">Оплата</h2>
+        <label className="block">
+          <span className="text-sm text-muted">Онлайн-оплата заказов</span>
+          <select
+            value={s.payment.provider}
+            onChange={(e) => setS({ ...s, payment: { ...s.payment, provider: e.target.value as typeof s.payment.provider } })}
+            className={inputCls}
+          >
+            <option value="none">выключена (только при получении)</option>
+            <option value="mock">тестовый провайдер</option>
+            <option value="yookassa">ЮKassa</option>
+          </select>
+        </label>
+        <p className="text-muted text-xs mt-2">
+          Ключи провайдера — в env сайта ({s.payment.shopIdRef}, {s.payment.secretRef}), не в админке.
         </p>
       </section>
 

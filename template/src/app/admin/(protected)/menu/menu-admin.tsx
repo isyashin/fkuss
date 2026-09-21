@@ -188,7 +188,7 @@ function DishRow({ dish }: { dish: Dish }) {
             </button>
             <button
               disabled={pending}
-              onClick={() => startTransition(() => updateDish(dish.id, { available: !dish.available }))}
+              onClick={() => startTransition(() => updateDish(dish.id, { manualAvailable: !dish.manualAvailable }))}
               className={`min-h-11 px-4 rounded-full text-sm ${dish.available ? "border border-foreground/20" : "bg-foreground/10 text-muted"}`}
             >
               {dish.available ? "В наличии" : "Нет в наличии"}

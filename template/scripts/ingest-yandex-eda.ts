@@ -23,6 +23,9 @@ interface EdaItem {
   optionsGroups?: {
     id: number;
     name: string;
+    required?: boolean;
+    minSelected?: number;
+    maxSelected?: number;
     options?: { id: number; name: string; price?: number }[];
   }[];
 }
@@ -148,13 +151,20 @@ async function main() {
         image,
         weight: item.weight ?? "",
         tags: [],
-        modifiers: (item.optionsGroups ?? []).flatMap((g) =>
-          (g.options ?? []).map((o) => ({
+        modifiers: [],
+        // Группы Яндекс.Еды сохраняем как группы с min/max (не сплющиваем)
+        groups: (item.optionsGroups ?? []).map((g, gi) => ({
+          id: slugifyId("group", g.id),
+          name: g.name,
+          position: gi,
+          minSelected: g.minSelected ?? (g.required ? 1 : 0),
+          maxSelected: g.maxSelected ?? 99,
+          modifiers: (g.options ?? []).map((o) => ({
             id: slugifyId("mod", o.id),
-            name: `${g.name}: ${o.name}`,
+            name: o.name,
             price: Math.round(o.price ?? 0),
           })),
-        ),
+        })),
         available: item.available !== false,
       });
     }

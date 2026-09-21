@@ -17,13 +17,13 @@ export async function GET(request: Request) {
   const schedule = resolveSchedule(restaurant);
   const slots = generateSlots(schedule, date, settings.booking.slotMinutes);
 
-  // Отсекаем прошедшее для «сегодня» с учётом minHoursAhead
-  const now = new Date();
-  const todayUtc = now.toISOString().slice(0, 10);
+  // Отсекаем прошедшее для «сегодня» с учётом minHoursAhead — в tz ресторана
+  const tz = (settings as { timezone?: string }).timezone ?? "Europe/Moscow";
+  const { restaurantLocal } = await import("@/lib/delivery/slots");
+  const local = restaurantLocal(new Date(), tz);
   let available = slots;
-  if (date === todayUtc) {
-    const minMinutes =
-      now.getUTCHours() * 60 + now.getUTCMinutes() + settings.booking.minHoursAhead * 60;
+  if (date === local.date) {
+    const minMinutes = local.minutes + settings.booking.minHoursAhead * 60;
     available = slots.filter((s) => {
       const [h, m] = s.split(":").map(Number);
       return h * 60 + m >= minMinutes;

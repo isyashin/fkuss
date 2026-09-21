@@ -117,5 +117,11 @@ docker run --rm --network template_default -e DATABASE_URL="$SITE_DB_URL" resto-
 cd "$SITE_DIR"
 docker compose up -d
 
+# 7. Cron: метрики и синхронизация меню (по CRON_SECRET сайта)
+SITE_CRON=$(grep '^CRON_SECRET=' "$SITE_DIR/.env" | cut -d= -f2-)
+(crontab -l 2>/dev/null | grep -v "localhost:$PORT" ; \
+  echo "0 */6 * * * curl -sf -X POST http://localhost:$PORT/api/jobs/report-metrics -H \"X-Cron-Secret: $SITE_CRON\" >/dev/null # resto $SLUG" ; \
+  echo "*/15 * * * * curl -sf -X POST http://localhost:$PORT/api/jobs/sync-menu -H \"X-Cron-Secret: $SITE_CRON\" >/dev/null # resto $SLUG") | crontab -
+
 echo "✓ $SLUG: порт $PORT, база $SLUG, домены: ${DOMAIN:-субдомен}"
 echo "  Не забудь: seed (CONTENT_DIR=$SITE_DIR/content npm run seed) и Caddyfile"

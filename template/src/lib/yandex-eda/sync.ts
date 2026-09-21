@@ -6,6 +6,9 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { EdaMenu, EdaDish } from "./client";
 import { fetchEdaMenu } from "./client";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import sharp from "sharp";
 
 type PrismaLike = Pick<PrismaClient, "dish" | "category" | "modifierGroup" | "modifier" | "settings" | "$transaction">;
 
@@ -76,6 +79,34 @@ function computeAvailable(manualAvailable: boolean, yandexAvailable: boolean): b
   return manualAvailable && yandexAvailable;
 }
 
+/** BUG-008: скачать и оптимизировать фото блюда в tenant content volume */
+async function downloadDishImage(dishId: string, imageUrl: string): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    const response = await fetch(imageUrl, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0" },
+    });
+    clearTimeout(timer);
+    if (!response.ok) return null;
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const dir = path.join(process.cwd(), "content", "images", "dishes");
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, `${dishId}.webp`),
+      await sharp(buffer).resize(800, 800, { fit: "inside" }).webp({ quality: 82 }).toBuffer(),
+    );
+    await writeFile(
+      path.join(dir, `${dishId}-sm.webp`),
+      await sharp(buffer).resize(400, 400, { fit: "inside" }).webp({ quality: 78 }).toBuffer(),
+    );
+    return `images/dishes/${dishId}.webp`;
+  } catch {
+    return null; // путь не пишем, если файл не скачался
+  }
+}
+
 async function upsertDish(prisma: PrismaLike, dish: EdaDish): Promise<void> {
   const category = await prisma.category.upsert({
     where: { externalId: dish.categoryExternalId },
@@ -92,6 +123,11 @@ async function upsertDish(prisma: PrismaLike, dish: EdaDish): Promise<void> {
   const yandexAvailable = dish.available;
 
   if (existing) {
+    // Фото: скачиваем только если локального нет, а URL есть
+    let image = existing.image;
+    if (!image && dish.imageUrl) {
+      image = (await downloadDishImage(existing.id, dish.imageUrl)) ?? "";
+    }
     await prisma.dish.update({
       where: { id: existing.id },
       data: {
@@ -103,18 +139,23 @@ async function upsertDish(prisma: PrismaLike, dish: EdaDish): Promise<void> {
         yandexAvailable,
         available: computeAvailable(existing.manualAvailable, yandexAvailable),
         lastSyncedAt: new Date(),
-        image: dish.imageUrl && !existing.image ? `images/dishes/${existing.id}.webp` : existing.image,
+        image,
       },
     });
   } else {
+    const newId = `dish-${dish.externalId}`;
+    let image = "";
+    if (dish.imageUrl) {
+      image = (await downloadDishImage(newId, dish.imageUrl)) ?? "";
+    }
     await prisma.dish.create({
       data: {
-        id: `dish-${dish.externalId}`,
+        id: newId,
         categoryId: category.id,
         name: dish.name,
         description: dish.description,
         price: dish.price ?? 0,
-        image: dish.imageUrl ? `images/dishes/dish-${dish.externalId}.webp` : "",
+        image,
         weight: dish.weight,
         tags: [],
         available: yandexAvailable,
@@ -178,9 +219,18 @@ async function upsertDish(prisma: PrismaLike, dish: EdaDish): Promise<void> {
       where: { groupId, id: { notIn: [...seenOptionIds] } },
     });
   }
-  await prisma.modifierGroup.deleteMany({
+
+  // BUG-009: сначала удаляем модификаторы исчезнувших групп (FK),
+  // затем сами группы — иначе FK не даст удалить
+  const staleGroups = await prisma.modifierGroup.findMany({
     where: { dishId: dishRow.id, id: { notIn: [...seenGroupIds] } },
+    select: { id: true },
   });
+  if (staleGroups.length > 0) {
+    const staleIds = staleGroups.map((g) => g.id);
+    await prisma.modifier.deleteMany({ where: { groupId: { in: staleIds } } });
+    await prisma.modifierGroup.deleteMany({ where: { id: { in: staleIds } } });
+  }
 }
 
 export interface SyncOptions {
@@ -256,8 +306,14 @@ export async function syncMenu(prisma: PrismaLike, options: SyncOptions = {}): P
     try {
       const { recomputePrices } = await import("../order/recompute");
       await recomputePrices(prisma as PrismaClient);
-    } catch {
-      // пересчёт не должен ронять синхронизацию
+    } catch (error) {
+      // BUG-010: ошибка пересчёта НЕ маскируем успехом — фиксируем как ошибку
+      const message = error instanceof Error ? error.message : String(error);
+      await releaseLock(prisma, {
+        lastStatus: "error" as const,
+        lastError: `Синхронизация применена, но пересчёт цен упал: ${message}`,
+      });
+      return { ok: false, error: `Пересчёт цен: ${message}` };
     }
 
     return { ok: true, upserted, missing: missing.count };

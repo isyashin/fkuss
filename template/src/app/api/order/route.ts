@@ -157,17 +157,54 @@ export async function POST(request: Request) {
 
   // Варианты доставки с интервалами: если есть включённые — цена и время от них,
   // зоны не применяются (единое начисление, без двойной платы)
+  if (input.type === "delivery") {
+    // BUG-012: флаги и адрес — серверные проверки
+    if (!settings.delivery.enabled) {
+      return NextResponse.json({ error: "Доставка временно недоступна" }, { status: 400 });
+    }
+    if (!input.address.trim()) {
+      return NextResponse.json({ error: "Укажите адрес доставки" }, { status: 400 });
+    }
+  } else if (!settings.delivery.pickupEnabled) {
+    return NextResponse.json({ error: "Самовывоз временно недоступен" }, { status: 400 });
+  }
+
   const options =
     input.type === "delivery"
       ? await prisma.deliveryOption.findMany({ where: { enabled: true }, orderBy: { position: "asc" } })
       : [];
-  const option = options.length > 0 ? (options.find((o) => o.id === input.deliveryOptionId) ?? options[0]) : null;
+
+  let option = options.length > 0 ? (options.find((o) => o.id === input.deliveryOptionId) ?? null) : null;
+  // BUG-012: неизвестный ID варианта — отказ, а не подмена первым
+  if (input.type === "delivery" && options.length > 0 && input.deliveryOptionId && !option) {
+    return NextResponse.json({ error: "Неизвестный вариант доставки" }, { status: 400 });
+  }
+  if (input.type === "delivery" && options.length > 0 && !option) {
+    option = options[0];
+  }
+
   const tz = (settings as { timezone?: string }).timezone ?? "Europe/Moscow";
   const now = new Date();
   let desiredTimeText = input.desiredTime;
 
   if (option) {
+    // Снимок режима — из найденной опции, не из тела запроса
+    const { restaurantLocal } = await import("@/lib/delivery/slots");
+    const local = restaurantLocal(now, tz);
+    const dayOk = option.days.includes(local.day) && !option.exceptions.includes(local.date);
+    if (!dayOk) {
+      return NextResponse.json({ error: "Доставка в выбранный день недоступна" }, { status: 400 });
+    }
+
     if (option.mode === "asap") {
+      // BUG-012: ASAP проверяем часы варианта
+      const [fh, fm] = option.hoursFrom.split(":").map(Number);
+      const [th, tm] = option.hoursTo.split(":").map(Number);
+      const fromMin = fh * 60 + fm;
+      const toMin = th * 60 + tm;
+      if (local.minutes < fromMin || local.minutes >= toMin) {
+        return NextResponse.json({ error: "Срочная доставка сейчас недоступна" }, { status: 400 });
+      }
       desiredTimeText = "как можно скорее";
     } else {
       // scheduled: окно обязательно и валидируется сервером

@@ -24,6 +24,20 @@ export default async function HomePage() {
     `${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`,
   );
 
+  // Баланс бонусов авторизованного гостя (для списания в корзине)
+  let bonusBalance = 0;
+  try {
+    const { getSessionCustomer } = await import("@/lib/auth");
+    const { getBonusBalance } = await import("@/lib/loyalty");
+    const customer = await getSessionCustomer();
+    if (customer) {
+      const prisma = getPrisma();
+      bonusBalance = await getBonusBalance(prisma, customer.id);
+    }
+  } catch {
+    // без баланса — анонимная корзина
+  }
+
   const about = pages.pages.find((p) => p.slug === "about");
   const banquetsSettings = (settings as { banquets?: { enabled?: boolean; title?: string } }).banquets;
   let banquetsEnabled = banquetsSettings?.enabled === true;
@@ -73,6 +87,8 @@ export default async function HomePage() {
             loyalty={settings.loyalty}
             whatsapp={settings.channels.whatsapp}
             isOpen={open}
+            paymentProvider={settings.payment.provider}
+            bonusBalance={bonusBalance}
           />
         </div>
 

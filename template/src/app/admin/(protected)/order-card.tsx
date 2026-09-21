@@ -47,7 +47,11 @@ export function OrderCard({ order }: { order: Order & { items: OrderItem[] } }) 
         <p className="font-semibold text-accent">{order.total.toLocaleString("ru-RU")} ₽</p>
       </div>
       <p className="text-sm mt-1">
-        {order.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}
+        {order.items.map((i) => {
+          const mods = (i.modifiers as { name?: string; price?: number }[] | null) ?? [];
+          const modsText = mods.length ? ` [${mods.map((m) => m.name).join(", ")}]` : "";
+          return `${i.name}${modsText} ×${i.quantity}`;
+        }).join(", ")}
       </p>
       <p className="text-muted text-sm mt-1">
         {order.customerName} · {order.customerPhone} ·{" "}

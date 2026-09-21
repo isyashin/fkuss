@@ -99,8 +99,15 @@ async function main() {
     }
 
     for (const [ci, category] of menu.categories.entries()) {
+      // BUG-011: externalId категории из cat-<num> (инжест)
+      const catExt = category.id.match(/^cat-(\d+)$/);
       await tx.category.create({
-        data: { id: category.id, name: category.name, position: ci },
+        data: {
+          id: category.id,
+          name: category.name,
+          position: ci,
+          externalId: catExt ? catExt[1] : null,
+        },
       });
       for (const [di, dish] of category.dishes.entries()) {
         // Внешние ID инжеста (dish-<num>, mod-<num>) → source=yandex
@@ -138,12 +145,15 @@ async function main() {
           },
         });
 
-        // Группы модификаторов (с min/max)
+        // Группы модификаторов (с min/max); externalId из group-<num>/mod-<num>
         for (const [gi, group] of dish.groups.entries()) {
+          const gExt = group.id.match(/^group-(\d+)$/);
+          const groupId = gExt ? `${dish.id}:g${gExt[1]}` : `${dish.id}:${group.id}`;
           await tx.modifierGroup.create({
             data: {
-              id: `${dish.id}:${group.id}`,
+              id: groupId,
               dish: { connect: { id: dish.id } },
+              externalId: gExt ? gExt[1] : null,
               name: group.name,
               position: group.position ?? gi,
               minSelected: group.minSelected,
@@ -152,7 +162,9 @@ async function main() {
                 create: group.modifiers.map((m) => {
                   const mExt = m.id.match(/^mod-(\d+)$/);
                   return {
-                    id: `${dish.id}:${group.id}:${m.id}`,
+                    id: gExt && mExt
+                      ? `${dish.id}:g${gExt[1]}:o${mExt[1]}`
+                      : `${dish.id}:${group.id}:${m.id}`,
                     dish: { connect: { id: dish.id } },
                     externalId: mExt ? mExt[1] : null,
                     name: m.name,

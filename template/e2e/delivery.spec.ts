@@ -7,6 +7,7 @@ function ip(project: string, n: number) {
 
 test("админ создаёт scheduled-вариант, гость заказывает с интервалом", async ({ page, request }, testInfo) => {
   const optName = `Курьер по времени ${Date.now().toString(36)}`;
+  const asapName = `Экспресс 24/7 ${Date.now().toString(36)}`;
 
   // 1. Админка → Доставка → новый вариант
   await page.goto("/admin/login");
@@ -23,6 +24,15 @@ test("админ создаёт scheduled-вариант, гость заказ�
   await page.getByLabel("Часы до").fill("23:59");
   await page.getByRole("button", { name: "Сохранить" }).click();
   await expect(page.getByText(optName)).toBeVisible({ timeout: 15000 });
+
+  // ASAP-вариант 24/7 для детерминированного DEL-01 (ресторан открыт не всегда)
+  await page.getByRole("button", { name: "+ Вариант доставки" }).click();
+  await page.getByLabel("Название").fill(asapName);
+  await page.getByLabel("Режим").selectOption("asap");
+  await page.getByLabel("Часы с").fill("00:00");
+  await page.getByLabel("Часы до").fill("23:59");
+  await page.getByRole("button", { name: "Сохранить" }).click();
+  await expect(page.getByText(asapName)).toBeVisible({ timeout: 15000 });
 
   // 2. API отдаёт вариант с окнами
   const slots = await (await request.get("/api/delivery/slots")).json();
@@ -97,6 +107,11 @@ test("админ создаёт scheduled-вариант, гость заказ�
 });
 
 test("DEL-01: asap — заказ «как можно скорее» без интервала", async ({ request }, testInfo) => {
+  // Берём ASAP-вариант 24/7, созданный в первом тесте файла
+  const slots = await (await request.get("/api/delivery/slots")).json();
+  const asap = slots.options.find((o: { name: string; mode: string }) => o.mode === "asap" && o.name.startsWith("Экспресс 24/7"));
+  expect(asap).toBeTruthy();
+
   const response = await request.post("/api/order", {
     data: {
       items: [{ dishId: "khachapuri-adjarski", quantity: 2, modifierIds: [] }],
@@ -107,6 +122,7 @@ test("DEL-01: asap — заказ «как можно скорее» без ин
       customerPhone: "+79990000004",
       website: "",
       deliveryMode: "asap",
+      deliveryOptionId: asap.id,
     },
     headers: ip(testInfo.project.name, 4),
   });

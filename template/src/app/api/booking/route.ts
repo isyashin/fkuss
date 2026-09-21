@@ -44,6 +44,25 @@ export async function POST(request: Request) {
   }
 
   const schedule = resolveSchedule(restaurant);
+
+  // BUG-013: серверные проверки даты и minHoursAhead в часовом поясе ресторана
+  const tz = (settings as { timezone?: string }).timezone ?? "Europe/Moscow";
+  const { restaurantLocal } = await import("@/lib/delivery/slots");
+  const local = restaurantLocal(new Date(), tz);
+
+  if (parsed.data.date < local.date) {
+    return NextResponse.json({ error: "Нельзя забронировать на прошедшую дату" }, { status: 400 });
+  }
+  if (parsed.data.date === local.date) {
+    const [h, m] = parsed.data.time.split(":").map(Number);
+    if (h * 60 + m < local.minutes + settings.booking.minHoursAhead * 60) {
+      return NextResponse.json(
+        { error: `Бронь возможна не раньше чем через ${settings.booking.minHoursAhead} ч.` },
+        { status: 400 },
+      );
+    }
+  }
+
   if (!isValidBookingTime(schedule, parsed.data.date, parsed.data.time, settings.booking.slotMinutes)) {
     return NextResponse.json(
       { error: "На это время бронь недоступна — выберите время в часы работы ресторана" },
@@ -51,9 +70,37 @@ export async function POST(request: Request) {
     );
   }
 
+  // BUG-013: вместимость слота: сумма гостей на дату+время ≤ maxGuestsPerSlot
   const prisma = getPrisma();
+  const slotLoad = await prisma.reservation.aggregate({
+    where: {
+      date: parsed.data.date,
+      time: parsed.data.time,
+      status: { in: ["new", "confirmed"] },
+    },
+    _sum: { guests: true },
+  });
+  const taken = slotLoad._sum.guests ?? 0;
+  if (taken + parsed.data.guests > settings.booking.maxGuestsPerSlot) {
+    return NextResponse.json(
+      { error: "На это время мест больше нет — выберите другое время" },
+      { status: 400 },
+    );
+  }
+
+  // Привязка к авторизованному гостю (если сессия есть)
+  let customerId: string | null = null;
+  try {
+    const { getSessionCustomer } = await import("@/lib/auth");
+    const sessionCustomer = await getSessionCustomer();
+    customerId = sessionCustomer?.id ?? null;
+  } catch {
+    // анонимная бронь
+  }
+
   const reservation = await prisma.reservation.create({
     data: {
+      customerId,
       date: parsed.data.date,
       time: parsed.data.time,
       guests: parsed.data.guests,

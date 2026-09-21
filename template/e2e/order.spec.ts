@@ -38,12 +38,18 @@ test("гость заказывает блюдо с главной через к
   await expect(page.getByText(/Заказ №\d+ принят/)).toBeVisible({ timeout: 15000 });
 });
 
-test("форма брони отправляется", async ({ page }) => {
+test("форма брони отправляется", async ({ page }, testInfo) => {
   await page.goto("/booking");
-  // Будущий будний день — ресторан открыт (тест-ресторан пн–вс 11:00–23:00)
-  await page.getByRole("textbox", { name: "Дата" }).fill("2027-01-06");
-  // Слоты подгружаются с сервера — ждём и выбираем 19:00
-  await page.getByRole("combobox", { name: "Время" }).selectOption("19:00", { timeout: 15000 });
+  // Будущий будний день + уникальный слот прогона (вместимость слота не накапливается между прогонами)
+  const stamp = Math.floor(Date.now() / 60000);
+  const hour = 12 + (stamp % 9); // 12:00–20:00
+  const minute = stamp % 2 === 0 ? "00" : "30";
+  const time = `${String(hour).padStart(2, "0")}:${minute}`;
+  const daysAhead = 7 + (stamp % 20);
+  const date = new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10);
+
+  await page.getByRole("textbox", { name: "Дата" }).fill(date);
+  await page.getByRole("combobox", { name: "Время" }).selectOption(time, { timeout: 15000 });
   await page.getByLabel("Имя").fill("Тест E2E");
   await page.getByLabel("Телефон").fill("+79990001133");
   await page.getByRole("button", { name: "Забронировать" }).click();

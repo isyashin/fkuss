@@ -82,7 +82,11 @@ export async function getSiteMenu(): Promise<Menu> {
             image: d.image,
             weight: d.weight,
             tags: d.tags,
-            modifiers: d.modifiers.map((m) => ({ id: m.id, name: m.name, price: m.price })),
+            // BUG-004: в flat-блоке «Добавки» — только модификаторы БЕЗ группы,
+            // иначе каждый соус дублируется дважды (в блоке и в группе)
+            modifiers: d.modifiers
+              .filter((m) => m.groupId === null)
+              .map((m) => ({ id: m.id, name: m.name, price: m.price })),
             groups: d.modifierGroups.map((g) => ({
               id: g.id,
               name: g.name,

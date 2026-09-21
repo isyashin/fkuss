@@ -20,12 +20,16 @@ export function MenuClient({
   loyalty,
   whatsapp,
   isOpen,
+  paymentProvider = "none",
+  bonusBalance = 0,
 }: {
   menu: Menu;
   delivery: ContentSettings["delivery"];
   loyalty: ContentSettings["loyalty"];
   whatsapp: ContentSettings["channels"]["whatsapp"];
   isOpen?: boolean;
+  paymentProvider?: string;
+  bonusBalance?: number;
 }) {
   const [activeCategory, setActiveCategory] = useState(menu.categories[0]?.id ?? "");
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
@@ -126,7 +130,16 @@ export function MenuClient({
       )}
 
       <CartBar onOpen={() => setCartOpen(true)} />
-      {cartOpen && <CartSheet delivery={delivery} loyalty={loyalty} whatsapp={whatsapp} onClose={() => setCartOpen(false)} />}
+      {cartOpen && (
+        <CartSheet
+          delivery={delivery}
+          loyalty={loyalty}
+          whatsapp={whatsapp}
+          paymentProvider={paymentProvider}
+          bonusBalance={bonusBalance}
+          onClose={() => setCartOpen(false)}
+        />
+      )}
     </div>
   );
 }

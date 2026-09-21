@@ -215,6 +215,7 @@ export const settingsSchema = z.object({
   captcha: z.object({
     provider: z.enum(["none", "smartcaptcha"]).default("none"),
   }),
+  timezone: z.string().default("Europe/Moscow"),
 });
 
 export type ContentRestaurant = z.infer<typeof restaurantSchema>;

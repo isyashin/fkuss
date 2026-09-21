@@ -15,6 +15,7 @@ export async function updateDish(
     price?: number;
     description?: string;
     available?: boolean;
+    manualAvailable?: boolean;
     weight?: string;
     priceMode?: "inherit" | "yandex" | "manual" | "coefficient";
     manualPrice?: number | null;
@@ -23,7 +24,18 @@ export async function updateDish(
 ): Promise<void> {
   await guard();
   const prisma = getPrisma();
-  await prisma.dish.update({ where: { id }, data });
+  const { manualAvailable, ...rest } = data;
+  const dish = await prisma.dish.findUnique({ where: { id } });
+  if (!dish) throw new Error("Блюдо не найдено");
+
+  const update: Record<string, unknown> = { ...rest };
+  if (manualAvailable !== undefined) {
+    // BUG-007: ручной рубильник меняет manualAvailable; итог пересчитываем
+    update.manualAvailable = manualAvailable;
+    update.available = manualAvailable && dish.yandexAvailable;
+  }
+
+  await prisma.dish.update({ where: { id }, data: update });
   const { recomputePrices } = await import("@/lib/order/recompute");
   await recomputePrices(prisma);
   revalidatePath("/admin/menu");

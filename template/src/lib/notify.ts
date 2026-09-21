@@ -12,7 +12,13 @@ export async function notifyNewOrder(orderId: string): Promise<void> {
 
   const settings = await getSiteSettings();
   const lines = order.items
-    .map((i) => `• ${i.name} × ${i.quantity} — ${i.total} ₽`)
+    .map((i) => {
+      const mods = (i.modifiers as { name?: string; price?: number }[] | null) ?? [];
+      const modsText = mods.length
+        ? ` [${mods.map((m) => `${m.name ?? ""}${m.price ? ` +${m.price} ₽` : ""}`).join(", ")}]`
+        : "";
+      return `• ${i.name}${modsText} × ${i.quantity} — ${i.total} ₽`;
+    })
     .join("\n");
   const text = [
     `🆕 Заказ №${order.number} — ${order.type === "delivery" ? "Доставка" : "Самовывоз"}`,

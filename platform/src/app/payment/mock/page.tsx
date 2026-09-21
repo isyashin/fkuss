@@ -29,6 +29,7 @@ export default async function MockPaymentPage({
           siteId: payment.siteId,
           type: "topup",
           amount: payment.amount,
+          dedupeKey: `topup:${payment.id}`,
           comment: `Оплата счёта №${invoiceId} (тест)`,
         },
       }),

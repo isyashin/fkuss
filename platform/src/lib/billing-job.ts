@@ -16,21 +16,24 @@ export async function runBillingDaily(): Promise<string[]> {
     if (!site.tariff) continue;
     const daily = dailyChargeKopecks(site.tariff.monthlyPrice);
 
-    // Идемпотентность: не списываем дважды за одни сутки (ретрай cron)
+    // Идемпотентность через уникальный dedupeKey: повторный запуск за день
+    // упирается в unique-индекс и пропускается (гонки cron не страшны)
     if (site.state !== "suspended" && daily > 0) {
-      const todayStart = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
-      const alreadyCharged = await prisma.balanceTransaction.findFirst({
-        where: { siteId: site.slug, type: "charge", createdAt: { gte: todayStart } },
-      });
-      if (!alreadyCharged) {
+      const today = new Date().toISOString().slice(0, 10);
+      try {
         await prisma.balanceTransaction.create({
           data: {
             siteId: site.slug,
             type: "charge",
             amount: -daily,
+            dedupeKey: `charge:${site.slug}:${today}`,
             comment: `Тариф «${site.tariff.name}» за день`,
           },
         });
+      } catch (error) {
+        const isUnique = error instanceof Error && error.message.includes("dedupeKey");
+        if (!isUnique) throw error;
+        // уже списано сегодня — пропускаем
       }
     }
 
@@ -58,11 +61,24 @@ export async function runBillingDaily(): Promise<string[]> {
     }
 
     const days = daysLeft(balance, daily);
-    const sentRaw = await prisma.balanceTransaction.findFirst({
-      where: { siteId: site.slug, type: "adjustment", comment: { startsWith: "notify:" } },
+    // Пороги считаются только после последнего пополнения:
+    // после topup цикл уведомлений начинается заново
+    const lastTopup = await prisma.balanceTransaction.findFirst({
+      where: { siteId: site.slug, type: "topup" },
       orderBy: { createdAt: "desc" },
     });
-    const alreadySent = sentRaw ? sentRaw.comment.replace("notify:", "").split(",").map(Number) : [];
+    const notifyEntries = await prisma.balanceTransaction.findMany({
+      where: {
+        siteId: site.slug,
+        type: "adjustment",
+        comment: { startsWith: "notify:" },
+        ...(lastTopup ? { createdAt: { gt: lastTopup.createdAt } } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    const alreadySent = notifyEntries.length
+      ? notifyEntries[0].comment.replace("notify:", "").split(",").map(Number)
+      : [];
     const threshold = shouldNotify(days, alreadySent);
     if (threshold !== null) {
       await prisma.balanceTransaction.create({

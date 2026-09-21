@@ -43,6 +43,7 @@ model BalanceTransaction {
   site      Site     @relation(fields: [siteId], references: [slug])
   type      String   // charge | topup | adjustment
   amount    Int      // копейки; charge отрицательный
+  dedupeKey String?  @unique // защита от гонок/повторов: charge:<site>:<дата>, topup:<paymentId>
   comment   String   @default("")
   createdAt DateTime @default(now())
 }

@@ -30,14 +30,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
 
   const prisma = getPrisma();
   const payment = await prisma.payment.findFirst({ where: { invoiceId } });
-  if (!payment || payment.status === "paid") return NextResponse.json({ ok: true }); // идемпотентность
+  if (!payment) return NextResponse.json({ ok: true });
 
   if (event.status === "paid") {
+    // Атомарно и идемпотентно: помечаем paid ТОЛЬКО из pending —
+    // повторный webhook получит count=0 и не зачислит дважды
+    const marked = await prisma.payment.updateMany({
+      where: { id: payment.id, status: "pending" },
+      data: { status: "paid", providerPaymentId: event.paymentId },
+    });
+    if (marked.count === 0) return NextResponse.json({ ok: true }); // уже обработан
+
     await prisma.$transaction([
-      prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: "paid", providerPaymentId: event.paymentId },
-      }),
       prisma.invoice.update({
         where: { id: invoiceId },
         data: { status: "paid", paidAt: new Date() },
@@ -47,18 +51,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
           siteId: payment.siteId,
           type: "topup",
           amount: payment.amount,
+          dedupeKey: `topup:${payment.id}`,
           comment: `Оплата счёта №${invoiceId}`,
         },
       }),
-      // Реактивация: если сайт был приостановлен — баланс пополнен, вернём в active
-      // (billing-daily пересчитает точно, здесь — быстрый откат)
       prisma.site.updateMany({
         where: { slug: payment.siteId, state: { in: ["grace", "suspended"] } },
         data: { state: "active", stateChangedAt: new Date() },
       }),
     ]);
   } else {
-    await prisma.payment.update({ where: { id: payment.id }, data: { status: "failed" } });
+    await prisma.payment.updateMany({
+      where: { id: payment.id, status: "pending" },
+      data: { status: "failed" },
+    });
   }
 
   return NextResponse.json({ ok: true });

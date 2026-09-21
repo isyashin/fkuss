@@ -66,6 +66,15 @@ export function calculateBonusAccrual(
   return Math.floor((base * cashbackPercent) / 100);
 }
 
+/** Сумма к оплате: итог заказа с учётом варианта доставки и списанных бонусов */
+export function paymentAmountForOrder(input: {
+  itemsTotal: number;
+  deliveryPrice: number;
+  bonusSpent: number;
+}): number {
+  return Math.max(0, input.itemsTotal + input.deliveryPrice - input.bonusSpent);
+}
+
 export interface CalculateOrderInput {
   items: OrderItemInput[];
   type: "delivery" | "pickup";

@@ -226,54 +226,81 @@ export async function POST(request: Request) {
         )
       : calc.bonusAccrued;
 
-  const order = await prisma.order.create({
-    data: {
-      customerId,
-      type: input.type,
-      status: "new",
-      itemsTotal: calc.itemsTotal,
-      deliveryPrice: deliveryPriceFinal,
-      bonusSpent: calc.bonusSpent,
-      bonusAccrued: bonusAccruedFinal,
-      total: totalFinal,
-      paymentMethod: input.paymentMethod,
-      paymentStatus: input.paymentMethod === "online" ? "pending" : "none",
-      customerName: input.customerName,
-      customerPhone: input.customerPhone,
-      addressText: input.address,
-      comment: input.comment,
-      desiredTime: desiredTimeText,
-      deliveryMode: input.type === "delivery" ? input.deliveryMode : null,
-      deliveryDate: input.type === "delivery" ? input.deliveryDate : null,
-      deliverySlotStart: input.type === "delivery" ? input.deliverySlotStart : null,
-      deliverySlotEnd: input.type === "delivery" ? input.deliverySlotEnd : null,
-      deliveryTz: input.type === "delivery" ? ((settings as { timezone?: string }).timezone ?? "Europe/Moscow") : null,
-      deliveryOptionName,
-      items: {
-        create: orderLines.map((l) => ({
-          dishId: l.dishId,
-          name: l.name,
-          price: l.price,
-          quantity: l.quantity,
-          modifiers: l.modifiers,
-          total: l.total,
-        })),
-      },
-    },
-    include: { items: true },
-  });
+  // Атомарно: создание заказа + списание бонусов одной транзакцией,
+  // с повторной проверкой баланса внутри (защита от конкурентного списания)
+  let order;
+  try {
+    order = await prisma.$transaction(async (tx) => {
+      if (customerId && calc.bonusSpent > 0) {
+        const agg = await tx.bonusTransaction.aggregate({
+          where: { customerId },
+          _sum: { amount: true },
+        });
+        const balanceNow = agg._sum.amount ?? 0;
+        if (balanceNow < calc.bonusSpent) {
+          throw new Error("BONUS_BALANCE_RACE");
+        }
+      }
 
-  // Бонусы списываем сразу (ledger), начисление — при статусе «выполнен» (этап 6)
-  if (customerId && calc.bonusSpent > 0) {
-    await prisma.bonusTransaction.create({
-      data: {
-        customerId,
-        orderId: order.id,
-        type: "spend",
-        amount: -calc.bonusSpent,
-        comment: `Списание по заказу №${order.number}`,
-      },
+      const created = await tx.order.create({
+        data: {
+          customerId,
+          type: input.type,
+          status: "new",
+          itemsTotal: calc.itemsTotal,
+          deliveryPrice: deliveryPriceFinal,
+          bonusSpent: calc.bonusSpent,
+          bonusAccrued: bonusAccruedFinal,
+          total: totalFinal,
+          paymentMethod: input.paymentMethod,
+          paymentStatus: input.paymentMethod === "online" ? "pending" : "none",
+          customerName: input.customerName,
+          customerPhone: input.customerPhone,
+          addressText: input.address,
+          comment: input.comment,
+          desiredTime: desiredTimeText,
+          deliveryMode: input.type === "delivery" ? input.deliveryMode : null,
+          deliveryDate: input.type === "delivery" ? input.deliveryDate : null,
+          deliverySlotStart: input.type === "delivery" ? input.deliverySlotStart : null,
+          deliverySlotEnd: input.type === "delivery" ? input.deliverySlotEnd : null,
+          deliveryTz: input.type === "delivery" ? ((settings as { timezone?: string }).timezone ?? "Europe/Moscow") : null,
+          deliveryOptionName,
+          items: {
+            create: orderLines.map((l) => ({
+              dishId: l.dishId,
+              name: l.name,
+              price: l.price,
+              quantity: l.quantity,
+              modifiers: l.modifiers,
+              total: l.total,
+            })),
+          },
+        },
+        include: { items: true },
+      });
+
+      if (customerId && calc.bonusSpent > 0) {
+        await tx.bonusTransaction.create({
+          data: {
+            customerId,
+            orderId: created.id,
+            type: "spend",
+            amount: -calc.bonusSpent,
+            comment: `Списание по заказу №${created.number}`,
+          },
+        });
+      }
+
+      return created;
     });
+  } catch (error) {
+    if (error instanceof Error && error.message === "BONUS_BALANCE_RACE") {
+      return NextResponse.json(
+        { error: "Недостаточно бонусов — обновите страницу и попробуйте снова" },
+        { status: 409 },
+      );
+    }
+    throw error;
   }
 
   // Онлайн-оплата: создаём платёж у провайдера
@@ -285,13 +312,19 @@ export async function POST(request: Request) {
     }
     const canonical = settings.domains.canonical;
     const baseUrl = canonical.startsWith("http") ? canonical : `https://${canonical}`;
+    const { paymentAmountForOrder } = await import("@/lib/order/pricing");
+    const amount = paymentAmountForOrder({
+      itemsTotal: calc.itemsTotal,
+      deliveryPrice: deliveryPriceFinal,
+      bonusSpent: calc.bonusSpent,
+    });
     try {
       const payment = await provider.createPayment({
         orderId: order.id,
         orderNumber: order.number,
-        amount: calc.total,
+        amount,
         description: `Заказ №${order.number}`,
-        returnUrl: `${baseUrl}/order/${order.number}`,
+        returnUrl: `${baseUrl}/order/success?n=${order.number}`,
       });
       confirmationUrl = payment.confirmationUrl;
       await prisma.order.update({
@@ -299,11 +332,27 @@ export async function POST(request: Request) {
         data: { paymentId: payment.paymentId },
       });
     } catch {
-      // Провайдер недоступен: заказ не оставляем «висеть» — помечаем и сообщаем
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { paymentStatus: "failed", comment: `${order.comment} [оплата не создана]` },
-      });
+      // Компенсация: провайдер недоступен — возвращаем списанные бонусы,
+      // заказ помечаем failed, клиент может выбрать оплату при получении
+      await prisma.$transaction([
+        ...(customerId && calc.bonusSpent > 0
+          ? [
+              prisma.bonusTransaction.create({
+                data: {
+                  customerId,
+                  orderId: order.id,
+                  type: "refund",
+                  amount: calc.bonusSpent,
+                  comment: `Возврат бонусов, платёж не создан (заказ №${order.number})`,
+                },
+              }),
+            ]
+          : []),
+        prisma.order.update({
+          where: { id: order.id },
+          data: { paymentStatus: "failed", comment: `${order.comment} [оплата не создана]` },
+        }),
+      ]);
       return NextResponse.json(
         { error: "Не удалось создать платёж. Выберите оплату при получении или попробуйте позже." },
         { status: 502 },

@@ -29,8 +29,10 @@ export async function requestOwnerCode(email: string): Promise<{ devCode?: strin
     });
     return {};
   } catch {
-    console.log(`[platform-auth] Код для ${email}: ${code}`);
+    // BUG-021: в production действующий код НЕ логируем — только факт сбоя
+    console.warn(`[platform-auth] SMTP недоступен, код для ${email} не доставлен`);
     const expose = process.env.AUTH_DEV_CODE === "1" || process.env.NODE_ENV !== "production";
+    if (expose) console.log(`[platform-auth] DEV код для ${email}: ${code}`);
     return { devCode: expose ? code : undefined };
   }
 }

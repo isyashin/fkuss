@@ -76,6 +76,8 @@ export const modifierGroupSchema = z.object({
   minSelected: z.number().int().min(0).default(0),
   maxSelected: z.number().int().min(1).default(1),
   modifiers: z.array(modifierSchema).min(1),
+}).refine((g) => g.minSelected <= g.maxSelected, {
+  message: "minSelected не может быть больше maxSelected",
 });
 
 export const dishSchema = z.object({

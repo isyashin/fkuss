@@ -1,13 +1,7 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { getSiteRestaurant } from "@/lib/site";
-import { trackPageView } from "@/lib/metrics-counter";
 
 export async function SiteHeader() {
-  // Счёт просмотров витрины (SiteHeader не рендерится в админке/API)
-  const hdrs = await headers();
-  void trackPageView(hdrs.get("user-agent"));
-
   const restaurant = await getSiteRestaurant();
   return (
     <header className="sticky top-0 z-40 bg-background/90 backdrop-blur border-b border-foreground/10">

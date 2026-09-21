@@ -343,6 +343,23 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
           <label className="flex items-center gap-3 min-h-11">
             <input
               type="checkbox"
+              checked={s.channels.max.enabled}
+              onChange={(e) => setS({ ...s, channels: { ...s.channels, max: { ...s.channels.max, enabled: e.target.checked } } })}
+              className="w-5 h-5 accent-[var(--accent)]"
+            />
+            MAX (токен в secrets, chat_id ниже)
+          </label>
+          {s.channels.max.enabled && (
+            <input
+              value={s.channels.max.chatId}
+              onChange={(e) => setS({ ...s, channels: { ...s.channels, max: { ...s.channels.max, chatId: e.target.value } } })}
+              placeholder="chat_id чата MAX"
+              className={inputCls}
+            />
+          )}
+          <label className="flex items-center gap-3 min-h-11">
+            <input
+              type="checkbox"
               checked={s.channels.email.enabled}
               onChange={(e) => setS({ ...s, channels: { ...s.channels, email: { ...s.channels.email, enabled: e.target.checked } } })}
               className="w-5 h-5 accent-[var(--accent)]"
@@ -388,6 +405,41 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
           />
           Бронирование включено
         </label>
+        {s.booking.enabled && (
+          <div className="grid grid-cols-3 gap-3">
+            <label className="block">
+              <span className="text-sm text-muted">Шаг слота, мин</span>
+              <input
+                type="number"
+                min={15}
+                max={180}
+                value={s.booking.slotMinutes}
+                onChange={(e) => setS({ ...s, booking: { ...s.booking, slotMinutes: Number(e.target.value) } })}
+                className={inputCls}
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm text-muted">Гостей на слот, макс</span>
+              <input
+                type="number"
+                min={1}
+                value={s.booking.maxGuestsPerSlot}
+                onChange={(e) => setS({ ...s, booking: { ...s.booking, maxGuestsPerSlot: Number(e.target.value) } })}
+                className={inputCls}
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm text-muted">Не раньше, ч.</span>
+              <input
+                type="number"
+                min={0}
+                value={s.booking.minHoursAhead}
+                onChange={(e) => setS({ ...s, booking: { ...s.booking, minHoursAhead: Number(e.target.value) } })}
+                className={inputCls}
+              />
+            </label>
+          </div>
+        )}
       </section>
 
       <div className="flex items-center gap-3 bg-background/95 border-t border-foreground/10 py-3 mt-6">

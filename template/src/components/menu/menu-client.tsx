@@ -22,6 +22,7 @@ export function MenuClient({
   isOpen,
   paymentProvider = "none",
   bonusBalance = 0,
+  initialAddress = "",
 }: {
   menu: Menu;
   delivery: ContentSettings["delivery"];
@@ -30,6 +31,7 @@ export function MenuClient({
   isOpen?: boolean;
   paymentProvider?: string;
   bonusBalance?: number;
+  initialAddress?: string;
 }) {
   const [activeCategory, setActiveCategory] = useState(menu.categories[0]?.id ?? "");
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
@@ -137,6 +139,7 @@ export function MenuClient({
           whatsapp={whatsapp}
           paymentProvider={paymentProvider}
           bonusBalance={bonusBalance}
+          initialAddress={initialAddress}
           onClose={() => setCartOpen(false)}
         />
       )}

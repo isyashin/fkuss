@@ -18,6 +18,7 @@ export function CartSheet({
   whatsapp,
   paymentProvider = "none",
   bonusBalance = 0,
+  initialAddress = "",
   onClose,
 }: {
   delivery: ContentSettings["delivery"];
@@ -25,6 +26,7 @@ export function CartSheet({
   whatsapp: ContentSettings["channels"]["whatsapp"];
   paymentProvider?: string;
   bonusBalance?: number;
+  initialAddress?: string;
   onClose: () => void;
 }) {
   const { items, setQuantity, clear, total } = useCart();
@@ -38,7 +40,7 @@ export function CartSheet({
   const [zoneName, setZoneName] = useState(delivery.zones[0]?.name ?? "");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "online">("cash");
   const [bonusSpend, setBonusSpend] = useState(0);
-  const [form, setForm] = useState({ address: "", name: "", phone: "", email: "", comment: "", website: "" });
+  const [form, setForm] = useState({ address: initialAddress, name: "", phone: "", email: "", comment: "", website: "" });
 
   // Варианты доставки и окна (если настроены)
   const [options, setOptions] = useState<{

@@ -108,10 +108,14 @@ export async function getSiteMenu(): Promise<Menu> {
 export async function getSitePromos(): Promise<{ promos: Promo[] }> {
   try {
     const prisma = getPrisma();
-    const promos = await prisma.promo.findMany({ orderBy: { position: "asc" } });
-    if (promos.length > 0) {
-      return {
-        promos: promos.map((p) => ({
+    const rows = await prisma.promo.findMany({ orderBy: { position: "asc" } });
+    const today = new Date().toISOString().slice(0, 10);
+    // BUG-027: показываем только активные по датам; пустой результат НЕ
+    // откатываемся на JSON (иначе удалённые промо «воскресают»)
+    return {
+      promos: rows
+        .filter((p) => (!p.activeFrom || p.activeFrom <= today) && (!p.activeTo || p.activeTo >= today))
+        .map((p) => ({
           id: p.id,
           title: p.title,
           text: p.text,
@@ -119,10 +123,9 @@ export async function getSitePromos(): Promise<{ promos: Promo[] }> {
           activeFrom: p.activeFrom ?? "",
           activeTo: p.activeTo,
         })),
-      };
-    }
+    };
   } catch {
-    // fallback ниже
+    // БД недоступна — только тогда читаем из content/
   }
   return readPromos();
 }

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { deleteHall, saveBanquetsSettings, saveHall, type BanquetsSettings } from "./actions";
+import { deleteHall, saveBanquetsSettings, saveHall, addHallImage, removeHallImage, type BanquetsSettings } from "./actions";
 import { contentAssetUrl } from "@/lib/assets";
 import type { BanquetHall } from "@/generated/prisma/client";
 
@@ -107,16 +107,45 @@ function HallRow({ hall }: { hall: BanquetHall }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: hall.name, capacity: hall.capacity, description: hall.description });
   const fileRef = useRef<HTMLInputElement>(null);
+  const images = hall.images.length > 0 ? hall.images : hall.image ? [hall.image] : [];
 
   return (
-    <div className="bg-card rounded-[var(--radius)] p-3 flex gap-3 items-start">
-      <button onClick={() => fileRef.current?.click()} className="relative w-20 h-14 rounded-lg overflow-hidden bg-foreground/5 shrink-0" title="Заменить фото">
-        {hall.image ? (
-          <Image src={contentAssetUrl(hall.image)} alt={hall.name} fill sizes="80px" className="object-cover" />
-        ) : (
-          <span className="absolute inset-0 flex items-center justify-center text-muted text-xs">+ фото</span>
-        )}
-      </button>
+    <div className="bg-card rounded-[var(--radius)] p-3 space-y-2">
+      <div className="flex gap-3 items-start">
+        <button onClick={() => fileRef.current?.click()} className="relative w-20 h-14 rounded-lg overflow-hidden bg-foreground/5 shrink-0" title="Добавить фото">
+          {images[0] ? (
+            <Image src={contentAssetUrl(images[0])} alt={hall.name} fill sizes="80px" className="object-cover" />
+          ) : (
+            <span className="absolute inset-0 flex items-center justify-center text-muted text-xs">+ фото</span>
+          )}
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between gap-2 items-baseline">
+            <p className="font-medium">{hall.name}</p>
+            <p className="text-muted text-sm">{hall.capacity}</p>
+          </div>
+          <p className="text-muted text-xs">фото: {images.length}</p>
+        </div>
+      </div>
+
+      {images.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {images.map((image, index) => (
+            <div key={index} className="relative w-16 h-12 rounded-lg overflow-hidden bg-foreground/5 shrink-0">
+              <Image src={contentAssetUrl(image)} alt={`${hall.name} ${index + 1}`} fill sizes="64px" className="object-cover" />
+              <button
+                disabled={pending}
+                onClick={() => startTransition(() => removeHallImage(hall.id, image))}
+                className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 text-white text-xs"
+                aria-label="Удалить фото"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <input
         ref={fileRef}
         type="file"
@@ -128,14 +157,11 @@ function HallRow({ hall }: { hall: BanquetHall }) {
           const fd = new FormData();
           fd.append("file", file);
           fd.append("section", "gallery");
-          fd.append("name", `hall-${hall.id}`);
+          fd.append("name", `hall-${hall.id}-${Date.now().toString(36)}`);
           const response = await fetch("/api/admin/upload", { method: "POST", body: fd });
           const data = await response.json();
           if (response.ok) {
-            startTransition(async () => {
-              await saveHall({ id: hall.id, name: form.name, capacity: form.capacity, description: form.description, image: data.path });
-              location.reload();
-            });
+            startTransition(() => addHallImage(hall.id, data.path));
           }
         }}
       />
@@ -157,21 +183,15 @@ function HallRow({ hall }: { hall: BanquetHall }) {
           </div>
         </div>
       ) : (
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between gap-2 items-baseline">
-            <p className="font-medium">{hall.name}</p>
-            <p className="text-muted text-sm">{hall.capacity}</p>
-          </div>
-          <div className="flex gap-2 mt-2">
-            <button onClick={() => setEditing(true)} className="min-h-11 px-4 rounded-full border border-foreground/20 text-sm">Править</button>
-            <button
-              disabled={pending}
-              onClick={() => { if (confirm(`Удалить зал «${hall.name}»?`)) startTransition(() => deleteHall(hall.id)); }}
-              className="min-h-11 px-4 rounded-full border border-red-300 text-red-600 text-sm"
-            >
-              Удалить
-            </button>
-          </div>
+        <div className="flex gap-2">
+          <button onClick={() => setEditing(true)} className="min-h-11 px-4 rounded-full border border-foreground/20 text-sm">Править</button>
+          <button
+            disabled={pending}
+            onClick={() => { if (confirm(`Удалить зал «${hall.name}»?`)) startTransition(() => deleteHall(hall.id)); }}
+            className="min-h-11 px-4 rounded-full border border-red-300 text-red-600 text-sm"
+          >
+            Удалить
+          </button>
         </div>
       )}
     </div>

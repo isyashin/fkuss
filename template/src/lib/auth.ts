@@ -25,9 +25,10 @@ export async function requestAuthCode(email: string): Promise<{ devCode?: string
     await sendMail(email, "Код входа", `Ваш код входа: ${code}\n\nДействует 10 минут.`);
     return {};
   } catch {
-    // SMTP не настроен: dev-режим — код в лог и в ответе
-    console.log(`[auth] Код для ${email}: ${code}`);
+    // BUG-021: в production действующий код НЕ логируем — только факт сбоя
+    console.warn(`[auth] SMTP недоступен, код для ${email} не доставлен`);
     const exposeCode = process.env.AUTH_DEV_CODE === "1" || process.env.NODE_ENV !== "production";
+    if (exposeCode) console.log(`[auth] DEV код для ${email}: ${code}`);
     return { devCode: exposeCode ? code : undefined };
   }
 }

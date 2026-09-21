@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { getPrisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin-auth";
 import type { ContentSettings } from "@/lib/content-schema";
@@ -74,15 +75,22 @@ export async function saveBackground(input: {
   revalidatePath("/admin/settings");
 }
 
+const pricingSchema = z.object({
+  globalMode: z.enum(["yandex", "manual", "coefficient"]),
+  // Коэффициент ниже -100% дал бы отрицательные цены — запрещаем (BUG-022)
+  globalPercent: z.number().min(-100).max(500),
+});
+
 export async function savePricing(pricing: { globalMode: string; globalPercent: number }): Promise<void> {
   await guard();
+  const parsed = pricingSchema.parse(pricing);
   const prisma = getPrisma();
   const row = await prisma.settings.findUnique({ where: { key: "settings" } });
   const current = (row?.value ?? {}) as Record<string, unknown>;
   await prisma.settings.upsert({
     where: { key: "settings" },
-    create: { key: "settings", value: JSON.parse(JSON.stringify({ ...current, pricing })) },
-    update: { value: JSON.parse(JSON.stringify({ ...current, pricing })) },
+    create: { key: "settings", value: JSON.parse(JSON.stringify({ ...current, pricing: parsed })) },
+    update: { value: JSON.parse(JSON.stringify({ ...current, pricing: parsed })) },
   });
   const { recomputePrices } = await import("@/lib/order/recompute");
   await recomputePrices(prisma);

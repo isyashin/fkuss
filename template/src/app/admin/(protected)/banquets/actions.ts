@@ -40,11 +40,13 @@ export async function saveHall(input: {
   capacity: string;
   description: string;
   image?: string;
+  images?: string[];
 }): Promise<string> {
   await guard();
   const prisma = getPrisma();
   const id = input.id ?? `hall-${Date.now().toString(36)}`;
   const max = await prisma.banquetHall.aggregate({ _max: { position: true } });
+  const images = input.images ?? (input.image ? [input.image] : undefined);
   await prisma.banquetHall.upsert({
     where: { id },
     create: {
@@ -52,19 +54,50 @@ export async function saveHall(input: {
       name: input.name,
       capacity: input.capacity,
       description: input.description,
-      image: input.image ?? "",
+      image: input.image ?? images?.[0] ?? "",
+      images: images ?? [],
       position: (max._max.position ?? -1) + 1,
     },
     update: {
       name: input.name,
       capacity: input.capacity,
       description: input.description,
-      ...(input.image !== undefined ? { image: input.image } : {}),
+      ...(images !== undefined ? { images, image: images[0] ?? "" } : input.image !== undefined ? { image: input.image } : {}),
     },
   });
   revalidatePath("/admin/banquets");
   revalidatePath("/banquets");
   return id;
+}
+
+/** Добавить фото в галерею зала (в конец массива) */
+export async function addHallImage(hallId: string, image: string): Promise<void> {
+  await guard();
+  const prisma = getPrisma();
+  const hall = await prisma.banquetHall.findUnique({ where: { id: hallId } });
+  if (!hall) throw new Error("Зал не найден");
+  const images = [...hall.images, image];
+  await prisma.banquetHall.update({
+    where: { id: hallId },
+    data: { images, image: hall.image || image },
+  });
+  revalidatePath("/admin/banquets");
+  revalidatePath("/banquets");
+}
+
+/** Удалить фото из галереи зала */
+export async function removeHallImage(hallId: string, image: string): Promise<void> {
+  await guard();
+  const prisma = getPrisma();
+  const hall = await prisma.banquetHall.findUnique({ where: { id: hallId } });
+  if (!hall) return;
+  const images = hall.images.filter((i) => i !== image);
+  await prisma.banquetHall.update({
+    where: { id: hallId },
+    data: { images, image: images[0] ?? "" },
+  });
+  revalidatePath("/admin/banquets");
+  revalidatePath("/banquets");
 }
 
 export async function deleteHall(id: string): Promise<void> {

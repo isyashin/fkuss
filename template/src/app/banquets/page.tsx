@@ -32,26 +32,33 @@ export default async function BanquetsPage() {
       {banquets.description && <p className="text-muted max-w-2xl">{banquets.description}</p>}
 
       <div className="mt-8 grid md:grid-cols-2 gap-4">
-        {halls.map((hall) => (
-          <div key={hall.id} className="bg-card rounded-[var(--radius)] overflow-hidden shadow-sm">
-            {hall.image && (
-              <div className="relative aspect-video bg-foreground/5">
-                <Image
-                  src={contentAssetUrl(hall.image)}
-                  alt={hall.name}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover"
-                />
+        {halls.map((hall) => {
+          const images = hall.images.length > 0 ? hall.images : hall.image ? [hall.image] : [];
+          return (
+            <div key={hall.id} className="bg-card rounded-[var(--radius)] overflow-hidden shadow-sm">
+              {images.length > 0 && (
+                <div className="flex overflow-x-auto snap-x snap-mandatory">
+                  {images.map((image, index) => (
+                    <div key={index} className="relative aspect-video w-full shrink-0 snap-center bg-foreground/5">
+                      <Image
+                        src={contentAssetUrl(image)}
+                        alt={`${hall.name} — фото ${index + 1}`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="p-4">
+                <h2 className="text-xl">{hall.name}</h2>
+                {hall.capacity && <p className="text-accent text-sm mt-0.5">{hall.capacity}</p>}
+                {hall.description && <p className="text-muted mt-1">{hall.description}</p>}
               </div>
-            )}
-            <div className="p-4">
-              <h2 className="text-xl">{hall.name}</h2>
-              {hall.capacity && <p className="text-accent text-sm mt-0.5">{hall.capacity}</p>}
-              {hall.description && <p className="text-muted mt-1">{hall.description}</p>}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {banquets.conditions && (

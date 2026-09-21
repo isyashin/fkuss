@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getSiteRestaurant, getSiteMenu, getSitePromos, getSitePages, getSiteTheme, getSiteSettings } from "@/lib/site";
+import { getSiteRestaurant, getSiteMenu, getSitePromos, getSitePages, getSiteTheme, getSiteSettings, contentAssetUrl } from "@/lib/site";
 import { isOpenAt, resolveSchedule } from "@/lib/hours";
 import { MenuClient } from "@/components/menu/menu-client";
 import { getPrisma } from "@/lib/db";
@@ -24,8 +24,9 @@ export default async function HomePage() {
     `${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`,
   );
 
-  // Баланс бонусов авторизованного гостя (для списания в корзине)
+  // Баланс бонусов и адрес авторизованного гостя (для корзины)
   let bonusBalance = 0;
+  let lastAddress = "";
   try {
     const { getSessionCustomer } = await import("@/lib/auth");
     const { getBonusBalance } = await import("@/lib/loyalty");
@@ -33,12 +34,27 @@ export default async function HomePage() {
     if (customer) {
       const prisma = getPrisma();
       bonusBalance = await getBonusBalance(prisma, customer.id);
+      const [address, lastOrder] = await Promise.all([
+        prisma.address.findFirst({ where: { customerId: customer.id } }),
+        prisma.order.findFirst({
+          where: { customerId: customer.id, addressText: { not: "" } },
+          orderBy: { createdAt: "desc" },
+        }),
+      ]);
+      lastAddress = address?.street ?? lastOrder?.addressText ?? "";
     }
   } catch {
-    // без баланса — анонимная корзина
+    // без данных — анонимная корзина
   }
 
   const about = pages.pages.find((p) => p.slug === "about");
+  let galleryImages: { id: string; image: string; alt: string }[] = [];
+  try {
+    const prisma = getPrisma();
+    galleryImages = await prisma.galleryImage.findMany({ orderBy: { position: "asc" }, take: 8 });
+  } catch {
+    // БД недоступна — галерею пропускаем
+  }
   const banquetsSettings = (settings as { banquets?: { enabled?: boolean; title?: string } }).banquets;
   let banquetsEnabled = banquetsSettings?.enabled === true;
   if (banquetsEnabled) {
@@ -89,6 +105,7 @@ export default async function HomePage() {
             isOpen={open}
             paymentProvider={settings.payment.provider}
             bonusBalance={bonusBalance}
+            initialAddress={lastAddress}
           />
         </div>
 
@@ -101,6 +118,25 @@ export default async function HomePage() {
                 <p className="text-muted mt-1">{promo.text}</p>
               </div>
             ))}
+          </section>
+        )}
+
+        {blocks.includes("gallery") && galleryImages.length > 0 && (
+          <section className="mx-auto max-w-5xl px-4 py-8">
+            <h2 className="text-2xl mb-4">Галерея</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {galleryImages.map((img) => (
+                <div key={img.id} className="relative aspect-square rounded-[var(--radius)] overflow-hidden bg-foreground/5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={contentAssetUrl(img.image)}
+                    alt={img.alt}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
           </section>
         )}
 

@@ -221,12 +221,13 @@ model GalleryImage {
 }
 
 model BanquetHall {
-  id          String @id
+  id          String   @id
   name        String
-  capacity    String @default("")
-  description String @default("")
-  image       String @default("")
-  position    Int    @default(0)
+  capacity    String   @default("")
+  description String   @default("")
+  image       String   @default("") // обложка (первое фото, совместимость)
+  images      String[] @default([]) // упорядоченная галерея зала
+  position    Int      @default(0)
 }
 
 model Page {

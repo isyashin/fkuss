@@ -24,15 +24,26 @@ export default defineConfig({
   projects: [
     {
       name: "mobile-360",
-      use: { ...devices["Desktop Chrome"], viewport: { width: 360, height: 800 } },
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 360, height: 800 },
+        extraHTTPHeaders: { "x-forwarded-for": "10.99.200.1" },
+      },
     },
     {
       name: "webkit-mobile",
-      use: { ...devices["iPhone 13"] },
+      use: {
+        ...devices["iPhone 13"],
+        browserName: "webkit",
+        extraHTTPHeaders: { "x-forwarded-for": "10.99.200.2" },
+      },
     },
     {
       name: "desktop",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        extraHTTPHeaders: { "x-forwarded-for": "10.99.200.3" },
+      },
     },
   ],
 });

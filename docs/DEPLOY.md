@@ -32,7 +32,7 @@
 4. Caddyfile: `*.fkuss.ru` → сайты, `admin.fkuss.ru` → платформа
    (per-domain TLS автоматически, HTTP/TLS-ALPN через открытые 80/443)
 5. SMTP (DKIM/SPF/DMARC на fkuss.ru) → коды входа и уведомления
-6. Крон-джобы (метрики/биллинг/бэкап) по образцу dev-ВМ
+6. Крон-джобы (метрики, sync-menu, биллинг, экспорт, бэкап) по образцу dev-ВМ
 7. Первый сайт: `deploy.sh <slug>` → seed → проверка по HTTPS
 
 ## Текущее состояние (dev-ВМ, LAN)
@@ -68,12 +68,23 @@ bash ~/resto/src/scripts/update.sh --no-restart  # только сборка
 - Caddy :80 — маршрутизация по Host (LAN-режим, без реального TLS)
 
 Cron на хосте:
-- `*/6h` — POST /api/jobs/report-metrics на сайтах (метрики → платформа)
+- `0 */6 * * *` — POST /api/jobs/report-metrics на сайтах (метрики → платформа)
+- `*/15 * * * *` — POST /api/jobs/sync-menu на сайтах; фактический запуск дополнительно
+  ограничен `intervalMinutes` ресторана
+- `*/5 * * * *` — `scripts/process-exports.sh` (запросы экспорта и TTL 24 часа)
 - `04:30` — POST /api/jobs/billing-daily на платформе (списания, уведомления)
 - `05:00` — `scripts/backup.sh`
 
-Джобы реализованы HTTP-роутами внутри приложений и защищены
-`X-Cron-Secret` — не требуют node на хосте.
+Tenant-джобы устанавливает `install-site-jobs.sh`: секрет читается runner-ом
+из env-файла с правами 600 и не попадает в crontab/argv. Хостовый обработчик
+экспортов устанавливает `install-platform-jobs.sh`. `deploy.sh` и `update.sh`
+вызывают оба установщика автоматически.
+
+Проверка после обновления:
+
+```bash
+crontab -l | grep -E 'resto .* (report-metrics|sync-menu|process-exports)$'
+```
 
 ## Прод-VPS (когда будет публичный IP и домен)
 
@@ -86,6 +97,33 @@ Cron на хосте:
    завести `SMTP_URL`/`SMTP_FROM` в env платформы и сайтов.
 5. ufw (22, 80, 443), fail2ban — включить.
 6. Секреты: `secrets/sites/<slug>.env` → env сайта (токены ботов, платёжка).
+
+Для платформы в production обязательны отдельный случайный `SESSION_SECRET`
+(не короче 32 байт) и `PLATFORM_ADMIN_PASSWORD`. Fallback сессий на пароль
+администратора поддерживается только для совместимости и не является штатной
+конфигурацией.
+
+`platform/docker-compose.yml` содержит окружение конкретного сервера и поэтому
+не хранится в git. Помимо `DATABASE_URL` и секретов в нём обязательно задать
+каталог экспорта и read-only volume:
+
+```yaml
+services:
+  platform:
+    environment:
+      SESSION_SECRET: ${SESSION_SECRET}
+      EXPORT_DIR: /srv/resto/backups/export
+    volumes:
+      - /home/ilya/resto/backups/export:/srv/resto/backups/export:ro
+```
+
+До запуска создать host-каталог. Он должен быть доступен для чтения
+непривилегированному пользователю `app` внутри контейнера; сам volume остаётся
+read-only, а скачивание снаружи возможно только через авторизованный API:
+
+```bash
+install -d -m 755 ~/resto/backups/export
+```
 
 ## Нюанс кук (всплыло на LAN-ВМ)
 
@@ -103,7 +141,7 @@ Cron на хосте:
 ## Деплой нового сайта
 
 ```bash
-bash ~/resto/scripts/deploy.sh <slug> [--domain=example.ru]
+bash ~/resto/src/scripts/deploy.sh <slug> [--domain=example.ru]
 # deploy.sh сам: выделяет порт (registry.json), создаёт per-site
 # пользователя БД с паролем и базу, пишет .env (DATABASE_URL,
 # ADMIN_PASSWORD, CRON_SECRET, права 600), поднимает контейнер.
@@ -119,4 +157,11 @@ DATABASE_URL=... CONTENT_DIR=<путь> npm run seed
 ## Бэкапы и экспорт
 
 - Автомат: `backup.sh` по cron (дампы БД + content, 14 последних).
-- Экспорт для клиента: `export-site.sh <slug>` → tar.gz в backups/export/.
+- Экспорт для клиента: запрос создаётся в кабинете, `process-exports.sh`
+  формирует tar.gz в `backups/export/`, а платформа отдаёт его только владельцу.
+- В `Site.exportReadyPath` хранится только имя файла, не абсолютный host-путь.
+  Старые записи с абсолютным путём очищаются воркером и требуют нового запроса.
+- Архивы доступны 24 часа, затем файл и состояние ссылки удаляются; частичные
+  архивы старше часа также очищаются. Воркер защищён `flock` от двойного запуска.
+- Smoke-check: запросить экспорт, дождаться cron, скачать файл из кабинета и
+  убедиться, что внутри есть `content/` и `database.sql`.

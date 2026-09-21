@@ -72,15 +72,18 @@ export async function OwnerDashboard({ ownerId }: { ownerId: string }) {
       <section className="bg-white rounded-xl border border-zinc-200 p-5">
         <h2 className="font-medium mb-2">Экспорт сайта</h2>
         <p className="text-sm text-zinc-500 mb-3">
-          Архив контента и базы данных сайта. Ссылка придёт на email после подготовки.
+          Архив контента и базы данных сайта появится здесь после подготовки.
         </p>
         {site.exportReadyPath ? (
-          <a
-            href="/api/export/download"
-            className="inline-flex min-h-11 px-5 items-center rounded-full bg-zinc-900 text-white text-sm font-medium"
-          >
-            Скачать архив ({site.exportReadyPath.split("/").pop()})
-          </a>
+          <div className="flex flex-wrap gap-3">
+            <a
+              href="/api/export/download"
+              className="inline-flex min-h-11 px-5 items-center rounded-full bg-zinc-900 text-white text-sm font-medium"
+            >
+              Скачать архив ({site.exportReadyPath})
+            </a>
+            <ExportButton slug={site.slug} requested={false} label="Подготовить новый архив" />
+          </div>
         ) : (
           <ExportButton slug={site.slug} requested={Boolean(site.exportRequestedAt)} />
         )}

@@ -25,11 +25,17 @@ async function main() {
     update: { tariffId: tariff.id },
   });
 
-  await prisma.ownerAccount.upsert({
-    where: { email: "owner@buxara.test" },
-    create: { email: "owner@buxara.test", siteId: "buxara" },
-    update: {},
-  });
+  for (const email of [
+    "owner@buxara.test",
+    "owner-mobile@buxara.test",
+    "owner-desktop@buxara.test",
+  ]) {
+    await prisma.ownerAccount.upsert({
+      where: { email },
+      create: { email, siteId: "buxara" },
+      update: { siteId: "buxara" },
+    });
+  }
 
   console.log("✓ Сид платформы: тариф 3000 ₽/мес, сайт buxara, владелец owner@buxara.test");
   await prisma.$disconnect();

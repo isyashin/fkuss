@@ -9,9 +9,13 @@ describe("export archive access", () => {
   const exportDir = "/srv/resto/backups/export";
 
   it("resolves only a portable archive name inside the configured export directory", () => {
-    expect(resolveExportArchive(exportDir, "bistro-20260921-120000.tar.gz")).toBe(
+    expect(resolveExportArchive(exportDir, "bistro-20260921-120000.tar.gz", "bistro")).toBe(
       "/srv/resto/backups/export/bistro-20260921-120000.tar.gz",
     );
+  });
+
+  it("rejects an archive that belongs to another site", () => {
+    expect(resolveExportArchive(exportDir, "other-20260921-120000.tar.gz", "bistro")).toBeNull();
   });
 
   it.each([

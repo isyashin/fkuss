@@ -23,7 +23,7 @@
 
 - Репозиторий публичный, основная ветка — `main`.
 - У `main` нет branch protection или ruleset.
-- GitHub Actions разрешены, но workflows отсутствуют.
+- GitHub Actions разрешены; workflow находится в `.github/workflows/test.yml`.
 - Токен workflows по умолчанию имеет только read-доступ — это правильно.
 - Actions не могут одобрять pull requests — это правильно.
 - Secret scanning и push protection включены; открытых secret alerts нет.
@@ -132,12 +132,14 @@ git ls-remote origin HEAD
 публичность сама по себе не делает проект open source и не требует выдавать
 лицензию.
 
-### Шаг 4. Добавить воспроизводимый CI
+### Шаг 4. Поддерживать воспроизводимый CI
 
-До защиты `main` нужно создать `.github/workflows/ci.yml`. Иначе GitHub не
-сможет требовать прохождение проверок.
+До защиты `main` workflow `.github/workflows/test.yml` должен хотя бы один раз
+полностью пройти на GitHub. Иначе GitHub не сможет требовать его проверки.
 
-Минимальные jobs:
+Текущий workflow уже проверяет оба приложения с отдельными PostgreSQL service,
+миграциями, unit/integration tests, lint, production build, seed и Playwright.
+Целевой состав проверок:
 
 1. `template-quality`
    - установка Node.js и зависимостей через lockfile;

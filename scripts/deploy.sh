@@ -123,6 +123,8 @@ docker compose up -d
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 chmod 750 "$SCRIPT_DIR/run-site-job.sh" "$SCRIPT_DIR/install-site-jobs.sh"
 "$SCRIPT_DIR/install-site-jobs.sh" "$SLUG" "$PORT" "$SITE_DIR/.env"
+chmod 750 "$SCRIPT_DIR/process-exports.sh" "$SCRIPT_DIR/install-platform-jobs.sh"
+"$SCRIPT_DIR/install-platform-jobs.sh"
 
 echo "✓ $SLUG: порт $PORT, база $SLUG, домены: ${DOMAIN:-субдомен}"
 echo "  Не забудь: seed (CONTENT_DIR=$SITE_DIR/content npm run seed) и Caddyfile"

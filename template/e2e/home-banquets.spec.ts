@@ -27,7 +27,7 @@ test("UI-05: банкеты выключены → /banquets отдаёт 404, �
   await expect(page.getByRole("link", { name: "Банкеты" })).toHaveCount(0);
 });
 
-test("UI-04: админ включает банкеты → страница и кнопка появляются", async ({ page, request }) => {
+test("UI-04: админ включает банкеты → страница и кнопка появляются", async ({ page }) => {
   const hallName = `Зал Панорама ${Date.now().toString(36)}`;
 
   // Включаем раздел и создаём зал через админку

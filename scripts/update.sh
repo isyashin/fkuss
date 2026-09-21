@@ -58,9 +58,11 @@ if [ "${1:-}" != "--no-restart" ]; then
 fi
 
 echo "== cron-задачи сайтов =="
-chmod 750 "$SRC/scripts/run-site-job.sh" "$SRC/scripts/install-site-jobs.sh"
+chmod 750 "$SRC/scripts/run-site-job.sh" "$SRC/scripts/install-site-jobs.sh" \
+  "$SRC/scripts/process-exports.sh" "$SRC/scripts/install-platform-jobs.sh"
 for site in "$BASE"/sites/*/; do
   [ -f "$site/.env" ] && install_site_jobs "$site"
 done
+"$SRC/scripts/install-platform-jobs.sh"
 
 echo "✓ Обновление завершено: $(git -C "$SRC" log --oneline -1)"

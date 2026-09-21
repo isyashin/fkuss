@@ -7,8 +7,13 @@ const ARCHIVE_NAME_RE = /^[a-z0-9][a-z0-9-]*-\d{8}-\d{6}\.tar\.gz$/;
  * переносимое имя (`<slug>-YYYYMMDD-HHMMSS.tar.gz`). Иначе null: путь наружу,
  * незавершённый (.partial) или посторонний файл отклоняются.
  */
-export function resolveExportArchive(exportDir: string, storedName: string): string | null {
+export function resolveExportArchive(
+  exportDir: string,
+  storedName: string,
+  expectedSlug?: string,
+): string | null {
   if (!ARCHIVE_NAME_RE.test(storedName)) return null;
+  if (expectedSlug && !storedName.startsWith(`${expectedSlug}-`)) return null;
   if (storedName.includes("/") || storedName.includes("\\") || storedName.includes("\0")) {
     return null;
   }

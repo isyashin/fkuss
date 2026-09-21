@@ -14,6 +14,7 @@ export default defineConfig({
     env: {
       DATABASE_URL: process.env.PLATFORM_DATABASE_URL ?? "",
       AUTH_DEV_CODE: "1",
+      SESSION_SECRET: "platform-e2e-session-secret",
       INSECURE_HTTP: "1",
       PLATFORM_BASE_URL: "http://localhost:3100",
       PLATFORM_PAYMENT_PROVIDER: "mock",
@@ -21,7 +22,7 @@ export default defineConfig({
     },
   },
   projects: [
-    { name: "mobile", use: { ...devices["iPhone 13"] } },
+    { name: "mobile", use: { ...devices["iPhone 13"], browserName: "webkit" } },
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
   ],
 });

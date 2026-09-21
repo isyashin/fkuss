@@ -24,6 +24,7 @@ cp -r "$SITE_DIR/content" "$TMP/content"
 docker exec -i "$DB_CONTAINER" pg_dump -U resto "$SLUG" > "$TMP/database.sql"
 tar -czf "$ARCHIVE_TMP" -C "$TMP" .
 mv -- "$ARCHIVE_TMP" "$OUT"
+chmod 0644 "$OUT"
 
 echo "✓ Экспорт: $OUT"
 echo "EXPORT_PATH=$OUT"

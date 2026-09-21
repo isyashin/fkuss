@@ -21,14 +21,6 @@ export interface SyncResult {
   missing?: number;
 }
 
-interface SyncStateValue {
-  running?: boolean;
-  lastAttempt?: string;
-  lastSuccess?: string;
-  lastStatus?: "ok" | "error";
-  lastError?: string;
-}
-
 const SYNC_KEY = "syncState";
 const SETTINGS_KEY = "settings";
 

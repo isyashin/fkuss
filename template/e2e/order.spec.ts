@@ -38,7 +38,7 @@ test("гость заказывает блюдо с главной через к
   await expect(page.getByText(/Заказ №\d+ принят/)).toBeVisible({ timeout: 15000 });
 });
 
-test("форма брони отправляется", async ({ page }, testInfo) => {
+test("форма брони отправляется", async ({ page }) => {
   await page.goto("/booking");
   // Будущий будний день + уникальный слот прогона (вместимость слота не накапливается между прогонами)
   const stamp = Math.floor(Date.now() / 60000);

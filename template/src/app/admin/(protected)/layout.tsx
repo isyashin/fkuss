@@ -15,6 +15,7 @@ const NAV = [
   { href: "/admin/restaurant", label: "Ресторан" },
   { href: "/admin/sync", label: "Синхронизация" },
   { href: "/admin/delivery", label: "Доставка" },
+  { href: "/admin/print-materials", label: "Печать" },
   { href: "/admin/settings", label: "Настройки" },
   { href: "/admin/billing", label: "Подписка" },
 ];

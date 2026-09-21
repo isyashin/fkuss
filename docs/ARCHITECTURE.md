@@ -37,10 +37,12 @@ src/
 │   ├── account/           # личный кабинет
 │   ├── admin/             # админка (заказы, брони, меню, акции, галерея,
 │   │                      # страницы, ресторан+часы, синхронизация, доставка,
-│   │                      # банкеты, настройки+тема/фон, подписка)
+│   │                      # банкеты, печатные материалы, настройки+тема/фон,
+│   │                      # подписка)
 │   └── api/               # order, booking(+slots), auth, payments/webhook,
 │                          # delivery/slots, jobs (sync-menu, report-metrics),
-│                          # admin (upload, dish-image), content-asset
+│                          # admin (upload, dish-image, print-materials/export),
+│                          # content-asset
 ├── components/            # UI (menu-client, cart, booking, install-prompt,
 │                          # offline-banner)
 ├── lib/
@@ -53,6 +55,8 @@ src/
 │   ├── notify/            # telegram, max, email
 │   ├── loyalty/           # бонусы (ledger)
 │   ├── pwa-icons.ts       # генерация иконок из логотипа + fallback
+│   ├── print-materials.ts # схема, размеры и SVG-макеты визитки/магнита
+│   ├── print-materials-server.ts # QR + экспорт SVG/PNG/PDF
 │   ├── hours.ts           # часы работы (расписание + исключения)
 │   ├── site.ts            # данные витрины из БД с fallback на content/
 │   └── theme/             # токены и пресеты (+ фоновое изображение)
@@ -70,6 +74,10 @@ src/
   корзине → серверная валидация + снимок в Order; зоны заменяются вариантами.
 - **Меню на главной**: hero → MenuClient (тот же компонент) → о нас/контакты;
   /menu → redirect /#menu.
+- **Печатные материалы**: данные ресторана + Settings(printMaterials) →
+  предпросмотр в админке → QR с UTM-метками → защищённый server export в
+  SVG, PNG 300 dpi или PDF. Макеты содержат вылеты 3 мм; настройки хранятся
+  отдельно для визитки и магнита без новой таблицы БД.
 
 ## Мультитенантность
 

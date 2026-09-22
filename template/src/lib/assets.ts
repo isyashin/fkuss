@@ -5,7 +5,8 @@ export function contentAssetUrl(relPath: string): string {
 
 /**
  * Оптимизированная картинка блюда: size "sm" — карточка (400px, *-sm.webp),
- * "full" — модалка (800px). Если -sm отсутствует (старые сайты), отдаём full.
+ * "full" — модалка (800px). Эндпоинт контента отдаёт full как fallback,
+ * если у старого сайта ещё нет файла -sm.webp.
  */
 export function dishImageUrl(relPath: string, size: "sm" | "full" = "full"): string {
   if (!relPath) return "";

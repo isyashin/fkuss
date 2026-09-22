@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { resolveContentFile, resolveContentPath } from "@/lib/content-dir";
+import { resolveContentAssetFile, resolveContentPath } from "@/lib/content-dir";
 import { NextResponse } from "next/server";
 
 const MIME: Record<string, string> = {
@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
   }
 
   try {
-    const absPath = await resolveContentFile(relPath);
+    const absPath = await resolveContentAssetFile(relPath);
     if (!absPath) throw new Error("not a safe file");
     const ext = path.extname(absPath).toLowerCase();
     const contentType = MIME[ext];

@@ -36,3 +36,13 @@ export async function resolveContentFile(relativePath: string): Promise<string |
     return null;
   }
 }
+
+/**
+ * Файл публичного контента. Для старых наборов контента, где ещё нет
+ * карточного `-sm.webp`, безопасно возвращает полноразмерный WebP.
+ */
+export async function resolveContentAssetFile(relativePath: string): Promise<string | null> {
+  const exact = await resolveContentFile(relativePath);
+  if (exact || !relativePath.endsWith("-sm.webp")) return exact;
+  return resolveContentFile(relativePath.replace(/-sm\.webp$/, ".webp"));
+}

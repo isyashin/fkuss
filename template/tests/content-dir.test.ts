@@ -2,7 +2,12 @@ import { describe, expect, it, afterEach } from "vitest";
 import { mkdir, mkdtemp, realpath, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { getContentDir, resolveContentFile, resolveContentPath } from "@/lib/content-dir";
+import {
+  getContentDir,
+  resolveContentAssetFile,
+  resolveContentFile,
+  resolveContentPath,
+} from "@/lib/content-dir";
 
 const previous = process.env.CONTENT_DIR;
 afterEach(() => {
@@ -47,5 +52,27 @@ describe("content directory", () => {
     process.env.CONTENT_DIR = root;
 
     expect(await resolveContentFile("images/logo.png")).toBe(await realpath(file));
+  });
+
+  it("falls back from a missing dish thumbnail to the full WebP", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "content-dir-"));
+    await mkdir(path.join(root, "images", "dishes"), { recursive: true });
+    const full = path.join(root, "images", "dishes", "dish-1.webp");
+    await writeFile(full, "full image");
+    process.env.CONTENT_DIR = root;
+
+    expect(await resolveContentAssetFile("images/dishes/dish-1-sm.webp")).toBe(await realpath(full));
+  });
+
+  it("prefers an existing thumbnail over the full WebP", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "content-dir-"));
+    await mkdir(path.join(root, "images", "dishes"), { recursive: true });
+    const full = path.join(root, "images", "dishes", "dish-1.webp");
+    const thumbnail = path.join(root, "images", "dishes", "dish-1-sm.webp");
+    await writeFile(full, "full image");
+    await writeFile(thumbnail, "thumbnail");
+    process.env.CONTENT_DIR = root;
+
+    expect(await resolveContentAssetFile("images/dishes/dish-1-sm.webp")).toBe(await realpath(thumbnail));
   });
 });

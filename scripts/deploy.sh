@@ -69,9 +69,11 @@ fi
 # 3. Пользователь и база сайта (если нет): per-site пользователь с паролем
 DB_USER="site_${SLUG//-/_}"
 DB_PASS=$(openssl rand -hex 16)
-DB_EXISTS=$(docker exec -i "$DB_CONTAINER" psql -U resto -tc "SELECT 1 FROM pg_database WHERE datname='$SLUG'" | tr -d '[:space:]')
+# -d postgres: дефолтная БД пользователя resto может отсутствовать (на серверах
+# без демо-сайта resto нет) — служебные запросы идём в postgres.
+DB_EXISTS=$(docker exec -i "$DB_CONTAINER" psql -U resto -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$SLUG'" | tr -d '[:space:]')
 if [ "$DB_EXISTS" != "1" ]; then
-  docker exec -i "$DB_CONTAINER" psql -U resto <<SQL
+  docker exec -i "$DB_CONTAINER" psql -U resto -d postgres <<SQL
 CREATE USER "$DB_USER" WITH PASSWORD '$DB_PASS';
 CREATE DATABASE "$SLUG" OWNER "$DB_USER";
 SQL

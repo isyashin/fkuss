@@ -301,11 +301,21 @@
       volume content на сайт, лимиты CPU/RAM
 - [x] Демо-compose использует явный `resto-template:latest`: `update.sh`
       перезапускает демо и tenant-сайты на одном и том же свежем образе
-- [x] Перенос на прод-VPS: **ВЫПОЛНЕНО 2026-09-16**
+- [x] Перенос на прод-VPS: **ВЫПОЛНЕНО 2026-09-16**, обновлено 2026-09-22 (релиз v0.1)
       - Сервер подготовлен: LVM 15→30 ГБ, обновления, ufw (22/80/443),
         fail2ban, unattended-upgrades
-      - HTTPS: buxara.fkuss.ru, admin.fkuss.ru, u-mamy.fkuss.ru, fkuss.ru —
+      - HTTPS: buxara.fkuss.ru, admin.fkuss.ru, ochag-grill.fkuss.ru, fkuss.ru —
         реальные сертификаты (Caddy auto-TLS, wildcard `*.fkuss.ru` в DNS)
+      - **2026-09-22: прод пересобран под релиз v0.1 (main)**: удалены демо
+        u-mamy и старый ochag-стаб; перенесены с dev-ВМ Бухара (dump БД +
+        content, baseline миграций 0001/0002) и Очаг Grill (deploy.sh → порт
+        3002, seed по SSH-туннелю, регистрация в платформе + topup 3000 ₽,
+        sync ok, TLS авто); миграции платформы baselined (alters dedupeKey/
+        exportReadyPath + resolve 0001–0003); admin-пароли сайтов 12345
+        (заменить перед публичным запуском); cron через run-site-job.sh
+        (секреты вне crontab); бэкап перед чисткой: backups/2026-09-22_15-59
+      - Cron на проде: метрики */6ч (оба сайта), sync-menu */15 (оба),
+        биллинг 04:30, бэкап 05:00, process-exports */5
       - Сайт «Бухара»: 132 блюда с фото, заказ по HTTPS работает,
         метрики → платформа по docker-сети
       - Биллинг: джоб списал (active→grace), топап через API + mock-оплата,

@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    image: resto-template:latest
     restart: unless-stopped
     ports:
       - "3000:3000"

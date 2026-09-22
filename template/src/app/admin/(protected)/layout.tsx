@@ -26,7 +26,7 @@ export default async function AdminProtectedLayout({ children }: { children: Rea
   return (
     <div className="min-h-full flex flex-col">
       <header className="sticky top-0 z-40 bg-foreground text-background">
-        <div className="mx-auto max-w-6xl px-4 flex items-center gap-1 overflow-x-auto h-14">
+        <div className="mx-auto max-w-6xl px-4 flex flex-wrap items-center gap-1 min-h-14">
           <span className="font-bold mr-3 shrink-0">Админка</span>
           {NAV.map((item) => (
             <Link

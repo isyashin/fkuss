@@ -80,6 +80,15 @@ Tenant-джобы устанавливает `install-site-jobs.sh`: секре�
 экспортов устанавливает `install-platform-jobs.sh`. `deploy.sh` и `update.sh`
 вызывают оба установщика автоматически.
 
+На dev-ВМ tenant-джобы buxara (report-metrics, sync-menu) идут через
+`run-site-job.sh` с секретом из `sites/buxara/.env` (600). Синхронизация buxara
+включена: placeSlug `chajxana_buxara_xalyal`, `intervalMinutes` 60.
+
+⚠️ Перед включением sync на сайте, наполненным инжестом ДО этапа ТЗ-1
+(ids блюд `dish-<edaId>`, `externalId` пустой, `source='manual'`), применить
+`scripts/backfill-yandex-ids.sql` к БД сайта — иначе sync падает с конфликтом
+`Dish_pkey` (upsert по `externalId` не находит блюдо и CREATE бьётся о старый id).
+
 Проверка после обновления:
 
 ```bash

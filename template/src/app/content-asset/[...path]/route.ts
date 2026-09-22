@@ -1,9 +1,8 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
+import { resolveContentFile, resolveContentPath } from "@/lib/content-dir";
 import { NextResponse } from "next/server";
-
-const CONTENT_DIR = path.join(process.cwd(), "content");
 
 const MIME: Record<string, string> = {
   ".png": "image/png",
@@ -11,30 +10,29 @@ const MIME: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
   ".avif": "image/avif",
-  ".svg": "image/svg+xml",
 };
 
 /** Отдача файлов из content/ (картинки блюд, галереи, логотип) */
 export async function GET(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const { path: segments } = await params;
   const relPath = segments.join("/");
-  const absPath = path.join(CONTENT_DIR, relPath);
-
-  // Защита от path traversal и sibling-prefix обхода
-  const relative = path.relative(CONTENT_DIR, absPath);
-  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+  if (!resolveContentPath(relPath)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
+    const absPath = await resolveContentFile(relPath);
+    if (!absPath) throw new Error("not a safe file");
     const fileStat = await stat(absPath);
-    if (!fileStat.isFile()) throw new Error("not a file");
     const ext = path.extname(absPath).toLowerCase();
+    const contentType = MIME[ext];
+    if (!contentType) throw new Error("unsupported content asset type");
     const stream = createReadStream(absPath);
     return new Response(stream as unknown as ReadableStream, {
       headers: {
-        "Content-Type": MIME[ext] ?? "application/octet-stream",
+        "Content-Type": contentType,
         "Content-Length": String(fileStat.size),
+        "X-Content-Type-Options": "nosniff",
         // Картинки контента меняются редко; при замене меняется имя файла
         "Cache-Control": "public, max-age=86400",
       },

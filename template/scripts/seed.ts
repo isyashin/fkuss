@@ -16,6 +16,7 @@ import {
   settingsSchema,
   themeSchema,
 } from "../src/lib/content-schema";
+import { assertContentReadiness } from "../src/lib/content-readiness";
 
 const CONTENT_DIR = process.env.CONTENT_DIR
   ? path.resolve(process.env.CONTENT_DIR)
@@ -47,6 +48,7 @@ async function main() {
   const pages = await readAndValidate("pages.json", pagesSchema);
   const settings = await readAndValidate("settings.json", settingsSchema);
   const theme = await readAndValidate("theme.json", themeSchema);
+  await assertContentReadiness(CONTENT_DIR, { restaurant, menu, promos, theme, settings });
 
   // Уникальность id блюд и модификаторов
   const dishIds = new Set<string>();

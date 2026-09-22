@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { getContentDir } from "@/lib/content-dir";
 import { isAdmin } from "@/lib/admin-auth";
 
 /** Загрузка фото: sharp → WebP (max 1600px), в content/images/<section>/<name>.webp */
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const dir = path.join(process.cwd(), "content", "images", section);
+  const dir = path.join(getContentDir(), "images", section);
   await mkdir(dir, { recursive: true });
 
   if (section === "dishes") {
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
     );
   } else if (section === "logo") {
     // Логотип — всегда images/logo.png (PNG для иконок)
-    const logoPath = path.join(process.cwd(), "content", "images", "logo.png");
+    const logoPath = path.join(getContentDir(), "images", "logo.png");
     await mkdir(path.dirname(logoPath), { recursive: true });
     await writeFile(logoPath, await sharp(buffer).resize(1024, 1024, { fit: "inside" }).png().toBuffer());
     const relPathLogo = "images/logo.png";

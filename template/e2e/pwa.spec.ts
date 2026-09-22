@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
 
+test("content assets do not expose tenant JSON", async ({ request }) => {
+  const response = await request.get("/content-asset/settings.json");
+  expect(response.status()).toBe(404);
+});
+
 test("PWA-01/03: манифест отдаёт иконки ресторана с версией, fallback при отсутствии логотипа", async ({ request }) => {
   const manifest = await (await request.get("/manifest.webmanifest")).json();
   expect(manifest.icons.length).toBeGreaterThanOrEqual(2);

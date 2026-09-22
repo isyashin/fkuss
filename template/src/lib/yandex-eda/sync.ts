@@ -8,6 +8,7 @@ import type { EdaMenu, EdaDish } from "./client";
 import { fetchEdaMenu } from "./client";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getContentDir } from "../content-dir";
 import sharp from "sharp";
 
 type PrismaLike = Pick<PrismaClient, "dish" | "category" | "modifierGroup" | "modifier" | "settings" | "$transaction">;
@@ -83,7 +84,7 @@ async function downloadDishImage(dishId: string, imageUrl: string): Promise<stri
     clearTimeout(timer);
     if (!response.ok) return null;
     const buffer = Buffer.from(await response.arrayBuffer());
-    const dir = path.join(process.cwd(), "content", "images", "dishes");
+    const dir = path.join(getContentDir(), "images", "dishes");
     await mkdir(dir, { recursive: true });
     await writeFile(
       path.join(dir, `${dishId}.webp`),

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin-auth";
 import type { ContentSettings } from "@/lib/content-schema";
+import { resolveContentPath } from "@/lib/content-dir";
 
 async function guard() {
   if (!(await isAdmin())) throw new Error("Forbidden");
@@ -60,9 +61,8 @@ export async function saveBackground(input: {
   if (oldImage && oldImage !== input.image) {
     try {
       const { unlink } = await import("node:fs/promises");
-      const path = await import("node:path");
-      const abs = path.join(process.cwd(), "content", oldImage);
-      if (abs.startsWith(path.join(process.cwd(), "content"))) {
+      const abs = resolveContentPath(oldImage);
+      if (abs) {
         await unlink(abs).catch(() => {});
       }
     } catch {

@@ -22,9 +22,11 @@ template/
 └── docker-compose.yml
 ```
 
-Поток данных: `content/` → `seed.ts` (zod-валидация) → PostgreSQL →
+Поток данных: `CONTENT_DIR` (по умолчанию `content/`, для tenant-а задаётся
+явно) → content-readiness → `seed.ts` (zod-валидация) → PostgreSQL →
 витрина/админка. Админка правит БД напрямую (после сборки сайт живёт
-без `content/`).
+без `content/`). Для импортов и ручного наполнения provenance и нерешённые
+вопросы фиксируются в `source-report.json` рядом с контентом.
 
 ## Структура src/ (этап 1+)
 

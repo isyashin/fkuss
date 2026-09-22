@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Шаблон сайта ресторана Fkuss
 
-## Getting Started
+White-label приложение одного ресторана. Код общий для всех tenants, а данные
+конкретного ресторана находятся в отдельном `content/` и собственной базе.
 
-First, run the development server:
+## Локальный запуск
+
+1. Скопировать `.env.example` в `.env` и заменить значения-заглушки.
+2. Запустить PostgreSQL и создать базу `resto` либо поднять сервис `db` через
+   `docker compose`.
+3. Выполнить:
 
 ```bash
+npm ci
+npx prisma generate
+npx prisma migrate deploy
+npm run seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Сайт откроется на <http://localhost:3000>, админка — на
+<http://localhost:3000/admin>.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Другой ресторан подключается через `CONTENT_DIR=<путь-к-content>`; runtime и
+seed должны получать один и тот же каталог.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Проверка
 
-## Learn More
+```bash
+npm test
+npm run lint
+npm run build
+npx playwright test
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Интеграционные и E2E-тесты требуют отдельную тестовую базу. Не используйте
+рабочую `DATABASE_URL`. Формат content описан в `../docs/CONTENT-SCHEMA.md`,
+развёртывание — в `../docs/DEPLOY.md`.

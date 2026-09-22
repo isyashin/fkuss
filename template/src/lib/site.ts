@@ -15,6 +15,7 @@ import {
   type Promo,
 } from "./content";
 import type { ContentSettings } from "./content-schema";
+import { getContentDir } from "./content-dir";
 
 export { contentAssetUrl } from "./assets";
 
@@ -50,7 +51,7 @@ export async function getSiteSettings(): Promise<ContentSettings> {
   }
   const { readFile } = await import("node:fs/promises");
   const path = await import("node:path");
-  const raw = await readFile(path.join(process.cwd(), "content", "settings.json"), "utf-8");
+  const raw = await readFile(path.join(getContentDir(), "settings.json"), "utf-8");
   return JSON.parse(raw) as ContentSettings;
 }
 

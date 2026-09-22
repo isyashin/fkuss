@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import { getSiteRestaurant, getSiteTheme } from "@/lib/site";
+import { getContentDir } from "@/lib/content-dir";
 import { themeCssVars } from "@/lib/theme";
 import { SiteHeader } from "@/components/site-header";
 import { InstallPrompt } from "@/components/install-prompt";
@@ -23,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
   try {
     const { readFile } = await import("node:fs/promises");
     const path = await import("node:path");
-    const raw = await readFile(path.join(process.cwd(), "content", "icons", "icons.json"), "utf-8");
+    const raw = await readFile(path.join(getContentDir(), "icons", "icons.json"), "utf-8");
     version = (JSON.parse(raw) as { version?: string }).version ?? "1";
   } catch {
     // до первой генерации иконок

@@ -13,6 +13,7 @@ import {
   type PrintMaterialDesign,
   type PrintExportFormat,
 } from "./print-materials";
+import { getContentDir } from "./content-dir";
 
 export interface PrintExportResult {
   body: Uint8Array;
@@ -39,7 +40,7 @@ function mmToPoints(mm: number): number {
 async function contentPath(relativePath: string): Promise<string | null> {
   if (!relativePath) return null;
   try {
-    const root = await realpath(path.resolve(process.cwd(), "content"));
+    const root = await realpath(getContentDir());
     const candidate = path.resolve(root, relativePath);
     const lexicalRelative = path.relative(root, candidate);
     if (!lexicalRelative || lexicalRelative.startsWith("..") || path.isAbsolute(lexicalRelative)) {

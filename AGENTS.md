@@ -91,7 +91,11 @@ scripts/update.sh [--no-restart]                    # git pull → сборка 
 
 ## Кастомные агенты и команды OpenCode
 
-- Агент `site-builder` — наполнение сайта из входных данных (только `content/`).
+- Агент `site-builder` — наполнение сайта из входных данных (только
+  `sites/<slug>/content/`; `template/content/` — только для демо).
+- Навык `create-fkuss-restaurant-site` — полный процесс нового tenant-а:
+  Яндекс.Еда, проверка открытых источников, isolated content, readiness,
+  preview и приёмка.
 - Агент `reviewer` — read-only ревью изменений.
 - Агент-тестировщик — папка `тестировщик/`: read-only поиск багов (код, UI/UX, функционал),
   ведёт `тестировщик/журнал.md`, заводит issues на GitHub. Инструкция — `тестировщик/ИНСТРУКЦИЯ.md`.

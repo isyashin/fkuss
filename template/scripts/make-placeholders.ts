@@ -2,8 +2,15 @@
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { getContentDir, resolveContentPath } from "../src/lib/content-dir";
 
-const CONTENT = path.join(process.cwd(), "content");
+const CONTENT = getContentDir();
+
+function contentPath(relativePath: string): string {
+  const resolved = resolveContentPath(relativePath);
+  if (!resolved) throw new Error(`Недопустимый путь внутри CONTENT_DIR: ${relativePath}`);
+  return resolved;
+}
 
 const PALETTE = ["#b45309", "#92400e", "#78350f", "#a16207", "#854d0e"];
 
@@ -21,7 +28,7 @@ async function exists(p: string): Promise<boolean> {
 }
 
 async function makePlaceholder(relPath: string, text: string, colorIndex: number) {
-  const abs = path.join(CONTENT, relPath);
+  const abs = contentPath(relPath);
   if (await exists(abs)) return false;
   const color = PALETTE[colorIndex % PALETTE.length];
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800">
@@ -44,25 +51,25 @@ let made = 0;
 let i = 0;
 for (const category of menu.categories) {
   for (const dish of category.dishes) {
-    if (dish.image && !(await exists(path.join(CONTENT, dish.image)))) {
+    if (dish.image && !(await exists(contentPath(dish.image)))) {
       if (await makePlaceholder(dish.image, letter(dish.name), i++)) made++;
       // и карточный размер
       const sm = dish.image.replace(/\.webp$/, "-sm.webp");
-      if (!(await exists(path.join(CONTENT, sm)))) {
+      if (!(await exists(contentPath(sm)))) {
         await writeFile(
-          path.join(CONTENT, sm),
-          await sharp(await readFile(path.join(CONTENT, dish.image))).resize(400, 400, { fit: "inside" }).webp({ quality: 78 }).toBuffer(),
+          contentPath(sm),
+          await sharp(await readFile(contentPath(dish.image))).resize(400, 400, { fit: "inside" }).webp({ quality: 78 }).toBuffer(),
         );
       }
     }
   }
 }
 
-if (!(await exists(path.join(CONTENT, restaurant.logo)))) {
+if (!(await exists(contentPath(restaurant.logo)))) {
   if (await makePlaceholder(restaurant.logo, letter(restaurant.name), 0)) made++;
 }
 for (const promo of promos.promos) {
-  if (promo.image && !(await exists(path.join(CONTENT, promo.image)))) {
+  if (promo.image && !(await exists(contentPath(promo.image)))) {
     if (await makePlaceholder(promo.image, letter(promo.title), 2)) made++;
   }
 }

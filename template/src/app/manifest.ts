@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { getContentDir } from "@/lib/content-dir";
 import { getSiteRestaurant, getSiteTheme } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
 
   let version = "1";
   try {
-    const raw = await readFile(path.join(process.cwd(), "content", "icons", "icons.json"), "utf-8");
+    const raw = await readFile(path.join(getContentDir(), "icons", "icons.json"), "utf-8");
     version = (JSON.parse(raw) as { version?: string }).version ?? "1";
   } catch {
     // иконки ещё не сгенерированы (до первого seed)

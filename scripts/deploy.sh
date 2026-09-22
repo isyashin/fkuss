@@ -15,6 +15,17 @@ if [ -z "$SLUG" ]; then
   echo "Использование: deploy.sh <slug> [--domain=example.ru]" >&2
   exit 1
 fi
+if ! [[ "$SLUG" =~ ^[a-z0-9][a-z0-9-]*$ ]] || [ "${#SLUG}" -gt 58 ]; then
+  echo "Некорректный slug: нужны строчные латинские буквы, цифры и дефисы (до 58 символов)" >&2
+  exit 1
+fi
+if [ -n "$DOMAIN" ] && {
+  ! [[ "$DOMAIN" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9]$ ]] ||
+  [[ "$DOMAIN" == *..* ]] || [ "${#DOMAIN}" -gt 253 ];
+}; then
+  echo "Некорректный домен" >&2
+  exit 1
+fi
 
 BASE="${RESTO_BASE:-$HOME/resto}"
 REGISTRY="$BASE/registry.json"

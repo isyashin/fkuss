@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin-auth";
 import type { WeeklySchedule, DaySchedule } from "@/lib/hours";
+import { getContentDir } from "@/lib/content-dir";
 
 const DAY_NAMES: Record<string, string> = {
   mon: "пн", tue: "вт", wed: "ср", thu: "чт", fri: "пт", sat: "сб", sun: "вс",
@@ -80,9 +81,8 @@ export async function afterLogoUpload(): Promise<void> {
   const themeRow = await prisma.settings.findUnique({ where: { key: "theme" } });
   const theme = (themeRow?.value ?? {}) as { accent?: string };
   const { generateIcons } = await import("@/lib/pwa-icons");
-  const path = await import("node:path");
   await generateIcons(
-    path.join(process.cwd(), "content"),
+    getContentDir(),
     { name: (current.name as string) ?? "Ресторан", logo: "images/logo.png" },
     theme.accent ?? "#b45309",
   );

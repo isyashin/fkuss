@@ -1,11 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { cache } from "react";
-
-const CONTENT_DIR = path.join(process.cwd(), "content");
+import { getContentDir } from "./content-dir";
 
 async function readJson<T>(file: string): Promise<T> {
-  const raw = await readFile(path.join(CONTENT_DIR, file), "utf-8");
+  const raw = await readFile(path.join(getContentDir(), file), "utf-8");
   return JSON.parse(raw) as T;
 }
 

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Создать сайт ресторана Fkuss"
+  short_description: "Собирает ресторанный сайт из меню и источников"
+  brand_color: "#B45309"
+  default_prompt: "Используй $create-fkuss-restaurant-site, чтобы собрать новый сайт ресторана на Fkuss из ссылки Яндекс.Еды и подтверждённых открытых источников."

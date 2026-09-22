@@ -182,8 +182,8 @@ async function main() {
     name: place.name,
     slug: place.slug.replace(/_/g, "-").slice(0, 64),
     cuisine: place.tags.map((t) => t.name.toLowerCase()).join(", "),
-    phone: "+70000000000", // Яндекс.Еда не отдаёт телефон — заполнить вручную
-    email: "orders@example.ru", // заполнить при настройке
+    phone: "DRAFT_PHONE_REPLACE_ME", // Яндекс.Еда не отдаёт телефон — заполнить вручную
+    email: "DRAFT_EMAIL_REPLACE_ME@example.invalid", // заполнить при настройке
     address,
     workHours: hoursMatch ? [{ days: "пн–вс", from: hoursMatch[1], to: hoursMatch[2] }] : [],
     socials: { telegram: "", max: "", whatsapp: "", vk: "" },
@@ -218,12 +218,12 @@ async function main() {
     [
       "settings.json",
       {
-        domains: { canonical: `${restaurant.slug}.example.ru`, aliases: [] },
+        domains: { canonical: "DRAFT_DOMAIN_REPLACE_ME", aliases: [] },
         delivery: { enabled: true, pickupEnabled: true, minOrder: 0, zones: [{ name: "Город", price: 300, freeFrom: null }] },
         channels: {
           telegram: { enabled: false, botTokenRef: "TELEGRAM_BOT_TOKEN", chatId: "" },
           max: { enabled: false, botTokenRef: "MAX_BOT_TOKEN", chatId: "" },
-          email: { enabled: false, address: "orders@example.ru" },
+          email: { enabled: false, address: "DRAFT_EMAIL_REPLACE_ME@example.invalid" },
           whatsapp: { enabled: false, phone: "" },
         },
         payment: { provider: "none", shopIdRef: "YOOKASSA_SHOP_ID", secretRef: "YOOKASSA_SECRET" },
@@ -256,7 +256,7 @@ async function main() {
 
   console.log(`\n✓ Готово: ${menu.categories.length} категорий, ${dishCount} блюд, ${photoCount} фото`);
   console.log(`  Каталог: ${outDir}`);
-  console.log(`  ⚠ Заполнить вручную: телефон, email, соцсети (Яндекс.Еда их не отдаёт)`);
+  console.log(`  ⚠ ЧЕРНОВИК: замените телефон и email (DRAFT_*), а также соцсети перед seed.`);
 }
 
 main().catch((error) => {

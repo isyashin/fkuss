@@ -81,8 +81,13 @@ fi
 
 # 4. Compose сайта
 mkdir -p "$SITE_DIR/content"
-# BUG-016: bind mount должен быть доступен пользователю контейнера (app uid=100/gid=101)
-chown -R 100:101 "$SITE_DIR/content"
+# BUG-016: bind mount должен быть доступен пользователю контейнера (app uid=100/gid=101).
+# chown напрямую требует root — делаем через тот же образ приложения (--user root).
+# Фореграундный docker run с bind-mount в этом окружении не возвращается (CLI
+# зависает после exit(0) контейнера), поэтому detached + docker wait.
+CID=$(docker run -d --user root -v "$SITE_DIR:/s" "$IMAGE" chown -R 100:101 /s/content)
+docker wait "$CID" >/dev/null
+docker rm "$CID" >/dev/null
 cat > "$SITE_DIR/docker-compose.yml" <<EOF
 services:
   app:

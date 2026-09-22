@@ -153,11 +153,37 @@ install -d -m 755 ~/resto/backups/export
 bash ~/resto/src/scripts/deploy.sh <slug> [--domain=example.ru]
 # deploy.sh сам: выделяет порт (registry.json), создаёт per-site
 # пользователя БД с паролем и базу, пишет .env (DATABASE_URL,
-# ADMIN_PASSWORD, CRON_SECRET, права 600), поднимает контейнер.
-# Далее: контент в sites/<slug>/content (см. инжест), затем
-# seed: с локальной машины
-DATABASE_URL=... CONTENT_DIR=<путь> npm run seed
+# ADMIN_PASSWORD, CRON_SECRET, права 600), поднимает контейнер,
+# ставит cron-джобы (install-site-jobs.sh + install-platform-jobs.sh).
 ```
+
+⚠️ deploy.sh требует собранный `resto-template-migrator:latest` (шаг миграции):
+перед первым деплоем после чистки образов выполни `update.sh --no-restart`
+или `docker build --target migrator -t resto-template-migrator:latest template/`.
+
+⚠️ deploy.sh НЕ регистрирует сайт в платформе. Для метрик/биллинга добавь
+запись вручную: строку `Site` (siteKey — случайный hex) и стартовый `BalanceTransaction`
+(тип topup, сумма в копейках, уникальный dedupeKey) в БД `platform`, затем допиши
+в `.env` сайта `SITE_KEY=<key>` и `PLATFORM_URL=http://platform:3000`
+и пересоздай контейнер (`docker compose up -d` в каталоге сайта).
+
+Контент копируется на сервер в `sites/<slug>/content` (tar+scp), владение —
+100:101 (chown через контейнер, см. deploy.sh). Далее seed: **с локальной машины**:
+
+```bash
+# DATABASE_URL из sites/<slug>/.env, но хост — IP/имя СЕРВЕРА:
+# template-db-1 резолвится только внутри docker-сети (снаружи ENOTFOUND).
+DATABASE_URL=postgresql://site_...:<pass>@192.168.88.153:5432/<slug> \
+CONTENT_DIR=<путь>/sites/<slug>/content npm run seed
+```
+
+Seed пишет PWA-иконки в `content/icons` каталога `CONTENT_DIR` (локально при
+удалённом seed) — скопируй их на сервер и выставь владение 100:101.
+Перед seed выполняется content-readiness: draft-заглушки (DRAFT_, @example.ru,
+70000000000) и отсутствующие изображения отклоняются до записи в БД.
+
+После первого деплоя на dev-ВМ сайт доступен по `http://<IP>:<порт>` и через
+Caddy `http://<slug>.resto.local` (маршрут добавляет sync-caddy.sh по cron */5).
 
 Изоляция БД: у каждого сайта свой пользователь `site_<slug>` и своя база —
 один сайт не читает чужие данные. Пароль общего суперпользователя —

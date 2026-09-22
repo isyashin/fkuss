@@ -34,9 +34,14 @@ docker compose -f "$SRC/platform/docker-compose.yml" build
 docker build --target migrator -t platform-migrator:latest "$SRC/platform"
 
 echo "== миграции БД =="
-# resto (u-mamy): DATABASE_URL из .env сайта
-RESTO_DB_URL=$(grep '^DATABASE_URL=' "$SRC/template/.env" | cut -d= -f2-)
-docker run --rm --network template_default -e DATABASE_URL="$RESTO_DB_URL" resto-template-migrator:latest
+# resto (u-mamy): DATABASE_URL из .env сайта. На серверах без демо-сайта
+# (template/.env отсутствует) шаг пропускаем — guard ниже.
+if [ -f "$SRC/template/.env" ]; then
+  RESTO_DB_URL=$(grep '^DATABASE_URL=' "$SRC/template/.env" | cut -d= -f2-)
+  docker run --rm --network template_default -e DATABASE_URL="$RESTO_DB_URL" resto-template-migrator:latest
+else
+  echo "template/.env не найден — демо-сайт не настроен, миграция пропущена"
+fi
 # platform: DATABASE_URL из compose
 PLATFORM_DB_URL=$(grep 'DATABASE_URL:' "$SRC/platform/docker-compose.yml" | head -1 | awk '{print $2}')
 docker run --rm --network template_default -e DATABASE_URL="$PLATFORM_DB_URL" platform-migrator:latest
@@ -50,7 +55,8 @@ done
 
 if [ "${1:-}" != "--no-restart" ]; then
   echo "== restart сервисов =="
-  (cd "$SRC/template" && docker compose up -d)
+  # template (демо u-mamy) поднимаем только если он настроен на этом сервере
+  [ -f "$SRC/template/.env" ] && (cd "$SRC/template" && docker compose up -d)
   (cd "$SRC/platform" && docker compose up -d)
   for site in "$BASE"/sites/*/; do
     [ -f "$site/docker-compose.yml" ] && (cd "$site" && docker compose up -d)

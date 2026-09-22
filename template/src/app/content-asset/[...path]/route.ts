@@ -1,5 +1,4 @@
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { resolveContentFile, resolveContentPath } from "@/lib/content-dir";
 import { NextResponse } from "next/server";
@@ -23,15 +22,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
   try {
     const absPath = await resolveContentFile(relPath);
     if (!absPath) throw new Error("not a safe file");
-    const fileStat = await stat(absPath);
     const ext = path.extname(absPath).toLowerCase();
     const contentType = MIME[ext];
     if (!contentType) throw new Error("unsupported content asset type");
-    const stream = createReadStream(absPath);
-    return new Response(stream as unknown as ReadableStream, {
+    // Загрузчик ограничивает файл 8 МБ. Буфер не создаёт ложную серверную
+    // ошибку, когда браузер отменяет загрузку картинки при навигации.
+    const body = new Uint8Array(await readFile(absPath));
+    return new Response(body, {
       headers: {
         "Content-Type": contentType,
-        "Content-Length": String(fileStat.size),
+        "Content-Length": String(body.byteLength),
         "X-Content-Type-Options": "nosniff",
         // Картинки контента меняются редко; при замене меняется имя файла
         "Cache-Control": "public, max-age=86400",

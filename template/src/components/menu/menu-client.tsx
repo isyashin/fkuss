@@ -47,7 +47,7 @@ export function MenuClient({
       )}
       {/* Табы категорий — прилипают к верху */}
       <div className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b border-foreground/10">
-        <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-none">
+        <div className="mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-3 scrollbar-none md:justify-[safe_center]">
           {menu.categories.map((c) => (
             <button
               key={c.id}

@@ -8,7 +8,7 @@ const EXCLUDED = ["/admin", "/account", "/api", "/payment", "/manifest.webmanife
  * Счёт просмотров витрины (BUG-027): только гостевые страницы,
  * без админки, кабинета, API и служебных маршрутов.
  */
-export function proxy(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPage =
     request.method === "GET" &&

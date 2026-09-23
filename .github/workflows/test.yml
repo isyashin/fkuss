@@ -42,6 +42,8 @@ jobs:
         working-directory: template
       - run: npm run build
         working-directory: template
+      - run: node scripts/check-proxy-registered.mjs
+        working-directory: template
       - run: npm run seed
         working-directory: template
       - run: npx playwright install --with-deps chromium webkit

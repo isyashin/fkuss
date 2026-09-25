@@ -63,11 +63,27 @@ test("public pages fit the viewport and content assets load", async ({ page }) =
   }
 });
 
-test("admin login and dashboard fit the viewport", async ({ page }) => {
+test("admin login, dashboard and bookings fit the viewport", async ({ page }) => {
   await assertResponsivePage(page, "/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
   await assertResponsivePage(page, "/admin");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/admin/bookings");
+  await expect(page.getByRole("heading", { name: "Предстоящие" })).toBeVisible();
+
+  const list = await page.getByRole("region", { name: "Список броней" }).boundingBox();
+  const detail = await page.getByRole("region", { name: "Детали брони" }).boundingBox();
+  expect(list).not.toBeNull();
+  expect(detail).not.toBeNull();
+  expect(detail!.x).toBeGreaterThan(list!.x + list!.width);
+  expect(detail!.y).toBeCloseTo(list!.y, 0);
+
+  await page.getByText("Все брони и фильтры").click();
+  await expect(page.getByRole("group", { name: "Фильтр броней" })).toBeVisible();
+  await page.setViewportSize({ width: 360, height: 800 });
+  const mobile = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
+  expect(mobile.content, "admin bookings overflow on mobile").toBeLessThanOrEqual(mobile.viewport + 1);
 });
 
 test("admin orders use two readable columns with bookings below at 1280px", async ({ page }) => {
@@ -120,26 +136,4 @@ test("admin dark theme colors the shell and panels consistently", async ({ page 
   await page.reload();
   await expect(page.getByRole("button", { name: "Включить светлую тему" })).toBeVisible();
   await expect.poll(colors).toMatchObject({ background: "rgb(27, 30, 29)", panel: "rgb(36, 40, 39)" });
-});
-
-test("admin bookings show upcoming list and details beside each other", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/admin/login");
-  await loginAdminUi(page);
-  await expect(page).toHaveURL(/\/admin$/);
-  await page.goto("/admin/bookings");
-  await expect(page.getByRole("heading", { name: "Предстоящие" })).toBeVisible();
-
-  const list = await page.getByRole("region", { name: "Список броней" }).boundingBox();
-  const detail = await page.getByRole("region", { name: "Детали брони" }).boundingBox();
-  expect(list).not.toBeNull();
-  expect(detail).not.toBeNull();
-  expect(detail!.x).toBeGreaterThan(list!.x + list!.width);
-  expect(detail!.y).toBeCloseTo(list!.y, 0);
-
-  await page.getByText("Все брони и фильтры").click();
-  await expect(page.getByRole("group", { name: "Фильтр броней" })).toBeVisible();
-  await page.setViewportSize({ width: 360, height: 800 });
-  const mobile = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
-  expect(mobile.content, "admin bookings overflow on mobile").toBeLessThanOrEqual(mobile.viewport + 1);
 });

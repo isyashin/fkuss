@@ -44,6 +44,7 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
   for (const action of ["Принять", "Готовится", "Готов", "Выдан"]) {
     await detail.getByRole("button", { name: action, exact: true }).click();
   }
+  await expect(detail.getByRole("button", { name: "Выдан", exact: true })).toHaveCount(0);
   await expect(detail.getByText("Выдан", { exact: true })).toBeVisible();
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)

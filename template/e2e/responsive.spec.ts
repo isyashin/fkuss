@@ -24,8 +24,9 @@ async function assertResponsivePage(page: Page, path: string) {
         })
         .map((element) => {
           const rect = element.getBoundingClientRect();
-          return { width: rect.width, height: rect.height };
-        }),
+          return { width: rect.width, height: rect.height, kind: `${element.tagName.toLowerCase()}.${String(element.className)}` };
+        })
+        .filter((element) => element.width > 0 && element.height > 0),
       touchLinks: [...document.querySelectorAll('a[href]')]
         .filter((element) => {
           const style = getComputedStyle(element);
@@ -37,17 +38,18 @@ async function assertResponsivePage(page: Page, path: string) {
         })
         .map((element) => {
           const rect = element.getBoundingClientRect();
-          return { width: rect.width, height: rect.height };
-        }),
+          return { width: rect.width, height: rect.height, kind: `${element.tagName.toLowerCase()}.${String(element.className)}` };
+        })
+        .filter((element) => element.width > 0 && element.height > 0),
     }));
     expect(layout.content, `${path} has horizontal overflow`).toBeLessThanOrEqual(layout.viewport + 1);
     for (const control of layout.controls) {
-      expect(control.width, `${path} control is narrower than 44px`).toBeGreaterThanOrEqual(44);
-      expect(control.height, `${path} control is shorter than 44px`).toBeGreaterThanOrEqual(44);
+      expect(control.width, `${path} ${control.kind} control is narrower than 44px`).toBeGreaterThanOrEqual(44);
+      expect(control.height, `${path} ${control.kind} control is shorter than 44px`).toBeGreaterThanOrEqual(44);
     }
     for (const link of layout.touchLinks) {
-      expect(link.width, `${path} touch link is narrower than 44px`).toBeGreaterThanOrEqual(44);
-      expect(link.height, `${path} touch link is shorter than 44px`).toBeGreaterThanOrEqual(44);
+      expect(link.width, `${path} ${link.kind} touch link is narrower than 44px`).toBeGreaterThanOrEqual(44);
+      expect(link.height, `${path} ${link.kind} touch link is shorter than 44px`).toBeGreaterThanOrEqual(44);
     }
     expect(brokenAssets, `${path} has broken content assets`).toEqual([]);
   } finally {

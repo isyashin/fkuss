@@ -38,7 +38,6 @@ export function AdminNotifications() {
         if (data.events.length) {
           setEvents((previous) => [...data.events, ...previous].slice(0, 10));
           setUnread((previous) => Math.min(99, previous + data.events.length));
-          setOpen(true);
           if (enabledRef.current && hasRecentAdminEvent(data.events)) {
             try { await playAdminSound(data.sound); }
             catch { enabledRef.current = false; setEnabled(false); setHint("Браузер не воспроизвёл звук. Нажмите «Включить звук» ещё раз."); }

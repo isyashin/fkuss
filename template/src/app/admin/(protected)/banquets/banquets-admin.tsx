@@ -207,8 +207,8 @@ function AddHallForm() {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="min-h-11 px-4 rounded-full border border-dashed border-foreground/30 text-sm text-muted">
-        + Зал
+      <button onClick={() => setOpen(true)} className="w-full min-h-11 px-4 rounded-[9px] border border-foreground/20 bg-card text-sm">
+        + Добавить зал
       </button>
     );
   }

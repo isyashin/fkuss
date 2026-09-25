@@ -28,11 +28,11 @@ export function PendingBookings({ bookings }: { bookings: Reservation[]; guestCo
   return <section className={`${styles.panel} ${styles.pendingBookings}`} aria-label="Ближайшие брони">
     <div className={styles.panelTitle}><h2>Брони</h2><Link className={styles.bookingLink} href="/admin/bookings">Все брони</Link></div>
     {bookings.length ? <div className={styles.pendingBookingList}>{bookings.map((booking) => <div className={styles.pendingBooking} key={booking.id}>
-      <Link className={styles.bookingOpen} href={`/admin/bookings?selected=${encodeURIComponent(booking.id)}`} aria-label={`Открыть бронь ${booking.date} ${booking.time}, ${booking.customerName}`}/>
-      <div className={styles.pendingBookingInfo}><strong>{booking.date} · {booking.time}</strong><small>{booking.guests} {guestWord(booking.guests)} · {booking.customerName}</small></div>
-      <span className={`${styles.badge} ${booking.status === "new" ? styles.new : styles.done}`}>{booking.status === "new" ? "Новая" : "Подтверждена"}</span>
+      <Link className={styles.bookingOpen} href={`/admin/bookings?selected=${encodeURIComponent(booking.id)}`} aria-label={`Открыть бронь ${booking.date} ${booking.time}, ${booking.customerName}`}>
+        <span className={styles.pendingBookingInfo}><strong>{booking.date} · {booking.time}</strong><small>{booking.guests} {guestWord(booking.guests)} · {booking.customerName}</small></span>
+        <span className={`${styles.badge} ${booking.status === "new" ? styles.new : styles.done}`}>{booking.status === "new" ? "Новая" : "Подтверждена"}</span><AdminIcon name="chevron" size={17}/>
+      </Link>
       {booking.status === "new" && <div className={styles.pendingBookingActions}><button type="button" disabled={pending} onClick={() => decide(booking.id, "confirmed")}>Подтвердить</button><button type="button" disabled={pending} onClick={() => decide(booking.id, "rejected")}>Отклонить</button></div>}
-      <AdminIcon name="chevron" size={17}/>
     </div>)}</div> : <p className={styles.empty}>Предстоящих броней нет.</p>}
     {error && <p className={styles.error} role="alert">{error}</p>}
   </section>;

@@ -157,7 +157,7 @@
 .pendingBooking:has(.new) { border-left:3px solid var(--admin-green); }
 .pendingBookingInfo { display:grid; flex:1; gap:5px; font-size:12px; }.pendingBookingInfo strong { font-size:12px; }.pendingBookingInfo small { color:var(--admin-muted); font-size:10px; }
 .pendingBooking .badge { margin-left:auto; }.pendingBooking .contactIcon { position:relative; z-index:2; }
-.bookingOpen { position:absolute; inset:0; z-index:1; border:0; border-radius:inherit; background:transparent; cursor:pointer; }
+.bookingOpen { min-width:0; min-height:44px; flex:1 1 220px; display:flex; align-items:center; gap:8px; border:0; border-radius:inherit; color:var(--admin-text); text-decoration:none; cursor:pointer; }
 .bookingOpen:focus-visible { outline:2px solid var(--admin-accent); outline-offset:2px; }
 .pendingBookingActions { position:relative; z-index:2; }
 .collapsed .sidebarFoot { display:none; }.collapsed .navLink em { position:absolute; top:1px; right:0; min-width:17px; height:17px; font-size:10px; }

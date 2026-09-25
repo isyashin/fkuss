@@ -48,7 +48,7 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
     await expect(detail.getByText(label, { exact: true }).first()).toBeVisible();
   }
   await expect(status.locator("option")).toHaveCount(1);
-  await expect(detail.getByText("Выдан", { exact: true })).toBeVisible();
+  await expect(detail.getByText("Выдан", { exact: true }).first()).toBeVisible();
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)
   await page.goto("/account");

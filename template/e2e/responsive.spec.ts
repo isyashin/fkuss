@@ -143,8 +143,13 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
     await expect(page.locator(`section#${section}`)).toBeAttached();
   }
   await expect(page.locator("section#delivery").getByRole("button", { name: "Сохранить" })).toBeVisible();
-  const settingsWidth = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
-  expect(settingsWidth.content, "admin settings overflow on mobile").toBeLessThanOrEqual(settingsWidth.viewport + 1);
+  const settingsWidth = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    content: document.documentElement.scrollWidth,
+    offenders: [...document.querySelectorAll("body *")].filter((element) => element.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
+      .slice(0, 8).map((element) => `${element.tagName.toLowerCase()}#${element.id}.${element.className?.toString().split(" ")[0]}:${Math.round(element.getBoundingClientRect().right)}`),
+  }));
+  expect(settingsWidth.content, `admin settings overflow on mobile: ${settingsWidth.offenders.join(", ")}`).toBeLessThanOrEqual(settingsWidth.viewport + 1);
 });
 
 test("admin orders use two readable columns with bookings below at 1280px", async ({ page }) => {

@@ -111,7 +111,7 @@ export function RestaurantAdmin({ initial }: { initial: FormState }) {
           {DAYS.map(({ key, label }) => {
             const day = (form.schedule.days as Record<string, DaySchedule>)[key] ?? DEFAULT_DAY;
             return (
-              <div key={key} className="flex items-center gap-2">
+              <div key={key} className="grid grid-cols-2 items-center gap-2 sm:flex" style={{ gridTemplateColumns: "repeat(2,minmax(0,1fr))" }}>
                 <span className="w-10 font-medium">{label}</span>
                 <label className="flex items-center gap-2 min-h-11">
                   <input
@@ -128,14 +128,14 @@ export function RestaurantAdmin({ initial }: { initial: FormState }) {
                       type="time"
                       value={day.from}
                       onChange={(e) => setDay(key, { from: e.target.value })}
-                      className="min-h-11 px-2 rounded-[var(--radius)] bg-card border border-foreground/15"
+                      className="min-w-0 w-full min-h-11 px-2 rounded-[var(--radius)] bg-card border border-foreground/15 sm:w-auto"
                     />
-                    <span className="text-muted">–</span>
+                    <span className="hidden text-muted sm:inline">–</span>
                     <input
                       type="time"
                       value={day.to}
                       onChange={(e) => setDay(key, { to: e.target.value })}
-                      className="min-h-11 px-2 rounded-[var(--radius)] bg-card border border-foreground/15"
+                      className="min-w-0 w-full min-h-11 px-2 rounded-[var(--radius)] bg-card border border-foreground/15 sm:w-auto"
                     />
                   </>
                 )}

@@ -5,7 +5,7 @@
 .intro p { margin:0; color:var(--admin-muted); font-size:13px; line-height:1.5; }
 
 .toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:17px; }
-.toolbar label { width:min(360px,100%); min-height:44px; display:flex; align-items:center; border:1px solid var(--admin-line); border-radius:10px; background:var(--admin-surface); }
+.toolbar label { flex:1; min-width:0; min-height:44px; display:flex; align-items:center; border:1px solid var(--admin-line); border-radius:10px; background:var(--admin-surface); }
 .toolbar input { width:100%; min-height:44px; padding:0 12px; border:0; outline:0; background:transparent; color:var(--admin-text); font-size:13px; }
 .toolbar>span,.sectionHead>span { border-radius:20px; padding:4px 8px; background:var(--admin-surface-2); color:var(--admin-muted); font-size:11px; white-space:nowrap; }
 .categories { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 24px; }
@@ -24,7 +24,7 @@
 .dishImage { width:100%; height:100%; display:block; object-fit:cover; }
 .dishPlaceholder { width:100%; height:100%; display:grid; place-items:center; padding:10px; font-size:12px; text-align:center; }
 .dishBody { flex:1; min-width:0; padding:15px; }
-.dishTitle { min-height:42px; margin:6px 0 0; font:16px/1.3 Arial,Helvetica,sans-serif; font-weight:700; }
+.page .dishTitle { min-height:42px; margin:6px 0 0; font:400 16px/1.3 Arial,Helvetica,sans-serif; }
 .dishDescription { min-height:45px; margin:8px 0 0; color:var(--admin-muted); font-size:11px; line-height:1.4; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
 .dishBottom { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px; color:var(--admin-muted); font-size:12px; }
 .dishBottom strong { color:var(--admin-text); white-space:nowrap; }
@@ -62,5 +62,5 @@
 .srOnly { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .page button:focus-visible,.page input:focus-visible,.page textarea:focus-visible,.page select:focus-visible { outline:2px solid var(--admin-accent); outline-offset:2px; }
 @media (max-width:700px) { .addCategory { grid-template-columns:1fr; } }
-@media (max-width:600px) { .intro h1 { font-size:30px; }.toolbar { align-items:stretch; flex-direction:column; gap:8px; }.toolbar label { width:100%; }.categories { gap:5px; }.categories button { padding:0 9px; font-size:11px; }.grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }.dishPhoto { height:110px; }.dishBody { padding:10px; }.dishTitle { min-height:34px; font-size:13px; }.dishDescription { min-height:30px; -webkit-line-clamp:2; }.dishBottom { flex-wrap:wrap; }.dishActions .outlineButton,.dishActions .availability { width:100%; }.dishCard.isEditing { grid-column:1/-1; } }
+@media (max-width:600px) { .intro h1 { font-size:30px; }.toolbar { align-items:stretch; flex-direction:column; gap:8px; }.toolbar label { width:100%; }.categories { gap:5px; }.categories button { padding:0 9px; font-size:11px; }.grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }.dishPhoto { height:110px; }.dishBody { padding:10px; }.page .dishTitle { min-height:34px; font-size:13px; }.dishDescription { min-height:30px; -webkit-line-clamp:2; }.dishBottom { flex-wrap:wrap; }.dishActions .outlineButton,.dishActions .availability { width:100%; }.dishCard.isEditing { grid-column:1/-1; } }
 @media (max-width:380px) { .formRow { grid-template-columns:1fr; } }

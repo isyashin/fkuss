@@ -126,6 +126,8 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   await expect(firstDish.locator("p").first()).toBeVisible();
   await firstDish.getByRole("button", { name: "Править" }).click();
   await expect(firstDish.getByLabel("Описание")).toBeVisible();
+  await firstDish.getByLabel("Режим цены").selectOption("inherit");
+  await expect(firstDish.getByLabel("Цена на витрине, ₽")).toBeVisible();
   await firstDish.getByRole("button", { name: "Отмена" }).click();
   await page.getByRole("button", { name: "+ Блюдо" }).first().click();
   await expect(page.getByRole("heading", { name: /Новое блюдо/ })).toBeVisible();
@@ -155,6 +157,16 @@ test("admin orders use two readable columns with bookings below at 1280px", asyn
   await page.setViewportSize({ width: 960, height: 900 });
   const width = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(width.content, "admin orders overflow near the two-column breakpoint").toBeLessThanOrEqual(width.viewport + 1);
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/admin/menu");
+  const search = await page.getByRole("textbox", { name: "Поиск по меню" }).boundingBox();
+  expect(search).not.toBeNull();
+  expect(search!.width).toBeGreaterThan(800);
+  const dishFont = await page.getByRole("article").first().getByRole("heading", { level: 3 })
+    .evaluate((element) => ({ family: getComputedStyle(element).fontFamily, weight: getComputedStyle(element).fontWeight }));
+  expect(dishFont.family).toContain("Arial");
+  expect(dishFont.weight).toBe("400");
 });
 
 test("admin dark theme colors the shell and panels consistently", async ({ page }) => {

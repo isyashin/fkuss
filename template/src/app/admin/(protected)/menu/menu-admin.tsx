@@ -148,16 +148,19 @@ function DishRow({ dish, categoryName }: { dish: Dish; categoryName: string }) {
         }}>
           <label>Название<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={120} /></label>
           <div className={styles.formRow}>
-            <label>Режим цены<select value={form.priceMode} onChange={(e) => setForm({ ...form, priceMode: e.target.value as typeof form.priceMode })}>
-              <option value="inherit">Общая настройка</option>
-              <option value="yandex" disabled={dish.yandexPrice === null}>Цена Яндекс.Еды</option>
-              <option value="manual">Ручная цена</option>
-              <option value="coefficient" disabled={dish.yandexPrice === null}>Яндекс ± %</option>
-            </select></label>
-            {form.priceMode === "manual" && <label>Цена на витрине, ₽<input type="number" min={0} max={1000000} step={1} required value={form.manualPrice ?? ""} onChange={(e) => setForm({ ...form, manualPrice: e.target.value === "" ? null : Number(e.target.value) })}/></label>}
-            {form.priceMode === "coefficient" && <label>Цена Яндекс ± %<input type="number" min={-100} max={500} value={form.coefficientPercent ?? ""} onChange={(e) => setForm({ ...form, coefficientPercent: e.target.value === "" ? null : Number(e.target.value) })}/></label>}
+            <label>Цена на витрине, ₽<input type="number" min={0} max={1000000} step={1} required value={form.priceMode === "manual" ? form.manualPrice ?? "" : dish.price} onChange={(e) => setForm({ ...form, priceMode: "manual", manualPrice: e.target.value === "" ? null : Number(e.target.value) })}/></label>
             <label>Вес / объём<input value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} maxLength={50}/></label>
           </div>
+          <label>Режим цены<select value={form.priceMode} onChange={(e) => {
+            const priceMode = e.target.value as typeof form.priceMode;
+            setForm({ ...form, priceMode, manualPrice: priceMode === "manual" ? form.manualPrice ?? dish.price : form.manualPrice });
+          }}>
+            <option value="inherit">Общая настройка</option>
+            <option value="yandex" disabled={dish.yandexPrice === null}>Цена Яндекс.Еды</option>
+            <option value="manual">Ручная цена</option>
+            <option value="coefficient" disabled={dish.yandexPrice === null}>Яндекс ± %</option>
+          </select></label>
+          {form.priceMode === "coefficient" && <label>Цена Яндекс ± %<input type="number" min={-100} max={500} value={form.coefficientPercent ?? ""} onChange={(e) => setForm({ ...form, coefficientPercent: e.target.value === "" ? null : Number(e.target.value) })}/></label>}
           <p className={styles.priceNote}>{dish.yandexPrice !== null ? `Яндекс: ${dish.yandexPrice} ₽ · ` : ""}Итог на витрине: {dish.price} ₽</p>
           <label>Описание<textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3}/></label>
           <label>Состав<textarea value={form.composition} onChange={(e) => setForm({ ...form, composition: e.target.value })} rows={2}/></label>

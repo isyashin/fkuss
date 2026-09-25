@@ -87,4 +87,8 @@ test("admin orders use two readable columns with bookings below at 1280px", asyn
   expect(detail!.x).toBeGreaterThan(orders!.x + orders!.width);
   expect(bookings!.y).toBeGreaterThanOrEqual(Math.max(orders!.y + orders!.height, detail!.y + detail!.height) - 1);
   expect(bookings!.x).toBeCloseTo(orders!.x, 0);
+
+  await page.setViewportSize({ width: 960, height: 900 });
+  const width = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
+  expect(width.content, "admin orders overflow near the two-column breakpoint").toBeLessThanOrEqual(width.viewport + 1);
 });

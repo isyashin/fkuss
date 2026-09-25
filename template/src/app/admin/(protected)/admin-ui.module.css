@@ -116,7 +116,7 @@
 .dashboard { max-width:none; gap:12px; }
 .panel { box-shadow:0 8px 28px rgba(67,48,37,.035); }
 .ordersPanel,.detailPanel { min-height:calc(100vh - 104px); }
-.ordersPanel { padding:20px 13px 13px; }
+.ordersPanel { padding:20px 13px 13px; container-type:inline-size; }
 .detailPanel { padding:21px 18px; }
 .panelTitle { padding:0 5px 15px; margin:0; }
 .panelTitle h1 { letter-spacing:-.035em; }
@@ -161,6 +161,7 @@
 .bookingOpen:focus-visible { outline:2px solid var(--admin-accent); outline-offset:2px; }
 .pendingBookingActions { position:relative; z-index:2; }
 .collapsed .sidebarFoot { display:none; }.collapsed .navLink em { position:absolute; top:1px; right:0; min-width:17px; height:17px; font-size:10px; }
+@container (max-width:440px) { .orderPreview { grid-template-columns:112px minmax(0,1fr); gap:7px 9px; align-items:start; }.orderLead { grid-column:1; grid-row:1; }.orderGuest { grid-column:2; grid-row:1; }.orderSummary { grid-column:1/-1; grid-row:2; display:flex; justify-content:space-between; align-items:center; padding-top:7px; border-top:1px solid var(--order-line); }.orderPreview>svg { display:none; } }
 @media (min-width:1501px) { .dashboard { grid-template-columns:minmax(320px,1.33fr) minmax(340px,1fr) minmax(260px,.78fr); } }
 @media (min-width:941px) and (max-width:1500px) { .dashboard { grid-template-columns:minmax(320px,1.05fr) minmax(340px,1fr); }.pendingBookings { grid-column:1/-1; }.ordersPanel,.detailPanel { min-height:0; } }
 @media (max-width:940px) { .sidebarFoot { display:none; }.dashboard { grid-template-columns:1fr; }.ordersPanel,.detailPanel { min-height:0; } }

@@ -126,6 +126,7 @@ test("admin bookings show upcoming list and details beside each other", async ({
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/admin/login");
   await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
   await page.goto("/admin/bookings");
   await expect(page.getByRole("heading", { name: "Предстоящие" })).toBeVisible();
 

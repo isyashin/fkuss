@@ -7,10 +7,11 @@ import { setBookingStatus } from "../actions";
 import styles from "../admin-ui.module.css";
 import { GuestContactActions } from "../guest-contact-actions";
 import type { GuestChannels } from "@/lib/guest-contact";
+import { formatAdminDate } from "@/lib/admin-date";
 
 const statusNames: Record<string, string> = { new: "Новая", confirmed: "Подтверждена", rejected: "Отклонена", cancelled: "Отменена" };
 
-export function BookingCard({ booking, guestContact }: { booking: Reservation; guestContact: GuestChannels }) {
+export function BookingCard({ booking, guestContact, timeZone }: { booking: Reservation; guestContact: GuestChannels; timeZone: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -21,7 +22,7 @@ export function BookingCard({ booking, guestContact }: { booking: Reservation; g
   });
 
   return <>
-    <div className={styles.detailHeader}><div><span className={styles.eyebrow}>Детали брони</span><h2>{booking.date} · {booking.time}</h2><p className={styles.muted}>Создана {booking.createdAt.toLocaleString("ru-RU")}</p></div><span className={`${styles.badge} ${booking.status === "new" ? styles.new : booking.status === "confirmed" ? styles.done : booking.status === "cancelled" ? styles.cancelled : ""}`}>{statusNames[booking.status] ?? booking.status}</span></div>
+    <div className={styles.detailHeader}><div><span className={styles.eyebrow}>Детали брони</span><h2>{booking.date} · {booking.time}</h2><p className={styles.muted}>Создана {formatAdminDate(booking.createdAt, timeZone)}</p></div><span className={`${styles.badge} ${booking.status === "new" ? styles.new : booking.status === "confirmed" ? styles.done : booking.status === "cancelled" ? styles.cancelled : ""}`}>{statusNames[booking.status] ?? booking.status}</span></div>
     <div className={styles.facts}>
       <div className={styles.fact}><span>Гость</span><strong>{booking.customerName}</strong></div>
       <div className={styles.fact}><span>Связь</span><GuestContactActions phone={booking.customerPhone} preferredChannel={null} channels={guestContact}/></div>

@@ -14,5 +14,5 @@ export default async function AdminBookingsPage({ searchParams }: { searchParams
   const query = parseBookingListQuery(await searchParams);
   const [listing, settings] = await Promise.all([loadBookingsPage(prisma, query), getSiteSettings()]);
 
-  return <BookingsDashboard {...listing} query={{ ...query, page: listing.page }} guestContact={visibleGuestChannels(settings)}/>;
+  return <BookingsDashboard {...listing} query={{ ...query, page: listing.page }} guestContact={visibleGuestChannels(settings)} timeZone={settings.timezone}/>;
 }

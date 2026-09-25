@@ -20,7 +20,8 @@ import { getContentDir } from "./content-dir";
 export { contentAssetUrl } from "./assets";
 
 function withSettingsDefaults(settings: ContentSettings): ContentSettings {
-  return { ...settings, pricing: settings.pricing ?? { globalMode: "yandex", globalPercent: 0 } };
+  return { ...settings, pricing: settings.pricing ?? { globalMode: "yandex", globalPercent: 0 },
+    timezone: settings.timezone ?? "Europe/Moscow" };
 }
 
 export async function getSiteRestaurant(): Promise<Restaurant> {

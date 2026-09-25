@@ -33,5 +33,5 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
 
   return <OrdersDashboard {...listing} query={{ ...query, page: listing.page }} catalog={catalog}
     deliveryOptions={options} deliveryZones={settings.delivery.zones.map((zone) => ({ name: zone.name }))}
-    guestContact={visibleGuestChannels(settings)} upcomingBookings={upcomingBookings} canManageMenu={actor.role === "owner"}/>;
+    guestContact={visibleGuestChannels(settings)} upcomingBookings={upcomingBookings} canManageMenu={actor.role === "owner"} timeZone={settings.timezone}/>;
 }

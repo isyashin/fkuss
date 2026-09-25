@@ -11,7 +11,7 @@ import type { GuestChannels } from "@/lib/guest-contact";
 
 const statusNames: Record<string, string> = { new: "Новая", confirmed: "Подтверждена", rejected: "Отклонена", cancelled: "Отменена" };
 
-export function BookingsDashboard({ bookings, counts, query, page, pageCount, guestContact }: { bookings: Reservation[]; counts: ReturnType<typeof bookingListCounts>; query: BookingListQuery; page: number; pageCount: number; guestContact: GuestChannels }) {
+export function BookingsDashboard({ bookings, counts, query, page, pageCount, guestContact, timeZone }: { bookings: Reservation[]; counts: ReturnType<typeof bookingListCounts>; query: BookingListQuery; page: number; pageCount: number; guestContact: GuestChannels; timeZone: string }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = bookings.find((booking) => booking.id === selectedId) ?? bookings[0];
   const href = (next: BookingListQuery) => adminListHref("/admin/bookings", next);
@@ -27,6 +27,6 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
       </button>) : <p className={styles.empty}>Броней с таким статусом пока нет.</p>}</div>
       <AdminPagination base="/admin/bookings" query={query} page={page} pageCount={pageCount} total={counts[query.status]}/>
     </section>
-    <section className={styles.panel} aria-label="Детали брони">{selected ? <BookingCard key={selected.id} booking={selected} guestContact={guestContact}/> : <p className={styles.empty}>Выберите бронь из списка.</p>}</section>
+    <section className={styles.panel} aria-label="Детали брони">{selected ? <BookingCard key={selected.id} booking={selected} guestContact={guestContact} timeZone={timeZone}/> : <p className={styles.empty}>Выберите бронь из списка.</p>}</section>
   </div>;
 }

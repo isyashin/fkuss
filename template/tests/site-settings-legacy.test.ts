@@ -16,6 +16,7 @@ describe("legacy site settings", () => {
       delivery: legacy.delivery,
       guestContact: legacy.guestContact,
       pricing: { globalMode: "yandex", globalPercent: 0 },
+      timezone: "Europe/Moscow",
     });
   });
 });

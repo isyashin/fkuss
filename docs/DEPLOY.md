@@ -61,8 +61,9 @@ bash ~/resto/src/scripts/update.sh --no-restart  # только сборка
 ```
 
 Работающие сервисы:
-- `template-app-1` (u-mamy) — :3000, БД `resto`
-- `buxara-app-1` — :3001, БД `buxara`, content volume
+- `template-app-1` (u-mamy) — :3000, БД `resto`, прежний образ
+- `buxara-app-1` — :3001, БД `buxara`, content volume, образ PR № 10
+- `ochag-grill-app-1` — :3003, БД `ochag-grill`, content volume, образ PR № 10
 - `platform-platform-1` — :3100, БД `platform`
 - `template-db-1` — общий PostgreSQL (базы разделены по сайтам)
 - Caddy :80 — маршрутизация по Host (LAN-режим, без реального TLS)
@@ -83,6 +84,15 @@ Tenant-джобы устанавливает `install-site-jobs.sh`: секре�
 На dev-ВМ tenant-джобы buxara (report-metrics, sync-menu) идут через
 `run-site-job.sh` с секретом из `sites/buxara/.env` (600). Синхронизация buxara
 включена: placeSlug `chajxana_buxara_xalyal`, `intervalMinutes` 60.
+
+После контролируемого переключения 2026-09-25 «Бухара» и «Очаг гриль» запущены
+с отдельным compose override `admin-pr10.override.yml` на закреплённом образе
+`resto-template:admin-pr10-634409a`; их БД мигрированы до `0007`. Задания
+report-metrics и sync-menu для обоих сайтов работают. Демо «У мамы» сохранено
+на прежнем образе и схеме. Рабочий checkout `~/resto/src` остался на `main`;
+код новой версии находится в отдельном `~/resto/admin-pr10-checkout`.
+`scripts/update.sh` до общего обновления всех сайтов применять нельзя: он
+затронет демо-сайт и снимет выбор закреплённого образа в обычном compose.
 
 ⚠️ Перед включением sync на сайте, наполненным инжестом ДО этапа ТЗ-1
 (ids блюд `dish-<edaId>`, `externalId` пустой, `source='manual'`), применить

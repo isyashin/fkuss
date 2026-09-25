@@ -5,6 +5,8 @@ import { loadBookingsPage } from "../admin-list-data";
 import { BookingsDashboard } from "./bookings-dashboard";
 import { getSiteSettings } from "@/lib/site";
 import { visibleGuestChannels } from "@/lib/guest-contact";
+import { loadUpcomingBookings } from "@/lib/admin-bookings-service";
+import { nowInTimeZone } from "@/lib/hours";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,8 @@ export default async function AdminBookingsPage({ searchParams }: { searchParams
     loadBookingsPage(prisma, query), getSiteSettings(),
     selectedId ? prisma.reservation.findUnique({ where: { id: selectedId } }) : Promise.resolve(null),
   ]);
+  const upcomingBookings = await loadUpcomingBookings(prisma, settings.timezone);
 
-  return <BookingsDashboard {...listing} query={{ ...query, page: listing.page }} guestContact={visibleGuestChannels(settings)} timeZone={settings.timezone}
+  return <BookingsDashboard {...listing} upcomingBookings={upcomingBookings} query={{ ...query, page: listing.page }} guestContact={visibleGuestChannels(settings)} timeZone={settings.timezone} today={nowInTimeZone(settings.timezone).date}
     initialSelectedId={selectedId} selectedBooking={selectedBooking}/>;
 }

@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { accrueOrderBonus, reverseOrderBonus, getBonusBalance } from "@/lib/loyalty";
 
-// Интеграционные тесты лояльности против dev-БД (PostgreSQL на ВМ)
+// Запускать только против одноразовой тестовой БД (scripts/test-with-db.sh)
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
@@ -15,7 +15,7 @@ async function makeOrder(overrides: Partial<{ total: number; bonusAccrued: numbe
     data: {
       customerId: customer.id,
       type: "pickup",
-      status: "new",
+      status: "issued",
       itemsTotal: overrides.total ?? 1000,
       total: overrides.total ?? 1000,
       bonusAccrued: overrides.bonusAccrued ?? 50,
@@ -44,7 +44,7 @@ describe("loyalty ledger", () => {
     await prisma.$disconnect();
   });
 
-  it("начисление при переводе заказа в «выполнен»", async () => {
+  it("начисление после выдачи заказа", async () => {
     const { customer, order } = await makeOrder();
     await accrueOrderBonus(prisma, order.id);
     const balance = await getBonusBalance(prisma, customer.id);

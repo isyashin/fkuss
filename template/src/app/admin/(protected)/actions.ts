@@ -3,51 +3,41 @@
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin-auth";
-import { accrueOrderBonus, reverseOrderBonus } from "@/lib/loyalty";
+import type { AdminPermission } from "@/lib/admin-users";
+import { applyAdminOrderStatus } from "@/lib/order-status-service";
+import { applyAdminBookingStatus } from "@/lib/admin-bookings-service";
+import { editOrderItems, orderEditSchema, type OrderEditInput } from "@/lib/admin-order-edit";
+import { ORDER_STATUS_CODES } from "@/lib/order-status";
 import { parseAdminInput, adminIdSchema } from "@/lib/admin-validation";
 import { z } from "zod";
 
-async function guard() {
-  if (!(await isAdmin())) throw new Error("Forbidden");
+async function guard(permission: AdminPermission) {
+  if (!(await isAdmin(permission))) throw new Error("Forbidden");
 }
 
-const ORDER_FLOW: Record<string, string[]> = {
-  new: ["accepted", "cancelled"],
-  accepted: ["cooking", "cancelled"],
-  cooking: ["delivering", "done", "cancelled"],
-  delivering: ["done", "cancelled"],
-  done: [],
-  cancelled: [],
-};
-
 export async function setOrderStatus(orderId: string, status: string): Promise<void> {
-  await guard();
+  await guard("orders");
   parseAdminInput(adminIdSchema, orderId);
-  parseAdminInput(z.enum(["accepted", "cancelled", "cooking", "delivering", "done"]), status);
+  const target = parseAdminInput(z.enum(ORDER_STATUS_CODES), status);
   const prisma = getPrisma();
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order) throw new Error("Заказ не найден");
-  if (!ORDER_FLOW[order.status]?.includes(status)) {
-    throw new Error(`Недопустимый переход: ${order.status} → ${status}`);
-  }
-
-  await prisma.order.update({ where: { id: orderId }, data: { status } });
-
-  // Лояльность: начисление при «выполнен», сторно при «отменён»
-  if (status === "done") await accrueOrderBonus(prisma, orderId);
-  if (status === "cancelled") await reverseOrderBonus(prisma, orderId);
+  await applyAdminOrderStatus(prisma, orderId, target);
 
   revalidatePath("/admin");
+  revalidatePath("/account");
+}
+
+export async function saveOrderItems(input: OrderEditInput): Promise<void> {
+  await guard("orders");
+  await editOrderItems(getPrisma(), orderEditSchema.parse(input));
+  revalidatePath("/admin");
+  revalidatePath("/account");
 }
 
 export async function setBookingStatus(id: string, status: string): Promise<void> {
-  await guard();
+  await guard("bookings");
   parseAdminInput(adminIdSchema, id);
-  parseAdminInput(z.enum(["confirmed", "rejected", "cancelled"]), status);
-  if (!["confirmed", "rejected", "cancelled"].includes(status)) {
-    throw new Error("Недопустимый статус брони");
-  }
-  const prisma = getPrisma();
-  await prisma.reservation.update({ where: { id }, data: { status } });
+  const target = parseAdminInput(z.enum(["confirmed", "rejected", "cancelled"]), status);
+  await applyAdminBookingStatus(getPrisma(), id, target);
   revalidatePath("/admin/bookings");
+  revalidatePath("/admin");
 }

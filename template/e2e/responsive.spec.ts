@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { loginAdminUi } from "./login-admin";
 
 async function assertResponsivePage(page: Page, path: string) {
   const brokenAssets: string[] = [];
@@ -62,8 +63,7 @@ test("public pages fit the viewport and content assets load", async ({ page }) =
 
 test("admin login and dashboard fit the viewport", async ({ page }) => {
   await assertResponsivePage(page, "/admin/login");
-  await page.getByPlaceholder("Пароль").fill("admin");
-  await page.getByRole("button", { name: "Войти" }).click();
+  await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
   await assertResponsivePage(page, "/admin");
 });

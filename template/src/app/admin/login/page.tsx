@@ -1,10 +1,10 @@
-import { isAdmin } from "@/lib/admin-auth";
+import { getAdminActor } from "@/lib/admin-auth";
 import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminLoginPage() {
-  if (await isAdmin()) {
+  if (await getAdminActor()) {
     const { redirect } = await import("next/navigation");
     redirect("/admin");
   }

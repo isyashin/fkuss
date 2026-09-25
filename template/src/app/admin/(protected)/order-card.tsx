@@ -1,83 +1,57 @@
 "use client";
 
-import { useTransition } from "react";
-import { setOrderStatus } from "./actions";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { Order, OrderItem } from "@/generated/prisma/client";
+import { orderActionsFor, orderStatusLabel } from "@/lib/order-status";
+import { orderEditBlockReason } from "@/lib/order-edit-policy";
+import { setOrderStatus } from "./actions";
+import { OrderEditor } from "./order-editor";
+import type { CatalogCategory, DeliveryOptionChoice, DeliveryZoneChoice } from "./order-editor-types";
+import styles from "./admin-ui.module.css";
+import { GuestContactActions } from "./guest-contact-actions";
+import type { GuestChannels } from "@/lib/guest-contact";
 
-const STATUS_NAMES: Record<string, string> = {
-  new: "Новый",
-  accepted: "Принят",
-  cooking: "Готовится",
-  delivering: "В пути",
-  done: "Выполнен",
-  cancelled: "Отменён",
-};
+const rub = (value: number) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
 
-const NEXT_ACTIONS: Record<string, { status: string; label: string }[]> = {
-  new: [
-    { status: "accepted", label: "Принять" },
-    { status: "cancelled", label: "Отменить" },
-  ],
-  accepted: [
-    { status: "cooking", label: "Готовится" },
-    { status: "cancelled", label: "Отменить" },
-  ],
-  cooking: [
-    { status: "delivering", label: "В пути" },
-    { status: "done", label: "Выполнен" },
-    { status: "cancelled", label: "Отменить" },
-  ],
-  delivering: [
-    { status: "done", label: "Выполнен" },
-    { status: "cancelled", label: "Отменить" },
-  ],
-};
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className={styles.fact}><span>{label}</span><strong>{children}</strong></div>;
+}
 
-export function OrderCard({ order }: { order: Order & { items: OrderItem[] } }) {
+export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, guestContact }: { order: Order & { items: OrderItem[] }; catalog: CatalogCategory[]; deliveryOptions: DeliveryOptionChoice[]; deliveryZones: DeliveryZoneChoice[]; guestContact: GuestChannels }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const actions = NEXT_ACTIONS[order.status] ?? [];
+  const [tab, setTab] = useState<"items" | "info">("items");
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState("");
+  const actions = orderActionsFor(order.type, order.status);
+  const editBlocked = orderEditBlockReason(order);
+  const run = (status: string) => startTransition(async () => {
+    setError("");
+    try { await setOrderStatus(order.id, status); router.refresh(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось изменить статус"); }
+  });
 
-  return (
-    <div className="bg-card rounded-[var(--radius)] p-4">
-      <div className="flex flex-wrap justify-between gap-2 items-baseline">
-        <p className="font-medium">
-          №{order.number} · {STATUS_NAMES[order.status] ?? order.status}
-          {order.paymentStatus === "paid" && <span className="ml-2 text-green-600 text-sm">оплачен</span>}
-        </p>
-        <p className="font-semibold text-accent">{order.total.toLocaleString("ru-RU")} ₽</p>
-      </div>
-      <p className="text-sm mt-1">
-        {order.items.map((i) => {
-          const mods = (i.modifiers as { name?: string; price?: number }[] | null) ?? [];
-          const modsText = mods.length ? ` [${mods.map((m) => m.name).join(", ")}]` : "";
-          return `${i.name}${modsText} ×${i.quantity}`;
-        }).join(", ")}
-      </p>
-      <p className="text-muted text-sm mt-1">
-        {order.customerName} · {order.customerPhone} ·{" "}
-        {order.type === "delivery" ? `доставка: ${order.addressText}` : "самовывоз"}
-      </p>
-      {order.comment && <p className="text-muted text-sm mt-0.5">💬 {order.comment}</p>}
-      <p className="text-muted text-xs mt-1">{order.createdAt.toLocaleString("ru-RU")}</p>
-
-      {actions.length > 0 && (
-        <div className="flex gap-2 mt-3">
-          {actions.map((action) => (
-            <button
-              key={action.status}
-              disabled={pending}
-              onClick={() => startTransition(() => setOrderStatus(order.id, action.status))}
-              className={`min-h-11 px-4 rounded-full text-sm font-medium disabled:opacity-50 ${
-                action.status === "cancelled"
-                  ? "border border-foreground/20"
-                  : "bg-accent text-white"
-              }`}
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <>
+    <div className={styles.detailHeader}><div><span className={styles.eyebrow}>Детали заказа</span><h2>Заказ № {order.number}</h2><p className={styles.muted}>{order.createdAt.toLocaleString("ru-RU")}</p></div><span className={`${styles.badge} ${order.status === "new" ? styles.new : order.status === "cancelled" ? styles.cancelled : order.status === "delivered" || order.status === "issued" ? styles.done : ""}`}>{orderStatusLabel(order.status)}</span></div>
+    <div className={styles.tabs} role="tablist" aria-label="Детали заказа"><button type="button" role="tab" aria-selected={tab === "items"} onClick={() => setTab("items")}>Состав заказа</button><button type="button" role="tab" aria-selected={tab === "info"} onClick={() => setTab("info")}>Информация</button></div>
+    {tab === "items" && !editing && <div className={styles.actions}><button type="button" disabled={Boolean(editBlocked) || pending} onClick={() => { setError(""); setEditing(true); }}>Изменить состав</button>{editBlocked && <span className={styles.muted}>{editBlocked}</span>}</div>}
+    {tab === "items" && editing ? <OrderEditor order={order} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} onClose={() => setEditing(false)}/> : tab === "items" ? <>
+      <div className={styles.items}>{order.items.map((item) => {
+        const modifiers = (item.modifiers as { name?: string; price?: number }[] | null) ?? [];
+        return <div key={item.id} className={styles.item}><div><strong>{item.name} × {item.quantity}</strong><small>{rub(item.price)} за шт.{modifiers.length ? ` · ${modifiers.map((modifier) => modifier.name).join(", ")}` : ""}</small></div><span className={styles.itemPrice}>{rub(item.total)}</span></div>;
+      })}</div>
+      <div className={styles.summary}><div className={styles.summaryLine}><span>Блюда</span><strong>{rub(order.itemsTotal)}</strong></div>{order.deliveryPrice > 0 && <div className={styles.summaryLine}><span>Доставка</span><strong>{rub(order.deliveryPrice)}</strong></div>}{order.bonusSpent > 0 && <div className={styles.summaryLine}><span>Списано бонусов</span><strong>−{rub(order.bonusSpent)}</strong></div>}<div className={`${styles.summaryLine} ${styles.summaryTotal}`}><span>Итого</span><strong>{rub(order.total)}</strong></div></div>
+    </> : <div className={styles.facts}>
+      <Fact label="Гость">{order.customerName}</Fact>
+      <div className={styles.fact}><span>Связь</span><GuestContactActions phone={order.customerPhone} preferredChannel={order.preferredChannel} channels={guestContact}/></div>
+      <Fact label="Тип">{order.type === "delivery" ? "Доставка" : "Самовывоз"}</Fact>
+      {order.type === "delivery" && <Fact label="Адрес">{order.addressText || "Не указан"}</Fact>}
+      {order.desiredTime && <Fact label="Время">{order.desiredTime}</Fact>}
+      <Fact label="Оплата">{order.paymentMethod === "online" ? "Онлайн" : "При получении"}{order.paymentStatus === "paid" ? " · оплачено" : ""}</Fact>
+      {order.comment && <Fact label="Комментарий">{order.comment}</Fact>}
+    </div>}
+    {actions.length > 0 && <div className={styles.actions}>{actions.map((action) => <button key={action.status} type="button" disabled={pending || editing} onClick={() => run(action.status)}>{action.label}</button>)}</div>}
+    {error && <p className={styles.error} role="alert">{error}</p>}
+  </>;
 }

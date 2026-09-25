@@ -1,5 +1,7 @@
 import { fetchMyBilling } from "@/lib/platform";
+import { requireAdminPermission } from "@/lib/admin-auth";
 import { TopupForm } from "./topup-form";
+import { AdminSettingsSubpage } from "../admin-settings-subpage";
 
 export const dynamic = "force-dynamic";
 
@@ -10,20 +12,20 @@ const STATE_NAMES: Record<string, string> = {
 };
 
 export default async function AdminBillingPage() {
+  await requireAdminPermission("manage");
   const billing = await fetchMyBilling();
 
   if (!billing) {
     return (
-      <div>
-        <h1 className="text-2xl mb-4">Подписка</h1>
+      <AdminSettingsSubpage title="Подписка" description="Баланс и тариф ресторана.">
         <p className="text-muted">Платформа не подключена к этому сайту (нет SITE_KEY/PLATFORM_URL).</p>
-      </div>
+      </AdminSettingsSubpage>
     );
   }
 
   return (
+    <AdminSettingsSubpage title="Подписка и баланс" description="Тариф, счета и активность ресторана.">
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl">Подписка и баланс</h1>
 
       <div className="bg-card rounded-[var(--radius)] p-5">
         <div className="flex flex-wrap justify-between items-baseline gap-2">
@@ -79,5 +81,6 @@ export default async function AdminBillingPage() {
         )}
       </section>
     </div>
+    </AdminSettingsSubpage>
   );
 }

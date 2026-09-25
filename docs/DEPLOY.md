@@ -155,13 +155,35 @@ install -d -m 755 ~/resto/backups/export
 bash ~/resto/src/scripts/deploy.sh <slug> [--domain=example.ru]
 # deploy.sh сам: выделяет порт (registry.json), создаёт per-site
 # пользователя БД с паролем и базу, пишет .env (DATABASE_URL,
-# ADMIN_PASSWORD, CRON_SECRET, права 600), поднимает контейнер,
+# ADMIN_PASSWORD для прежней версии, CRON_SECRET, права 600), поднимает контейнер,
 # ставит cron-джобы (install-site-jobs.sh + install-platform-jobs.sh).
 ```
 
-⚠️ deploy.sh требует собранный `resto-template-migrator:latest` (шаг миграции):
-перед первым деплоем после чистки образов выполни `update.sh --no-restart`
-или `docker build --target migrator -t resto-template-migrator:latest template/`.
+⚠️ deploy.sh требует собранный `resto-template-migrator:latest` (шаг миграции).
+Собери его отдельно: `docker build --target migrator -t resto-template-migrator:latest template/`.
+`update.sh --no-restart` не подходит для обновления со старых статусов заказов:
+он мигрирует БД, пока старый код ещё принимает записи.
+
+### Первый владелец новой админки
+
+После миграций до `0007_guest_contact`, до запуска нового кода, создай первого
+владельца в каждой ресторанной БД отдельно. Команда `bootstrap-admin.ts`
+принимает `DATABASE_URL`, `ADMIN_BOOTSTRAP_LOGIN`, `ADMIN_BOOTSTRAP_NAME` и
+`ADMIN_BOOTSTRAP_PASSWORD` из закрытых env-файлов. Повторный запуск при наличии
+учётной записи запрещён. Пароль не передавай аргументом командной строки и не
+выводи в журнал; после создания владельца удали временный bootstrap env-файл.
+
+```bash
+docker run --rm --network template_default \
+  --env-file /закрытый/путь/db.env \
+  --env-file /закрытый/путь/admin-bootstrap.env \
+  resto-template-migrator:latest \
+  node_modules/.bin/tsx scripts/bootstrap-admin.ts
+```
+
+В новой версии `ADMIN_PASSWORD` не используется для входа. Учётки и сессии
+живут в БД конкретного ресторана; при переносе на prod задаются новые
+доступы через bootstrap или раздел «Сотрудники», без изменения кода.
 
 ⚠️ deploy.sh НЕ регистрирует сайт в платформе. Для метрик/биллинга добавь
 запись вручную: строку `Site` (siteKey — случайный hex) и стартовый `BalanceTransaction`

@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { loginAdminUi } from "./login-admin";
 
-// Полный цикл лояльности: вход → заказ → админ «выполнен» → кэшбэк в кабинете
-test("цикл бонусов: заказ → выполнение → кэшбэк виден в кабинете", async ({ page, request }, testInfo) => {
+// Полный цикл лояльности: вход → заказ → выдача → кэшбэк в кабинете
+test("цикл бонусов: заказ → выдача → кэшбэк виден в кабинете", async ({ page, request }, testInfo) => {
   // 1. Вход по email-коду (dev). Отдельный rate-limit бакет — иначе 5/час на IP
   const email = `e2e-loyalty-${testInfo.project.name}-${Date.now()}@example.com`;
   const authIp = { "x-forwarded-for": `10.99.11.${testInfo.project.name === "webkit-mobile" ? 3 : testInfo.project.name.includes("mobile") ? 1 : 2}` };
@@ -33,21 +34,17 @@ test("цикл бонусов: заказ → выполнение → кэшб�
   const orderText = await page.getByText(/Заказ №\d+ принят/).textContent();
   const orderNumber = Number(orderText?.match(/№(\d+)/)?.[1]);
 
-  // 3. Админ переводит заказ в «выполнен»
+  // 3. Админ проводит самовывоз через все соседние стадии до выдачи
   await page.goto("/admin/login");
-  await page.getByPlaceholder("Пароль").fill("admin");
-  await page.getByRole("button", { name: "Войти" }).click();
+  await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
 
-  const orderCard = page.locator("div.bg-card", { hasText: `№${orderNumber} ` }).first();
-  await expect(orderCard).toBeVisible();
-  // new → accepted → cooking → done
-  await orderCard.getByRole("button", { name: "Принять" }).click();
-  await page.waitForTimeout(500);
-  await page.locator("div.bg-card", { hasText: `№${orderNumber} ` }).first().getByRole("button", { name: "Готовится" }).click();
-  await page.waitForTimeout(500);
-  await page.locator("div.bg-card", { hasText: `№${orderNumber} ` }).first().getByRole("button", { name: "Выполнен" }).click();
-  await page.waitForTimeout(500);
+  await page.getByRole("button", { name: `Открыть заказ № ${orderNumber}` }).click();
+  const detail = page.getByRole("region", { name: "Детали заказа" });
+  for (const action of ["Принять", "Готовится", "Готов", "Выдан"]) {
+    await detail.getByRole("button", { name: action, exact: true }).click();
+  }
+  await expect(detail.getByText("Выдан", { exact: true })).toBeVisible();
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)
   await page.goto("/account");

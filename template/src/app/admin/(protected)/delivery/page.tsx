@@ -1,16 +1,18 @@
 import { getPrisma } from "@/lib/db";
+import { requireAdminPermission } from "@/lib/admin-auth";
 import { DeliveryAdmin } from "./delivery-admin";
+import { AdminSettingsSubpage } from "../admin-settings-subpage";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDeliveryPage() {
+  await requireAdminPermission("manage");
   const prisma = getPrisma();
   const options = await prisma.deliveryOption.findMany({ orderBy: { position: "asc" } });
 
   return (
-    <div>
-      <h1 className="text-2xl mb-4">Доставка</h1>
+    <AdminSettingsSubpage title="Варианты доставки" description="Интервалы, цены и доступность доставки.">
       <DeliveryAdmin options={options} />
-    </div>
+    </AdminSettingsSubpage>
   );
 }

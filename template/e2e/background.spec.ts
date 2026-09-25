@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginAdminUi } from "./login-admin";
 import sharp from "sharp";
 
 // Настоящий PNG, сгенерированный в тесте
@@ -17,8 +18,7 @@ async function makePng(): Promise<Buffer> {
 
 test("VIS-01/03: загрузка фона через админку, применение на витрине, удаление", async ({ page }) => {
   await page.goto("/admin/login");
-  await page.getByPlaceholder("Пароль").fill("admin");
-  await page.getByRole("button", { name: "Войти" }).click();
+  await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
   await page.goto("/admin/settings");
@@ -68,8 +68,7 @@ test("VIS-01/03: загрузка фона через админку, приме
 
 test("VIS-02: SVG отклоняется сервером загрузки", async ({ page }) => {
   await page.goto("/admin/login");
-  await page.getByPlaceholder("Пароль").fill("admin");
-  await page.getByRole("button", { name: "Войти" }).click();
+  await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
   // page.request делит куки со страницей

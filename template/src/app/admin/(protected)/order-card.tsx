@@ -65,6 +65,7 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
       {editBlocked && <p className={styles.muted}>{editBlocked}</p>}
     </>)}
     {tab === "items" && <label className={styles.statusEditor}><span>Статус заказа</span><select value={order.status} disabled={pending || editing} onChange={(event) => run(event.target.value)}><option value={order.status}>{orderStatusLabel(order.status)}</option>{actions.map((action) => <option key={action.status} value={action.status}>{action.label}</option>)}</select>{editing && <small>Сначала сохраните изменения состава.</small>}</label>}
+    {actions.length > 0 && <div className={styles.actions}>{actions.map((action) => <button key={action.status} type="button" disabled={pending} onClick={() => run(action.status)}>{action.label}</button>)}</div>}
     {info}
     {error && <p className={styles.error} role="alert">{error}</p>}
   </>;

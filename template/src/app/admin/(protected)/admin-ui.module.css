@@ -193,6 +193,7 @@
 @media (max-width:600px) { .lineItem { grid-template-columns:44px minmax(0,1fr); }.linePhoto { width:44px; height:44px; }.linePrice { grid-column:2; }.orderInfo>div { grid-template-columns:80px minmax(0,1fr); }.totalRow strong { font-size:20px; } }
 
 .main:has(> .bookingPage) { padding-inline:0; }.main>div.bookingPage { max-width:1200px; margin:0 auto; padding:8px 28px 35px; }
+.main:has(> .menuPage) { padding-inline:0; }.main>div.menuPage { max-width:1320px; margin:0 auto; padding:8px 28px 35px; }
 .bookingIntro { margin:13px 0 24px; }.bookingIntro h1 { margin:0 0 8px; font-family:Georgia,serif; font-size:34px; letter-spacing:-.035em; }.bookingIntro p { margin:0; color:var(--admin-muted); font-size:13px; line-height:1.5; }
 .bookingsLayout { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr); gap:14px; align-items:start; }
 .bookingMain,.bookingDetail { padding:22px; }
@@ -203,3 +204,4 @@
 .bookingDetail .detailHeader { margin-bottom:20px; }.bookingDetail .detailHeader h2 { margin:0 0 7px; font-family:Arial,Helvetica,sans-serif; font-size:23px; }.bookingFacts { gap:17px; }.bookingFacts .fact { grid-template-columns:100px minmax(0,1fr); font-size:13px; }.bookingFacts .contactDetails>a.contactPhone { color:var(--admin-text); text-decoration:none; }.bookingFacts .contactLinks { gap:0 12px; }.bookingFacts .contactLinks a { min-height:44px; padding:0; border:0; border-radius:0; background:transparent; color:#436e8b; text-decoration:underline; white-space:nowrap; }.dark .bookingFacts .contactLinks a { color:#8bb9d4; }.bookingActions { display:grid; gap:8px; margin-top:24px; }.bookingActions button { width:100%; }
 @media (max-width:960px) { .bookingsLayout { grid-template-columns:1fr; } }
 @media (max-width:600px) { .main>div.bookingPage { padding:8px 10px 20px; }.bookingIntro h1 { font-size:30px; }.bookingMain,.bookingDetail { padding:17px; }.bookingItem { padding:10px; }.bookingItemCopy strong { font-size:12px; }.bookingItemCopy small { font-size:11px; }.bookingStatus { font-size:10px; padding:4px 7px; }.bookingFacts .fact { grid-template-columns:88px minmax(0,1fr); font-size:12px; } }
+@media (max-width:600px) { .main>div.menuPage { padding:8px 10px 20px; } }

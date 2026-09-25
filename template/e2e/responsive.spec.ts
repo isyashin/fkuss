@@ -114,6 +114,24 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
       await expect(mobileNav.locator(`a[href="${href}"] em`)).toHaveText(await sidebarCount.textContent() ?? "");
     }
   }
+
+  await page.goto("/admin/menu");
+  await expect(page.getByRole("heading", { name: "Меню", exact: true })).toBeVisible();
+  const categoryGroup = page.getByRole("group", { name: "Категории меню" });
+  await expect(categoryGroup).toBeVisible();
+  expect(await categoryGroup.evaluate((element) => getComputedStyle(element).flexWrap)).toBe("wrap");
+  const firstDish = page.getByRole("article").first();
+  await expect(firstDish.getByRole("heading", { level: 3 })).toBeVisible();
+  await expect(firstDish.getByRole("button", { name: /фото блюда/ })).toBeVisible();
+  await expect(firstDish.locator("p").first()).toBeVisible();
+  await firstDish.getByRole("button", { name: "Править" }).click();
+  await expect(firstDish.getByLabel("Описание")).toBeVisible();
+  await firstDish.getByRole("button", { name: "Отмена" }).click();
+  await page.getByRole("button", { name: "+ Блюдо" }).first().click();
+  await expect(page.getByRole("heading", { name: /Новое блюдо/ })).toBeVisible();
+  await page.getByRole("button", { name: "Отмена" }).click();
+  const menuWidth = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
+  expect(menuWidth.content, "admin menu overflows on mobile").toBeLessThanOrEqual(menuWidth.viewport + 1);
 });
 
 test("admin orders use two readable columns with bookings below at 1280px", async ({ page }) => {
@@ -166,4 +184,10 @@ test("admin dark theme colors the shell and panels consistently", async ({ page 
   await page.reload();
   await expect(page.getByRole("button", { name: "Включить светлую тему" })).toBeVisible();
   await expect.poll(colors).toMatchObject({ background: "rgb(27, 30, 29)", panel: "rgb(36, 40, 39)" });
+  await page.goto("/admin/menu");
+  const menuColors = await page.getByRole("article").first().evaluate((element) => ({
+    background: getComputedStyle(element).backgroundColor,
+    text: getComputedStyle(element).color,
+  }));
+  expect(menuColors).toEqual({ background: "rgb(36, 40, 39)", text: "rgb(244, 240, 233)" });
 });

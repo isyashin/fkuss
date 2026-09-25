@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { addCategory, addDish, deleteDish, updateDish } from "./actions";
 import { dishImageUrl } from "@/lib/assets";
 import type { Category, Dish } from "@/generated/prisma/client";
+import adminStyles from "../admin-ui.module.css";
 import styles from "./menu-admin.module.css";
 
 const errorText = (error: unknown) => error instanceof Error ? error.message : "Не удалось сохранить изменение";
@@ -53,19 +54,19 @@ export function MenuAdmin({ categories }: { categories: (Category & { dishes: Di
   const visibleCount = visible.reduce((sum, category) => sum + category.dishes.length, 0);
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${adminStyles.menuPage}`}>
       <div className={styles.intro}><span>Каталог</span><h1>Меню</h1><p>Блюда и категории текущего ресторана. Сохранённые изменения видны на сайте.</p></div>
       <div className={styles.toolbar}><label><span className={styles.srOnly}>Поиск по меню</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти блюдо или описание" aria-label="Поиск по меню" /></label><span>{visibleCount === total ? `${total} блюд` : `${visibleCount} из ${total} блюд`}</span></div>
       <div className={styles.categories} role="group" aria-label="Категории меню"><button type="button" aria-pressed={categoryId === "all"} onClick={() => setCategoryId("all")}>Все <span>{total}</span></button>{categories.map((category) => <button type="button" key={category.id} aria-pressed={categoryId === category.id} onClick={() => setCategoryId(category.id)}>{category.name} <span>{category.dishes.length}</span></button>)}</div>
       {visible.map((category) => (
         <section key={category.id} className={styles.section}>
           <div className={styles.sectionHead}><h2>{category.name}</h2><span>{category.dishes.length}</span></div>
+          {!needle && <AddDishForm categoryId={category.id} categoryName={category.name} />}
           <div className={styles.grid}>
             {category.dishes.map((dish) => (
-              <DishRow key={dish.id} dish={dish} />
+              <DishRow key={dish.id} dish={dish} categoryName={category.name} />
             ))}
           </div>
-          {!needle && <AddDishForm categoryId={category.id} />}
         </section>
       ))}
       {visible.length === 0 && <p className={styles.empty}>По этому запросу блюд нет.</p>}
@@ -98,7 +99,7 @@ export function MenuAdmin({ categories }: { categories: (Category & { dishes: Di
   );
 }
 
-function DishRow({ dish }: { dish: Dish }) {
+function DishRow({ dish, categoryName }: { dish: Dish; categoryName: string }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
@@ -107,7 +108,7 @@ function DishRow({ dish }: { dish: Dish }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className={styles.dishCard}>
+    <article className={`${styles.dishCard} ${editing ? styles.isEditing : ""}`} aria-label={dish.name}>
       <button
         onClick={() => fileRef.current?.click()}
         title={dish.image ? "Заменить фото" : "Добавить фото"}
@@ -116,9 +117,9 @@ function DishRow({ dish }: { dish: Dish }) {
         className={styles.dishPhoto}
       >
         {dish.image ? (
-          <img src={dishImageUrl(dish.image, "sm")} alt={dish.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+          <img src={dishImageUrl(dish.image, "sm")} alt={dish.name} loading="lazy" className={styles.dishImage} />
         ) : (
-          <span className="absolute inset-0 flex items-center justify-center text-muted text-xs">+ фото</span>
+          <span className={styles.dishPlaceholder}>Фото не добавлено</span>
         )}
       </button>
       <input
@@ -137,134 +138,72 @@ function DishRow({ dish }: { dish: Dish }) {
       />
 
       {editing ? (
-        <div className={styles.dishBody}>
-          <input
-            aria-label="Название блюда"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
-          />
-          <div className="flex gap-2 items-center flex-wrap">
-            <select
-              value={form.priceMode}
-              onChange={(e) => setForm({ ...form, priceMode: e.target.value as typeof form.priceMode })}
-              className="min-h-11 px-2 rounded-[var(--radius)] border border-foreground/15"
-              title="Режим цены"
-            >
+        <form className={`${styles.dishBody} ${styles.editForm}`} onSubmit={(event) => {
+          event.preventDefault();
+          startTransition(async () => {
+            setError("");
+            try { await updateDish(dish.id, form); setEditing(false); router.refresh(); }
+            catch (cause) { setError(errorText(cause)); }
+          });
+        }}>
+          <label>Название<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={120} /></label>
+          <div className={styles.formRow}>
+            <label>Режим цены<select value={form.priceMode} onChange={(e) => setForm({ ...form, priceMode: e.target.value as typeof form.priceMode })}>
               <option value="inherit">Общая настройка</option>
               <option value="yandex" disabled={dish.yandexPrice === null}>Цена Яндекс.Еды</option>
               <option value="manual">Ручная цена</option>
               <option value="coefficient" disabled={dish.yandexPrice === null}>Яндекс ± %</option>
-            </select>
-            {form.priceMode === "manual" && (
-              <input
-                type="number"
-                min={0}
-                max={1000000}
-                step={1}
-                required
-                value={form.manualPrice ?? ""}
-                onChange={(e) => setForm({ ...form, manualPrice: e.target.value === "" ? null : Number(e.target.value) })}
-                placeholder="Ручная ₽"
-                aria-label="Ручная цена, ₽"
-                className="w-28 min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
-              />
-            )}
-            {form.priceMode === "coefficient" && (
-              <input
-                type="number"
-                min={-100}
-                max={500}
-                value={form.coefficientPercent ?? ""}
-                onChange={(e) => setForm({ ...form, coefficientPercent: e.target.value === "" ? null : Number(e.target.value) })}
-                placeholder="% (пусто = общий)"
-                aria-label="Коэффициент цены, %"
-                className="w-36 min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
-              />
-            )}
-            <input
-              value={form.weight}
-              aria-label="Вес или объём"
-              onChange={(e) => setForm({ ...form, weight: e.target.value })}
-              placeholder="Вес"
-              className="w-24 min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
-            />
+            </select></label>
+            {form.priceMode === "manual" && <label>Цена на витрине, ₽<input type="number" min={0} max={1000000} step={1} required value={form.manualPrice ?? ""} onChange={(e) => setForm({ ...form, manualPrice: e.target.value === "" ? null : Number(e.target.value) })}/></label>}
+            {form.priceMode === "coefficient" && <label>Цена Яндекс ± %<input type="number" min={-100} max={500} value={form.coefficientPercent ?? ""} onChange={(e) => setForm({ ...form, coefficientPercent: e.target.value === "" ? null : Number(e.target.value) })}/></label>}
+            <label>Вес / объём<input value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} maxLength={50}/></label>
           </div>
-          <p className="text-xs text-muted">
-            {dish.yandexPrice !== null ? `Яндекс: ${dish.yandexPrice} ₽ · ` : ""}Итог на витрине: {dish.price} ₽
-          </p>
-          <textarea
-            value={form.composition}
-            onChange={(e) => setForm({ ...form, composition: e.target.value })}
-            rows={1}
-            placeholder="Состав (например: говядина, лук, специи)"
-            aria-label="Состав"
-            className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15"
-          />
-          <textarea
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            rows={2}
-            placeholder="Описание"
-            aria-label="Описание"
-            className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15"
-          />
-          <div className="flex gap-2">
-            <button
-              disabled={pending}
-              onClick={() =>
-                startTransition(async () => {
-                  setError("");
-                  try { await updateDish(dish.id, form); setEditing(false); router.refresh(); }
-                  catch (cause) { setError(errorText(cause)); }
-                })
-              }
-              className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
-            >
-              Сохранить
-            </button>
-            <button onClick={() => setEditing(false)} className="min-h-11 px-4 rounded-full border border-foreground/20 text-sm">
-              Отмена
-            </button>
+          <p className={styles.priceNote}>{dish.yandexPrice !== null ? `Яндекс: ${dish.yandexPrice} ₽ · ` : ""}Итог на витрине: {dish.price} ₽</p>
+          <label>Описание<textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3}/></label>
+          <label>Состав<textarea value={form.composition} onChange={(e) => setForm({ ...form, composition: e.target.value })} rows={2}/></label>
+          <p className={styles.priceNote}>Фото можно заменить нажатием на изображение выше.</p>
+          <div className={styles.formActions}>
+            <button type="submit" disabled={pending} className={styles.primaryButton}>Сохранить</button>
+            <button type="button" onClick={() => setEditing(false)} className={styles.outlineButton}>Отмена</button>
+            <button type="button" disabled={pending} onClick={() => {
+              if (confirm(`Удалить «${dish.name}»?`)) startTransition(async () => {
+                setError("");
+                try { await deleteDish(dish.id); router.refresh(); }
+                catch (cause) { setError(errorText(cause)); }
+              });
+            }} className={styles.deleteButton}>Удалить</button>
           </div>
-        </div>
+        </form>
       ) : (
         <div className={styles.dishBody}>
-          <div className="flex justify-between gap-2 items-baseline">
-            <p className="font-medium">{dish.name}</p>
-            <p className="text-accent font-semibold">{dish.price.toLocaleString("ru-RU")} ₽</p>
-          </div>
-          <p className="text-muted text-sm">{dish.weight}</p>
-          <div className="flex gap-2 mt-2 flex-wrap">
-            <button onClick={() => { setForm(draftFromDish(dish)); setEditing(true); }} className="min-h-11 px-4 rounded-full border border-foreground/20 text-sm">
+          <span className={styles.eyebrow}>{categoryName}</span>
+          <h3 className={styles.dishTitle}>{dish.name}</h3>
+          <p className={styles.dishDescription}>{dish.description || "Описание не указано"}</p>
+          <div className={styles.dishBottom}><span>{dish.weight || "Вес не указан"}</span><strong>{dish.price.toLocaleString("ru-RU")} ₽</strong></div>
+          <div className={styles.dishActions}>
+            <button type="button" onClick={() => { setForm(draftFromDish(dish)); setEditing(true); }} className={styles.outlineButton}>
               Править
             </button>
             <button
+              type="button"
               disabled={pending}
               onClick={() => startTransition(async () => { setError(""); try { await updateDish(dish.id, { manualAvailable: !dish.manualAvailable }); router.refresh(); } catch (cause) { setError(errorText(cause)); } })}
-              className={`min-h-11 px-4 rounded-full text-sm ${dish.available ? "border border-foreground/20" : "bg-foreground/10 text-muted"}`}
+              className={`${styles.availability} ${dish.available ? "" : styles.unavailable}`}
+              aria-label={`${dish.manualAvailable ? "Поставить на стоп" : "Снять со стопа"}: ${dish.name}`}
+              title={dish.manualAvailable ? "Поставить на стоп вручную" : "Вернуть в меню"}
             >
-              {dish.manualAvailable ? "В стоп-лист" : "Вернуть в меню"}
-            </button>
-            <button
-              disabled={pending}
-              onClick={() => {
-                if (confirm(`Удалить «${dish.name}»?`)) startTransition(async () => { setError(""); try { await deleteDish(dish.id); router.refresh(); } catch (cause) { setError(errorText(cause)); } });
-              }}
-              className="min-h-11 px-4 rounded-full border border-red-300 text-red-600 text-sm"
-            >
-              Удалить
+              {dish.available ? "В наличии" : "Нет в наличии"}
             </button>
           </div>
-          {!dish.available && <p className="text-muted text-xs mt-2">Недоступно на витрине{dish.manualAvailable ? " по данным Яндекс.Еды" : ""}</p>}
+          {!dish.available && <p className={styles.availabilityNote}>Недоступно на витрине{dish.manualAvailable ? " по данным Яндекс.Еды" : ""}</p>}
         </div>
       )}
       {error && <p className={styles.error} role="alert">{error}</p>}
-    </div>
+    </article>
   );
 }
 
-function AddDishForm({ categoryId }: { categoryId: string }) {
+function AddDishForm({ categoryId, categoryName }: { categoryId: string; categoryName: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", price: 0, weight: "", composition: "", description: "" });
@@ -303,42 +242,16 @@ function AddDishForm({ categoryId }: { categoryId: string }) {
       }}
       className={styles.addDishForm}
     >
-      <h3>Новое блюдо</h3>
-      <input
-        value={form.name}
-        onChange={(e) => setForm({ ...form, name: e.target.value })}
-        placeholder="Название"
-        aria-label="Название нового блюда"
-        required
-        className="w-full min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
-      />
-      <input
-        type="number"
-        min={0}
-        max={1000000}
-        step={1}
-        value={form.price || ""}
-        onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-        placeholder="Цена ₽"
-        aria-label="Цена нового блюда, ₽"
-        required
-        className="w-32 min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
-      />
-      <textarea
-        value={form.composition}
-        onChange={(e) => setForm({ ...form, composition: e.target.value })}
-        placeholder="Состав (например: говядина, лук, специи)"
-        aria-label="Состав"
-        rows={1}
-        className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15"
-      />
-      <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Описание" aria-label="Описание нового блюда" rows={2} className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15" />
-      <input type="text" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} placeholder="Вес / объём" aria-label="Вес нового блюда" maxLength={50} className="w-full min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15" />
-      <label className={styles.photoLabel}>Фото блюда<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} /></label>
-      <button disabled={pending} className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50">
-        Добавить блюдо
-      </button>
-      <button type="button" onClick={() => setOpen(false)} className="min-h-11 px-4 rounded-full border border-foreground/20 text-sm">Отмена</button>
+      <h3>Новое блюдо · {categoryName}</h3>
+      <label>Название<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={120}/></label>
+      <div className={styles.formRow}>
+        <label>Цена, ₽<input type="number" min={0} max={1000000} step={1} value={form.price || ""} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} required/></label>
+        <label>Вес / объём<input type="text" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} maxLength={50}/></label>
+      </div>
+      <label>Описание<textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3}/></label>
+      <label>Состав<textarea value={form.composition} onChange={(e) => setForm({ ...form, composition: e.target.value })} rows={2}/></label>
+      <label>Фото блюда<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} /></label>
+      <div className={styles.formActions}><button type="submit" disabled={pending} className={styles.primaryButton}>Добавить блюдо</button><button type="button" onClick={() => setOpen(false)} className={styles.outlineButton}>Отмена</button></div>
       {error && <p className={styles.error} role="alert">{error}</p>}
     </form>
   );

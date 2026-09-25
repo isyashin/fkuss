@@ -81,7 +81,7 @@ export function DeliveryAdmin({ options }: { options: DeliveryOption[] }) {
 
       {!editing ? (
         <button onClick={() => setEditing({ ...EMPTY })} className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium">
-          + Вариант доставки
+          + Добавить вариант доставки
         </button>
       ) : (
         <EditForm

@@ -51,6 +51,7 @@ export function BanquetsAdmin({
             <input value={s.contactPhone} onChange={(e) => setS({ ...s, contactPhone: e.target.value })} className={inputCls} />
           </label>
         </div>
+        <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="text-sm text-muted">Описание</span>
           <textarea rows={2} value={s.description} onChange={(e) => setS({ ...s, description: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-[var(--radius)] bg-card border border-foreground/15" />
@@ -59,6 +60,7 @@ export function BanquetsAdmin({
           <span className="text-sm text-muted">Условия</span>
           <textarea rows={3} value={s.conditions} onChange={(e) => setS({ ...s, conditions: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-[var(--radius)] bg-card border border-foreground/15" />
         </label>
+        </div>
         <label className="block">
           <span className="text-sm text-muted">Цены (опционально)</span>
           <textarea rows={2} value={s.pricesText} onChange={(e) => setS({ ...s, pricesText: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-[var(--radius)] bg-card border border-foreground/15" />

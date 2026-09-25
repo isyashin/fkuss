@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { saveRestaurant, afterLogoUpload } from "./actions";
 import type { WeeklySchedule, DaySchedule, DayException } from "@/lib/hours";
+import { contentAssetUrl } from "@/lib/assets";
+import styles from "./restaurant-admin.module.css";
 
 const DAYS: { key: string; label: string }[] = [
   { key: "mon", label: "Пн" },
@@ -25,8 +27,9 @@ interface FormState {
   schedule: WeeklySchedule;
 }
 
-export function RestaurantAdmin({ initial }: { initial: FormState }) {
+export function RestaurantAdmin({ initial, logoUrl = "" }: { initial: FormState; logoUrl?: string }) {
   const [form, setForm] = useState<FormState>(initial);
+  const [currentLogo, setCurrentLogo] = useState(logoUrl);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
 
@@ -49,14 +52,13 @@ export function RestaurantAdmin({ initial }: { initial: FormState }) {
   }
 
   return (
-    <div className="space-y-8 max-w-xl">
-      <section className="space-y-3">
-        <h2 className="text-xl">Основное</h2>
+    <div className={styles.form}>
+      <section className={styles.section}>
+        <div className={styles.fields}>
         <label className="block">
           <span className="text-sm text-muted">Название</span>
           <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} />
         </label>
-        <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-sm text-muted">Телефон</span>
             <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} />
@@ -65,14 +67,24 @@ export function RestaurantAdmin({ initial }: { initial: FormState }) {
             <span className="text-sm text-muted">Email</span>
             <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />
           </label>
-        </div>
         <label className="block">
           <span className="text-sm text-muted">Адрес</span>
           <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={inputCls} />
         </label>
-        <div className="flex items-center gap-3">
-          <label className="min-h-11 px-4 inline-flex items-center rounded-full bg-accent text-white text-sm cursor-pointer">
-            Загрузить логотип (PWA)
+        <label className="block">
+          <span className="text-sm text-muted">WhatsApp (номер)</span>
+          <input value={form.socials.whatsapp} onChange={(e) => setForm({ ...form, socials: { ...form.socials, whatsapp: e.target.value } })} className={inputCls} />
+        </label>
+        <label className="block">
+          <span className="text-sm text-muted">Telegram (ссылка)</span>
+          <input value={form.socials.telegram} onChange={(e) => setForm({ ...form, socials: { ...form.socials, telegram: e.target.value } })} className={inputCls} />
+        </label>
+        </div>
+        <div className={styles.logoEdit}>
+          {currentLogo ? <img src={currentLogo} alt="Логотип ресторана" /> : <div className={styles.logoPlaceholder} aria-label="Логотип пока не загружен">Логотип</div>}
+          <div><p>Логотип сайта</p>
+          <label className={styles.outlineUpload}>
+            Заменить логотип
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
@@ -86,59 +98,51 @@ export function RestaurantAdmin({ initial }: { initial: FormState }) {
                 fd.append("name", "logo");
                 const response = await fetch("/api/admin/upload", { method: "POST", body: fd });
                 if (response.ok) {
+                  const data = await response.json() as { path: string };
+                  setCurrentLogo(contentAssetUrl(data.path));
                   startTransition(() => afterLogoUpload());
                 }
               }}
             />
           </label>
-          <span className="text-muted text-xs">иконки приложения перегенерируются автоматически</span>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="text-sm text-muted">WhatsApp (номер)</span>
-            <input value={form.socials.whatsapp} onChange={(e) => setForm({ ...form, socials: { ...form.socials, whatsapp: e.target.value } })} className={inputCls} />
-          </label>
-          <label className="block">
-            <span className="text-sm text-muted">Telegram (ссылка)</span>
-            <input value={form.socials.telegram} onChange={(e) => setForm({ ...form, socials: { ...form.socials, telegram: e.target.value } })} className={inputCls} />
-          </label>
+          </div>
         </div>
       </section>
 
       <section>
-        <h2 className="text-xl mb-3">Часы работы</h2>
-        <div className="space-y-2">
+        <h3 className={styles.subhead}>Часы работы</h3>
+        <div className={styles.hoursList}>
           {DAYS.map(({ key, label }) => {
             const day = (form.schedule.days as Record<string, DaySchedule>)[key] ?? DEFAULT_DAY;
             return (
-              <div key={key} className="grid grid-cols-2 items-center gap-2 sm:flex" style={{ gridTemplateColumns: "repeat(2,minmax(0,1fr))" }}>
-                <span className="w-10 font-medium">{label}</span>
-                <label className="flex items-center gap-2 min-h-11">
+              <div key={key} className={styles.hoursRow}>
+                <strong>{label}</strong>
+                <label className={styles.dayToggle}>
                   <input
                     type="checkbox"
                     checked={day.open}
                     onChange={(e) => setDay(key, { open: e.target.checked })}
                     className="w-5 h-5 accent-[var(--accent)]"
                   />
-                  <span className="text-sm text-muted w-16">{day.open ? "открыто" : "выходной"}</span>
+                  <span>{day.open ? "Открыто" : "Выходной"}</span>
                 </label>
-                {day.open && (
-                  <>
                     <input
                       type="time"
                       value={day.from}
+                      disabled={!day.open}
+                      aria-label={`С ${label}`}
                       onChange={(e) => setDay(key, { from: e.target.value })}
-                      className="min-w-0 w-full min-h-11 px-2 rounded-[var(--radius)] bg-card border border-foreground/15 sm:w-auto"
+                      className={styles.timeInput}
                     />
-                    <span className="hidden text-muted sm:inline">–</span>
+                    <span className={styles.timeDash}>–</span>
                     <input
                       type="time"
                       value={day.to}
+                      disabled={!day.open}
+                      aria-label={`До ${label}`}
                       onChange={(e) => setDay(key, { to: e.target.value })}
-                      className="min-w-0 w-full min-h-11 px-2 rounded-[var(--radius)] bg-card border border-foreground/15 sm:w-auto"
+                      className={styles.timeInput}
                     />
-                  </>
-                )}
               </div>
             );
           })}
@@ -147,7 +151,7 @@ export function RestaurantAdmin({ initial }: { initial: FormState }) {
       </section>
 
       <section>
-        <h2 className="text-xl mb-3">Исключения (праздники, особые дни)</h2>
+        <h3 className={styles.subhead}>Особые дни</h3>
         <div className="space-y-2">
           {form.schedule.exceptions.map((ex, i) => (
             <div key={i} className="flex flex-wrap items-center gap-2 bg-card rounded-[var(--radius)] p-2">
@@ -193,12 +197,12 @@ export function RestaurantAdmin({ initial }: { initial: FormState }) {
             </div>
           ))}
         </div>
-        <button onClick={addException} className="mt-2 min-h-11 px-4 rounded-full border border-dashed border-foreground/30 text-sm text-muted">
-          + День-исключение
+        <button onClick={addException} className={styles.fullOutline}>
+          + Особый день
         </button>
       </section>
 
-      <div className="flex items-center gap-3 sticky bottom-4">
+      <div className={styles.actions}>
         <button
           disabled={pending}
           onClick={() =>
@@ -208,7 +212,7 @@ export function RestaurantAdmin({ initial }: { initial: FormState }) {
               setTimeout(() => setSaved(false), 3000);
             })
           }
-          className="min-h-12 px-8 rounded-full bg-accent text-white font-medium disabled:opacity-50 shadow-lg"
+          className={styles.saveButton}
         >
           {pending ? "Сохраняю…" : "Сохранить"}
         </button>

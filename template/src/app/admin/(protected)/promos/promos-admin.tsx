@@ -38,20 +38,22 @@ export function PromosAdmin({ promos }: { promos: Promo[] }) {
         }}
         className="bg-card rounded-[var(--radius)] p-4 space-y-2"
       >
-        <input
+        <div className="grid grid-cols-2 gap-3">
+        <label className="block text-xs text-muted">Заголовок акции<input
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           placeholder="Заголовок акции"
           required
           className="w-full min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
-        />
-        <textarea
+        /></label>
+        <label className="block text-xs text-muted">Текст акции<textarea
           value={form.text}
           onChange={(e) => setForm({ ...form, text: e.target.value })}
           placeholder="Текст"
           rows={2}
           className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15"
-        />
+        /></label>
+        </div>
         <button disabled={pending} className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50">
           Добавить акцию
         </button>

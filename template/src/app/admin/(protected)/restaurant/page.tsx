@@ -1,4 +1,4 @@
-import { getSiteRestaurant } from "@/lib/site";
+import { contentAssetUrl, getSiteRestaurant } from "@/lib/site";
 import { requireAdminPermission } from "@/lib/admin-auth";
 import { resolveSchedule } from "@/lib/hours";
 import { RestaurantAdmin } from "./restaurant-admin";
@@ -14,6 +14,7 @@ export default async function AdminRestaurantPage() {
   return (
     <AdminSettingsSubpage title="Ресторан" description="Контакты, время работы и оформление карточки ресторана.">
       <RestaurantAdmin
+        logoUrl={restaurant.logo ? contentAssetUrl(restaurant.logo) : ""}
         initial={{
           name: restaurant.name,
           phone: restaurant.phone,

@@ -33,7 +33,7 @@ export async function RestaurantSettingsSection() {
       address: restaurant.address,
       socials: restaurant.socials,
       schedule: resolveSchedule(restaurant),
-    }}/>
+    }} logoUrl={restaurant.logo ? contentAssetUrl(restaurant.logo) : ""}/>
   </section>;
 }
 

@@ -60,7 +60,7 @@ export function GalleryAdmin({ images }: { images: GalleryImage[] }) {
         disabled={uploading}
         className="mt-4 min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
       >
-        {uploading ? "Загружаю…" : "+ Фото"}
+        {uploading ? "Загружаю…" : "+ Добавить фото"}
       </button>
     </div>
   );

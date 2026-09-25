@@ -19,3 +19,29 @@
 .extraCard>div { max-width:none; }.extraCard :global(h2) { font-family:Arial,Helvetica,sans-serif; }.extraCard :global(input),.extraCard :global(select),.extraCard :global(textarea) { color:var(--admin-text); background:var(--admin-surface); border-color:var(--admin-line); }.extraCard :global(button) { min-height:44px; }.extraCard :global(.bg-card) { background:var(--admin-surface); }.extraCard :global(.text-muted) { color:var(--admin-muted); }.extraCard[id="print-materials"]>div>div:nth-child(2) { grid-template-columns:minmax(0,1fr); }.billingGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:16px 0; }.billingGrid>div { display:grid; gap:6px; min-height:72px; padding:13px; border:1px solid var(--admin-line); border-radius:10px; background:var(--admin-surface-2); }.billingGrid span { color:var(--admin-muted); font-size:12px; }.billingGrid strong { font-size:16px; }.outlineLink { min-height:44px; display:inline-flex; align-items:center; padding:0 14px; margin-top:12px; border:1px solid var(--admin-line); border-radius:9px; color:var(--admin-text); text-decoration:none; font-size:12px; font-weight:700; }.outlineLink:hover { background:var(--admin-surface-2); }
 @media (max-width:700px) { .zoneRow { grid-template-columns:1fr 1fr; }.zoneRow input:first-child,.zoneRow button { grid-column:1/-1; } }
 @media (max-width:600px) { .page { margin-top:0; padding:0 0 20px; }.intro h1 { font-size:26px; }.card,.more { padding:17px; }.links { grid-template-columns:1fr; }.card :global(.grid),.card :global(.grid-cols-2),.card :global(.grid-cols-3) { grid-template-columns:1fr; }.extraCard[id="gallery"] :global(.grid) { grid-template-columns:repeat(2,minmax(0,1fr)); }.extraCard[id="pages"] :global(.grid) { grid-template-columns:1fr; }.themeChoices button { min-height:70px; }.saveButton { min-width:120px; }.billingGrid { grid-template-columns:1fr 1fr; } }
+.page { --settings-control:var(--admin-surface); }
+.page .card h2 { font-weight:400; }
+.page .card h3 { font-family:Arial,Helvetica,sans-serif; font-weight:600; }
+.card { display:grid; gap:14px; align-content:start; }
+.cardHint { margin: -9px 0 0; }
+.formGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.formGrid>label { min-width:0; color:var(--admin-muted); font-size:11px; }
+.formGrid>label>span { font-size:11px; }
+.toggleList { display:flex; align-items:center; flex-wrap:wrap; gap:10px 20px; }
+.toggleList label { font-size:12px; }
+.fullOutlineUpload,.fullOutlineButton { width:100%; min-height:44px; display:inline-flex; align-items:center; justify-content:center; padding:0 14px; border:1px solid var(--admin-line); border-radius:9px; background:var(--admin-surface); color:var(--admin-text); font-size:12px; font-weight:700; cursor:pointer; }
+.fullOutlineUpload input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+.wrapActions { display:flex; flex-wrap:wrap; width:100%; }
+.zoneList { display:grid; gap:7px; }.zoneRow { padding:12px; border:1px solid var(--admin-line); border-radius:10px; grid-template-columns:minmax(0,1fr) 100px 120px auto; }
+.note { margin:0; color:var(--admin-muted); font-size:11px; line-height:1.4; }
+.extraCard :global(.max-w-2xl),.extraCard :global(.max-w-xl) { max-width:none; }
+.extraCard :global(.rounded-full) { border-radius:9px; }
+.extraCard[id="delivery-options"]>div>button,.extraCard[id="gallery"]>div>button { width:100%; border:1px solid var(--admin-line); background:var(--admin-surface); color:var(--admin-text); font-size:12px; font-weight:700; }
+.extraCard[id="gallery"]>div :global(.grid) { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.extraCard[id="banquets"]>div>section:first-child { padding:0; display:grid; gap:12px; }
+.extraCard[id="banquets"]>div>section:first-child>label { font-size:12px; }
+.extraCard[id="banquets"]>div>section:first-child>label:has(textarea) { min-width:0; }
+.extraCard[id="banquets"]>div>section:first-child :global(.grid) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.extraCard[id="print-materials"] :global(.rounded-full) { border-radius:9px; }
+.extraCard[id="print-materials"] :global(.bg-card.p-5) { padding:0; }
+@media(max-width:600px) { .formGrid { grid-template-columns:1fr; }.zoneRow { grid-template-columns:repeat(2,minmax(0,1fr)); }.zoneRow input:first-child,.zoneRow button { grid-column:1/-1; }.extraCard[id="gallery"]>div :global(.grid) { grid-template-columns:repeat(2,minmax(0,1fr)); }.extraCard[id="banquets"]>div>section:first-child :global(.grid) { grid-template-columns:1fr; } }

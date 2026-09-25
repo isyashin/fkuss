@@ -92,3 +92,32 @@ test("admin orders use two readable columns with bookings below at 1280px", asyn
   const width = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(width.content, "admin orders overflow near the two-column breakpoint").toBeLessThanOrEqual(width.viewport + 1);
 });
+
+test("admin dark theme colors the shell and panels consistently", async ({ page }) => {
+  await page.goto("/admin/login");
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.getByRole("button", { name: "Включить тёмную тему" }).click();
+
+  const colors = async () => page.evaluate(() => {
+    const shell = document.querySelector("main")?.parentElement?.parentElement;
+    const panel = document.querySelector('section[aria-label="Список заказов"]');
+    if (!shell || !panel) throw new Error("Admin shell or orders panel is missing");
+    return {
+      background: getComputedStyle(shell).backgroundColor,
+      text: getComputedStyle(shell).color,
+      panel: getComputedStyle(panel).backgroundColor,
+      panelText: getComputedStyle(panel).color,
+    };
+  });
+
+  await expect.poll(colors).toEqual({
+    background: "rgb(27, 30, 29)",
+    text: "rgb(244, 240, 233)",
+    panel: "rgb(36, 40, 39)",
+    panelText: "rgb(244, 240, 233)",
+  });
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Включить светлую тему" })).toBeVisible();
+  await expect.poll(colors).toMatchObject({ background: "rgb(27, 30, 29)", panel: "rgb(36, 40, 39)" });
+});

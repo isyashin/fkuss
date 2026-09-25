@@ -1,5 +1,5 @@
 .shell { --admin-bg:#f7f5f1; --admin-surface:#fffefd; --admin-surface-2:#f6f1ec; --admin-line:#e8e2dc; --admin-text:#252320; --admin-muted:#77716d; --admin-accent:#a65335; --admin-accent-soft:#f8ece5; --admin-green:#327051; --background:var(--admin-bg); --foreground:var(--admin-text); --card:var(--admin-surface); --muted:var(--admin-muted); --accent:var(--admin-accent); min-height:100vh; display:grid; grid-template-columns:232px minmax(0,1fr); background:var(--admin-bg); color:var(--admin-text); font-family:Arial,Helvetica,sans-serif; }
-.dark { --admin-bg:#1b1e1d; --admin-surface:#242827; --admin-surface-2:#2b302e; --admin-line:#3b413e; --admin-text:#f4f0e9; --admin-muted:#b0b2ad; --admin-accent:#cf8664; --admin-accent-soft:#493a32; --admin-green:#8fceac; color-scheme:dark; }
+.shell.dark { --admin-bg:#1b1e1d; --admin-surface:#242827; --admin-surface-2:#2b302e; --admin-line:#3b413e; --admin-text:#f4f0e9; --admin-muted:#b0b2ad; --admin-accent:#cf8664; --admin-accent-soft:#493a32; --admin-green:#8fceac; color-scheme:dark; }
 .shell :global(h1),.shell :global(h2),.shell :global(h3) { font-family:Georgia,serif; }
 .shell button,.shell input,.shell select { font:inherit; }
 .sidebar { position:sticky; top:0; height:100vh; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:4px; padding:22px 14px 18px; border-right:1px solid var(--admin-line); background:var(--admin-surface); }
@@ -82,7 +82,7 @@
 
 /* Рабочая панель использует компоновку и токены кликабельного прототипа. */
 .shell { --admin-bg:#f7f5f1; --admin-surface:#fffefd; --admin-surface-2:#f6f1ec; --admin-surface-3:#eee7e0; --admin-text:#252320; --admin-muted:#77716d; --admin-line:#e8e2dc; --admin-accent:#a65335; --admin-accent-soft:#f8ece5; --admin-blue:#436e8b; --admin-blue-soft:#e8f0f6; --admin-green:#327051; --admin-green-soft:#e9f4ed; }
-.dark { --admin-surface-3:#343936; --admin-blue:#8bb9d4; --admin-blue-soft:#304451; --admin-green-soft:#2b4839; }
+.shell.dark { --admin-surface-3:#343936; --admin-blue:#8bb9d4; --admin-blue-soft:#304451; --admin-green-soft:#2b4839; }
 .sidebar { padding:24px 14px 18px; overflow-x:hidden; }
 .brand { min-height:58px; padding:0 5px; }
 .logo { width:52px; height:52px; flex-basis:52px; }

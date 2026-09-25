@@ -45,6 +45,7 @@ export interface Dish {
   id: string;
   name: string;
   description: string;
+  composition: string;
   price: number;
   image: string;
   weight: string;

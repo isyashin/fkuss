@@ -79,6 +79,7 @@ export async function getSiteMenu(): Promise<Menu> {
             id: d.id,
             name: d.name,
             description: d.description,
+            composition: d.composition,
             price: d.price,
             image: d.image,
             weight: d.weight,

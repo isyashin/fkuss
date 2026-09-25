@@ -1,11 +1,12 @@
 import { contactLinks, preferredChannelSchema, type GuestChannels } from "@/lib/guest-contact";
 import styles from "./admin-ui.module.css";
 
-export function GuestContactActions({ phone, preferredChannel, channels, compact = false }: {
+export function GuestContactActions({ phone, preferredChannel, channels, compact = false, showTelegramHint = true }: {
   phone: string;
   preferredChannel: string | null;
   channels: GuestChannels;
   compact?: boolean;
+  showTelegramHint?: boolean;
 }) {
   const parsed = preferredChannelSchema.safeParse(preferredChannel);
   const preferred = parsed.success ? parsed.data : null;
@@ -27,7 +28,7 @@ export function GuestContactActions({ phone, preferredChannel, channels, compact
       title={link.channel === "telegram" ? "Ссылка сработает, если гость разрешил поиск по номеру в Telegram" : undefined}>
       {link.label}
     </a>)}</div>}
-    {links.some((link) => link.channel === "telegram") && <small>Поиск в Telegram зависит от настроек приватности гостя.</small>}
+    {showTelegramHint && links.some((link) => link.channel === "telegram") && <small>Поиск в Telegram зависит от настроек приватности гостя.</small>}
     {preferred && preferred !== "phone" && !links.length && <small>Выбранный канал скрыт или номер некорректен</small>}
     {preferred === null && !links.length && phone && <small>Некорректный номер для ссылки</small>}
   </div>;

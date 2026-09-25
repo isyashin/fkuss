@@ -78,6 +78,22 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   expect(detail).not.toBeNull();
   expect(detail!.x).toBeGreaterThan(list!.x + list!.width);
   expect(detail!.y).toBeCloseTo(list!.y, 0);
+  expect(list!.x).toBeLessThanOrEqual(264);
+  expect(detail!.x + detail!.width).toBeGreaterThanOrEqual(1248);
+  const bookingFonts = await page.evaluate(() => ({
+    list: getComputedStyle(document.querySelector('section[aria-label="Список броней"] h2')!).fontFamily,
+    detail: getComputedStyle(document.querySelector('section[aria-label="Детали брони"] h2')!).fontFamily,
+  }));
+  expect(bookingFonts.list).toContain("Arial");
+  expect(bookingFonts.detail).toContain("Arial");
+  const contactLinks = page.getByRole("region", { name: "Детали брони" }).getByRole("link", { name: /WhatsApp|Telegram/ });
+  if (await contactLinks.count() === 2) {
+    const first = await contactLinks.nth(0).boundingBox();
+    const second = await contactLinks.nth(1).boundingBox();
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(second!.y).toBeCloseTo(first!.y, 0);
+  }
 
   await page.getByText("Все брони и фильтры").click();
   await expect(page.getByRole("group", { name: "Фильтр броней" })).toBeVisible();

@@ -25,7 +25,7 @@ export function BookingCard({ booking, guestContact, timeZone, when }: { booking
     <div className={styles.detailHeader}><div><span className={styles.eyebrow}>Детали брони</span><h2>{when}</h2><p className={styles.muted}>Создана {formatAdminDate(booking.createdAt, timeZone)}</p></div><span className={`${styles.badge} ${styles.bookingStatus} ${booking.status === "new" ? styles.new : booking.status === "cancelled" || booking.status === "rejected" ? styles.cancelled : ""}`}>{statusNames[booking.status] ?? booking.status}</span></div>
     <div className={`${styles.facts} ${styles.bookingFacts}`}>
       <div className={styles.fact}><span>Имя</span><strong>{booking.customerName}</strong></div>
-      <div className={styles.fact}><span>Связь</span><GuestContactActions phone={booking.customerPhone} preferredChannel={null} channels={guestContact}/></div>
+      <div className={styles.fact}><span>Связь</span><GuestContactActions phone={booking.customerPhone} preferredChannel={null} channels={guestContact} showTelegramHint={false}/></div>
       <div className={styles.fact}><span>Гостей</span><strong>{booking.guests}</strong></div>
       <div className={styles.fact}><span>Пожелание</span><strong>{booking.comment || "Нет"}</strong></div>
       <div className={styles.fact}><span>Статус</span><strong>{statusNames[booking.status] ?? booking.status}</strong></div>

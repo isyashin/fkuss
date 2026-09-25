@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Playfair_Display, Inter } from "next/font/google";
 import { getSiteRestaurant, getSiteTheme } from "@/lib/site";
 import { getContentDir } from "@/lib/content-dir";
@@ -47,7 +48,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     .join("; ");
 
   const bg = theme.background;
-  const showBg = bg?.enabled && bg.image;
+  // Фон витрины не применяется в админке (x-pathname ставит proxy)
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const showBg = bg?.enabled && bg.image && !pathname.startsWith("/admin");
   const bgStyle = showBg
     ? `html body { background-image: linear-gradient(rgba(0,0,0,${(bg.dimPercent / 100).toFixed(2)}), rgba(0,0,0,${(bg.dimPercent / 100).toFixed(2)})), url('/content-asset/${bg.image}'); background-size: cover; background-position: ${bg.position === "top" ? "center top" : bg.position === "bottom" ? "center bottom" : "center"}; background-attachment: fixed; }` +
       (bg.disableOnMobile

@@ -54,6 +54,7 @@ function DishRow({ dish }: { dish: Dish }) {
     name: dish.name,
     price: dish.price,
     weight: dish.weight,
+    composition: dish.composition,
     description: dish.description,
     priceMode: dish.priceMode as "inherit" | "yandex" | "manual" | "coefficient",
     manualPrice: dish.manualPrice,
@@ -152,9 +153,19 @@ function DishRow({ dish }: { dish: Dish }) {
             {dish.yandexPrice !== null ? `Яндекс: ${dish.yandexPrice} ₽ · ` : ""}Итог на витрине: {dish.price} ₽
           </p>
           <textarea
+            value={form.composition}
+            onChange={(e) => setForm({ ...form, composition: e.target.value })}
+            rows={1}
+            placeholder="Состав (например: говядина, лук, специи)"
+            aria-label="Состав"
+            className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15"
+          />
+          <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={2}
+            placeholder="Описание"
+            aria-label="Описание"
             className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15"
           />
           <div className="flex gap-2">
@@ -211,7 +222,7 @@ function DishRow({ dish }: { dish: Dish }) {
 
 function AddDishForm({ categoryId }: { categoryId: string }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", price: 0, weight: "", description: "" });
+  const [form, setForm] = useState({ name: "", price: 0, weight: "", composition: "", description: "" });
   const [pending, startTransition] = useTransition();
 
   if (!open) {
@@ -229,7 +240,7 @@ function AddDishForm({ categoryId }: { categoryId: string }) {
         startTransition(async () => {
           await addDish({ categoryId, ...form });
           setOpen(false);
-          setForm({ name: "", price: 0, weight: "", description: "" });
+          setForm({ name: "", price: 0, weight: "", composition: "", description: "" });
         });
       }}
       className="mt-3 bg-card rounded-[var(--radius)] p-3 space-y-2"
@@ -249,6 +260,14 @@ function AddDishForm({ categoryId }: { categoryId: string }) {
         placeholder="Цена ₽"
         required
         className="w-32 min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
+      />
+      <textarea
+        value={form.composition}
+        onChange={(e) => setForm({ ...form, composition: e.target.value })}
+        placeholder="Состав (например: говядина, лук, специи)"
+        aria-label="Состав"
+        rows={1}
+        className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15"
       />
       <button disabled={pending} className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50">
         Добавить блюдо

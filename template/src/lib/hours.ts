@@ -109,3 +109,22 @@ export function isOpenAt(schedule: WeeklySchedule, date: string, time: string): 
   }
   return t >= from && t < to;
 }
+
+/** Текущие дата и время в таймзоне ресторана — для isOpenAt (без таймзоны сервера).
+ * Некорректная таймзона откатывается к Europe/Moscow. */
+export function nowInTimeZone(tz: string, now = new Date()): { date: string; time: string } {
+  let timeZone = tz;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+  } catch {
+    timeZone = 'Europe/Moscow';
+  }
+  const s = new Intl.DateTimeFormat('sv-SE', {
+    timeZone,
+    dateStyle: 'short',
+    timeStyle: 'short',
+    hourCycle: 'h23',
+  }).format(now);
+  const [date, time] = s.split(' ');
+  return { date, time };
+}

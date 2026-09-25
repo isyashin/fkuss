@@ -215,8 +215,14 @@ function DishModal({
         </div>
         <div className="p-4">
           <h3 className="text-xl">{dish.name}</h3>
-          {dish.weight && <p className="text-muted text-sm mt-1">{dish.weight}</p>}
-          {dish.description && <p className="mt-2 text-muted leading-relaxed">{dish.description}</p>}
+        {dish.weight && <p className="text-muted text-sm mt-1">{dish.weight}</p>}
+        {dish.composition && (
+          <p className="mt-2 text-sm leading-relaxed">
+            <span className="text-muted">Состав: </span>
+            {dish.composition}
+          </p>
+        )}
+        {dish.description && <p className="mt-2 text-muted leading-relaxed">{dish.description}</p>}
 
           {dish.modifiers.length > 0 && (
             <div className="mt-4 space-y-2">

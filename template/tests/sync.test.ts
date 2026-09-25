@@ -63,6 +63,36 @@ describe("syncMenu", () => {
     expect(dish!.lastSyncedAt).not.toBeNull();
   });
 
+  it("состав: первая синхронизация сохраняет «Ингредиенты» Еды", async () => {
+    await cleanup();
+    const result = await syncMenu(prisma, { placeSlug: "test-slug",
+      fetchMenu: okFetcher(menu([{ name: "Плов", composition: "рис, баранина, морковь, специи" }])),
+      retryDelays: [],
+    });
+    expect(result.ok).toBe(true);
+    const dish = await prisma.dish.findFirst({ where: { externalId: "100" } });
+    expect(dish!.composition).toBe("рис, баранина, морковь, специи");
+  });
+
+  it("состав: ручной ввод не затирается, когда у Еды пусто; обновляется, когда есть", async () => {
+    await cleanup();
+    await syncMenu(prisma, { placeSlug: "test-slug", fetchMenu: okFetcher(menu([{ name: "Плов" }])), retryDelays: [] });
+    await prisma.dish.updateMany({ where: { externalId: "100" }, data: { composition: "вручную: рис, мясо" } });
+
+    // Еда без состава → ручное значение сохранилось
+    await syncMenu(prisma, { placeSlug: "test-slug", fetchMenu: okFetcher(menu([{ name: "Плов" }])), retryDelays: [] });
+    let dish = await prisma.dish.findFirst({ where: { externalId: "100" } });
+    expect(dish!.composition).toBe("вручную: рис, мясо");
+
+    // Еда прислала состав → обновился
+    await syncMenu(prisma, { placeSlug: "test-slug",
+      fetchMenu: okFetcher(menu([{ name: "Плов", composition: "рис, баранина" }])),
+      retryDelays: [],
+    });
+    dish = await prisma.dish.findFirst({ where: { externalId: "100" } });
+    expect(dish!.composition).toBe("рис, баранина");
+  });
+
   it("стоп: блюдо стало недоступным → yandexAvailable=false, витрина скрыта", async () => {
     await syncMenu(prisma, { placeSlug: "test-slug", fetchMenu: okFetcher(menu([{ name: "Плов" }])), retryDelays: [] });
     await syncMenu(prisma, { placeSlug: "test-slug",

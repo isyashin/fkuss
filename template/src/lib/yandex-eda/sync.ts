@@ -126,6 +126,8 @@ async function upsertDish(prisma: PrismaLike, dish: EdaDish): Promise<void> {
       data: {
         name: dish.name,
         description: dish.description,
+        // состав обновляем только при непустом значении у Еды — ручной ввод не затираем
+        ...(dish.composition ? { composition: dish.composition } : {}),
         weight: dish.weight,
         categoryId: category.id,
         yandexPrice: dish.price,
@@ -147,6 +149,7 @@ async function upsertDish(prisma: PrismaLike, dish: EdaDish): Promise<void> {
         categoryId: category.id,
         name: dish.name,
         description: dish.description,
+        composition: dish.composition ?? "",
         price: dish.price ?? 0,
         image,
         weight: dish.weight,

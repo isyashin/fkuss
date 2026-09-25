@@ -121,6 +121,7 @@ async function main() {
             categoryId: category.id,
             name: dish.name,
             description: dish.description,
+            composition: dish.composition ?? "",
             price: dish.price,
             image: dish.image,
             weight: dish.weight,

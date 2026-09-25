@@ -24,6 +24,7 @@ model Dish {
   category          Category   @relation(fields: [categoryId], references: [id])
   name              String
   description       String     @default("")
+  composition       String     @default("") // состав («Ингредиенты» из Яндекс.Еды / ручной ввод)
   price             Int        // рассчитанная цена (только она видна серверу заказа)
   image             String     @default("")
   weight            String     @default("")

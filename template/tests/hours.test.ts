@@ -4,6 +4,7 @@ import {
   generateSlots,
   isValidBookingTime,
   isOpenAt,
+  nowInTimeZone,
   type WeeklySchedule,
 } from "@/lib/hours";
 
@@ -114,5 +115,59 @@ describe("isOpenAt", () => {
 
   it("выходной — закрыто всегда", () => {
     expect(isOpenAt(schedule, "2026-09-20", "15:00")).toBe(false);
+  });
+});
+
+describe("nowInTimeZone", () => {
+  // МСК = UTC+3 (без летнего времени)
+  it("переводит UTC-момент в локальное время ресторана", () => {
+    const now = new Date("2026-09-23T06:30:00Z");
+    expect(nowInTimeZone("Europe/Moscow", now)).toEqual({ date: "2026-09-23", time: "09:30" });
+  });
+
+  it("переводит дату на следующий день при пересечении полуночи (UTC 23:30 → МСК 02:30)", () => {
+    const now = new Date("2026-09-22T23:30:00Z");
+    expect(nowInTimeZone("Europe/Moscow", now)).toEqual({ date: "2026-09-23", time: "02:30" });
+  });
+
+  it("часы работы через полночь считаются по локальному времени", () => {
+    const now = new Date("2026-09-22T21:30:00Z"); // 00:30 МСК
+    const { date, time } = nowInTimeZone("Europe/Moscow", now);
+    const night: WeeklySchedule = {
+      days: {
+        mon: { open: true, from: "22:00", to: "03:00" },
+        tue: { open: true, from: "22:00", to: "03:00" },
+        wed: { open: true, from: "22:00", to: "03:00" },
+        thu: { open: true, from: "22:00", to: "03:00" },
+        fri: { open: true, from: "22:00", to: "03:00" },
+        sat: { open: true, from: "22:00", to: "03:00" },
+        sun: { open: true, from: "22:00", to: "03:00" },
+      },
+      exceptions: [],
+    };
+    expect(isOpenAt(night, date, time)).toBe(true); // ср 00:30 МСК внутри вт-ночной смены
+  });
+
+  it("некорректная таймзона откатывается к Europe/Moscow", () => {
+    const now = new Date("2026-09-23T06:30:00Z");
+    expect(nowInTimeZone("Invalid/Zone", now)).toEqual({ date: "2026-09-23", time: "09:30" });
+  });
+
+  it("рестораторский сценарий: утро по МСК не показывает «закрыто» для графика 09:00–22:00", () => {
+    const now = new Date("2026-09-23T06:30:00Z"); // 09:30 МСК
+    const { date, time } = nowInTimeZone("Europe/Moscow", now);
+    const day: WeeklySchedule = {
+      days: {
+        mon: { open: true, from: "09:00", to: "22:00" },
+        tue: { open: true, from: "09:00", to: "22:00" },
+        wed: { open: true, from: "09:00", to: "22:00" },
+        thu: { open: true, from: "09:00", to: "22:00" },
+        fri: { open: true, from: "09:00", to: "22:00" },
+        sat: { open: true, from: "09:00", to: "22:00" },
+        sun: { open: true, from: "09:00", to: "22:00" },
+      },
+      exceptions: [],
+    };
+    expect(isOpenAt(day, date, time)).toBe(true);
   });
 });

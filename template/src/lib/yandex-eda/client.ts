@@ -29,6 +29,8 @@ export interface EdaDish {
   categoryPosition: number;
   name: string;
   description: string;
+  /** «Ингредиенты» из вендорского кабинета Еды (публичный API пока не отдаёт — может быть пусто) */
+  composition?: string;
   price: number | null;
   available: boolean;
   weight: string;
@@ -45,6 +47,15 @@ const SKIP_CATEGORIES = new Set(["Что нового", "Выбор пользо
 function imageUrl(uri: string | undefined, size = "800x800"): string | null {
   if (!uri) return null;
   return `${EDA_HOST}${uri.replace("{w}x{h}", size)}`;
+}
+
+/** «Ингредиенты» Еды: массив строк или объектов {name} → строка через запятую */
+function normalizeIngredients(raw: unknown): string | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const names = raw
+    .map((i) => (typeof i === "string" ? i : i && typeof i === "object" && "name" in i ? String((i as { name: unknown }).name) : ""))
+    .filter(Boolean);
+  return names.length ? names.join(", ") : undefined;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -112,6 +123,7 @@ export async function fetchEdaMenu(placeSlug: string): Promise<EdaMenu> {
         categoryPosition: position,
         name: item.name,
         description: item.description ?? "",
+        composition: normalizeIngredients((item as RawItem & { ingredients?: unknown }).ingredients),
         price: item.price != null ? Math.round(item.price) : null,
         available: item.available !== false && item.inStock !== false,
         weight: item.weight ?? "",

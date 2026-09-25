@@ -16,6 +16,8 @@ interface EdaItem {
   id: number;
   name: string;
   description?: string;
+  /** «Ингредиенты» из вендорского кабинета Еды (массив строк или {name}) */
+  ingredients?: unknown;
   available: boolean;
   price: number;
   weight?: string;
@@ -39,6 +41,15 @@ interface EdaCategory {
 
 function slugifyId(prefix: string, id: number): string {
   return `${prefix}-${id}`;
+}
+
+/** «Ингредиенты» Еды: массив строк или объектов {name} → строка через запятую */
+function normalizeIngredients(raw: unknown): string | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const names = raw
+    .map((i) => (typeof i === "string" ? i : i && typeof i === "object" && "name" in i ? String((i as { name: unknown }).name) : ""))
+    .filter(Boolean);
+  return names.length ? names.join(", ") : undefined;
 }
 
 function imageUrl(uri: string | undefined, size = "800x800"): string | null {
@@ -147,6 +158,7 @@ async function main() {
         id,
         name: item.name,
         description: item.description ?? "",
+        composition: normalizeIngredients(item.ingredients) ?? "",
         price: Math.round(item.price),
         image,
         weight: item.weight ?? "",

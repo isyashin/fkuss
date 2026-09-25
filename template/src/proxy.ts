@@ -22,7 +22,10 @@ export default function proxy(request: NextRequest) {
     void fetch(new URL("/api/pv", request.url), { method: "POST" }).catch(() => {});
   }
 
-  return NextResponse.next();
+  // Путь для root layout: фон витрины не применяется в /admin
+  const headers = new Headers(request.headers);
+  headers.set("x-pathname", pathname);
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getSiteRestaurant, getSiteMenu, getSitePromos, getSitePages, getSiteTheme, getSiteSettings, contentAssetUrl } from "@/lib/site";
-import { isOpenAt, resolveSchedule } from "@/lib/hours";
+import { isOpenAt, resolveSchedule, nowInTimeZone } from "@/lib/hours";
 import { MenuClient } from "@/components/menu/menu-client";
 import { getPrisma } from "@/lib/db";
 
@@ -17,12 +17,9 @@ export default async function HomePage() {
   ]);
 
   const schedule = resolveSchedule(restaurant);
-  const now = new Date();
-  const open = isOpenAt(
-    schedule,
-    now.toISOString().slice(0, 10),
-    `${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`,
-  );
+  const tz = (settings as { timezone?: string }).timezone ?? "Europe/Moscow";
+  const nowLocal = nowInTimeZone(tz);
+  const open = isOpenAt(schedule, nowLocal.date, nowLocal.time);
 
   // Баланс бонусов и адрес авторизованного гостя (для корзины)
   let bonusBalance = 0;

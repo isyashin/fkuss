@@ -84,6 +84,7 @@ export const dishSchema = z.object({
   id: idSchema,
   name: z.string().min(1),
   description: z.string().default(""),
+  composition: z.string().default(""),
   price: priceSchema,
   image: imagePathSchema.or(z.literal("")),
   weight: z.string().default(""),
@@ -142,9 +143,9 @@ export const themeSchema = z.object({
       image: imagePathSchema.or(z.literal("")),
       position: z.enum(["center", "top", "bottom"]).default("center"),
       dimPercent: z.number().min(0).max(100).default(40),
-      disableOnMobile: z.boolean().default(true),
+      disableOnMobile: z.boolean().default(false),
     })
-    .default({ enabled: false, image: "", position: "center", dimPercent: 40, disableOnMobile: true }),
+    .default({ enabled: false, image: "", position: "center", dimPercent: 40, disableOnMobile: false }),
 });
 
 export const settingsSchema = z.object({

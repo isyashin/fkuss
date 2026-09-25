@@ -14,6 +14,7 @@ const updateDishSchema = z.object({
   name: adminShortTextSchema.optional(),
   price: adminMoneySchema.optional(),
   description: adminTextSchema.max(2000).optional(),
+  composition: adminTextSchema.max(2000).optional(),
   available: z.boolean().optional(),
   manualAvailable: z.boolean().optional(),
   weight: z.string().max(50).optional(),
@@ -28,6 +29,7 @@ export async function updateDish(
     name?: string;
     price?: number;
     description?: string;
+    composition?: string;
     available?: boolean;
     manualAvailable?: boolean;
     weight?: string;
@@ -64,10 +66,11 @@ export async function addDish(input: {
   name: string;
   price: number;
   description?: string;
+  composition?: string;
   weight?: string;
 }): Promise<string> {
   await guard();
-  parseAdminInput(z.object({ categoryId: adminIdSchema, name: adminShortTextSchema, price: adminMoneySchema, description: adminTextSchema.max(2000).optional(), weight: z.string().max(50).optional() }), input);
+  parseAdminInput(z.object({ categoryId: adminIdSchema, name: adminShortTextSchema, price: adminMoneySchema, description: adminTextSchema.max(2000).optional(), composition: adminTextSchema.max(2000).optional(), weight: z.string().max(50).optional() }), input);
   const prisma = getPrisma();
   const id = `${input.categoryId}-${Date.now().toString(36)}`;
   await prisma.dish.create({
@@ -77,6 +80,7 @@ export async function addDish(input: {
       name: input.name,
       price: input.price,
       description: input.description ?? "",
+      composition: input.composition ?? "",
       weight: input.weight ?? "",
       image: "",
       tags: [],

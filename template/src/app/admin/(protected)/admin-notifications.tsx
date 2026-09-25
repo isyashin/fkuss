@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { hasRecentAdminEvent, playAdminSound } from "@/lib/admin-audio";
 import type { PublicAdminSound } from "@/lib/admin-sound";
 import styles from "./admin-ui.module.css";
+import { AdminIcon } from "./admin-icon";
 
 type EventItem = { id: string; kind: string; label: string; createdAt: string };
 type ResponseData = { events: EventItem[]; latestId: string | null; sound: PublicAdminSound };
@@ -67,7 +68,7 @@ export function AdminNotifications() {
 
   return <div className={styles.notificationWrap}>
     <button type="button" className={styles.notificationButton} aria-label={`Оповещения${unread ? `: ${unread}` : ""}`} aria-expanded={open} onClick={() => { setOpen((value) => !value); setUnread(0); }}>
-      🔔{unread > 0 && <span className={styles.notificationCount}>{unread}</span>}
+      <AdminIcon name="bell"/>{unread > 0 && <span className={styles.notificationCount}>{unread}</span>}
     </button>
     {open && <div className={styles.notificationPanel} role="region" aria-label="Новые события">
       <strong>Новые события</strong>

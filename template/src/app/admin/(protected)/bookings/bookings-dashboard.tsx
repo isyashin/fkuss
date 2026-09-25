@@ -11,9 +11,9 @@ import type { GuestChannels } from "@/lib/guest-contact";
 
 const statusNames: Record<string, string> = { new: "Новая", confirmed: "Подтверждена", rejected: "Отклонена", cancelled: "Отменена" };
 
-export function BookingsDashboard({ bookings, counts, query, page, pageCount, guestContact, timeZone }: { bookings: Reservation[]; counts: ReturnType<typeof bookingListCounts>; query: BookingListQuery; page: number; pageCount: number; guestContact: GuestChannels; timeZone: string }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = bookings.find((booking) => booking.id === selectedId) ?? bookings[0];
+export function BookingsDashboard({ bookings, counts, query, page, pageCount, guestContact, timeZone, initialSelectedId, selectedBooking }: { bookings: Reservation[]; counts: ReturnType<typeof bookingListCounts>; query: BookingListQuery; page: number; pageCount: number; guestContact: GuestChannels; timeZone: string; initialSelectedId?: string | null; selectedBooking?: Reservation | null }) {
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
+  const selected = bookings.find((booking) => booking.id === selectedId) ?? (selectedBooking?.id === selectedId ? selectedBooking : null) ?? bookings[0];
   const href = (next: BookingListQuery) => adminListHref("/admin/bookings", next);
 
   return <div className={styles.dashboard}>

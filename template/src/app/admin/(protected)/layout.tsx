@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminActor } from "@/lib/admin-auth";
 import { getSiteRestaurant, contentAssetUrl } from "@/lib/site";
+import { getPrisma } from "@/lib/db";
 import { AdminShell } from "./admin-shell";
 
 export const dynamic = "force-dynamic";
@@ -8,12 +9,18 @@ export const dynamic = "force-dynamic";
 export default async function AdminProtectedLayout({ children }: { children: React.ReactNode }) {
   const actor = await getAdminActor();
   if (!actor) redirect("/admin/login");
-  const restaurant = await getSiteRestaurant();
+  const prisma = getPrisma();
+  const [restaurant, newOrdersCount, newBookingsCount] = await Promise.all([
+    getSiteRestaurant(),
+    prisma.order.count({ where: { status: "new" } }),
+    prisma.reservation.count({ where: { status: "new" } }),
+  ]);
 
   return (
     <>
       <style>{"body > header:first-of-type { display: none; }"}</style>
-      <AdminShell restaurantName={restaurant.name} logo={restaurant.logo ? contentAssetUrl(restaurant.logo) : ""} actor={actor}>
+      <AdminShell restaurantName={restaurant.name} logo={restaurant.logo ? contentAssetUrl(restaurant.logo) : ""} actor={actor}
+        newOrdersCount={newOrdersCount} newBookingsCount={newBookingsCount}>
         {children}
       </AdminShell>
     </>

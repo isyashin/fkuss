@@ -11,8 +11,14 @@ export const dynamic = "force-dynamic";
 export default async function AdminBookingsPage({ searchParams }: { searchParams: Promise<RawAdminQuery> }) {
   await requireAdminPermission("bookings");
   const prisma = getPrisma();
-  const query = parseBookingListQuery(await searchParams);
-  const [listing, settings] = await Promise.all([loadBookingsPage(prisma, query), getSiteSettings()]);
+  const raw = await searchParams;
+  const query = parseBookingListQuery(raw);
+  const selectedId = typeof raw.selected === "string" && raw.selected.length <= 100 ? raw.selected : null;
+  const [listing, settings, selectedBooking] = await Promise.all([
+    loadBookingsPage(prisma, query), getSiteSettings(),
+    selectedId ? prisma.reservation.findUnique({ where: { id: selectedId } }) : Promise.resolve(null),
+  ]);
 
-  return <BookingsDashboard {...listing} query={{ ...query, page: listing.page }} guestContact={visibleGuestChannels(settings)} timeZone={settings.timezone}/>;
+  return <BookingsDashboard {...listing} query={{ ...query, page: listing.page }} guestContact={visibleGuestChannels(settings)} timeZone={settings.timezone}
+    initialSelectedId={selectedId} selectedBooking={selectedBooking}/>;
 }

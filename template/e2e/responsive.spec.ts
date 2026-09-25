@@ -69,3 +69,22 @@ test("admin login and dashboard fit the viewport", async ({ page }) => {
   await expect(page).toHaveURL(/\/admin$/);
   await assertResponsivePage(page, "/admin");
 });
+
+test("admin orders use two readable columns with bookings below at 1280px", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/admin/login");
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
+
+  const orders = await page.getByRole("region", { name: "Список заказов" }).boundingBox();
+  const detail = await page.getByRole("region", { name: "Детали заказа" }).boundingBox();
+  const bookings = await page.getByRole("region", { name: "Ближайшие брони" }).boundingBox();
+  expect(orders).not.toBeNull();
+  expect(detail).not.toBeNull();
+  expect(bookings).not.toBeNull();
+  expect(orders!.width).toBeGreaterThan(430);
+  expect(detail!.width).toBeGreaterThan(400);
+  expect(detail!.x).toBeGreaterThan(orders!.x + orders!.width);
+  expect(bookings!.y).toBeGreaterThanOrEqual(Math.max(orders!.y + orders!.height, detail!.y + detail!.height) - 1);
+  expect(bookings!.x).toBeCloseTo(orders!.x, 0);
+});

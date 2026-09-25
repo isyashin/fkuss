@@ -38,6 +38,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
   const dark = useSyncExternalStore(subscribeTheme, readTheme, () => false);
   const changeTheme = () => { localStorage.setItem("restaurant-admin-theme", dark ? "light" : "dark"); window.dispatchEvent(new Event("restaurant-admin-theme-change")); };
   const section = [...primary, ...secondary].find((item) => item.href === pathname)?.label ?? "Управление";
@@ -49,7 +50,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
   return <div className={`${styles.shell} ${dark ? styles.dark : ""} ${collapsed ? styles.collapsed : ""}`}>
     <aside className={styles.sidebar} aria-label="Панель ресторана">
       <Link href="/admin" className={styles.brand} aria-label={`${restaurantName}: заказы`}>
-        <span className={styles.logo}>{logo ? <Image src={logo} width={52} height={52} alt="" unoptimized/> : restaurantName.slice(0, 1)}</span>
+        <span className={styles.logo}>{logo && !logoFailed ? <Image src={logo} width={52} height={52} alt="" unoptimized onError={() => setLogoFailed(true)}/> : restaurantName.slice(0, 1)}</span>
         <span className={styles.brandText}><strong>{restaurantName}</strong><small>Панель ресторана</small></span>
       </Link>
       <button type="button" className={styles.collapseButton} aria-label={collapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"} aria-expanded={!collapsed} onClick={() => setCollapsed((value) => !value)}><AdminIcon name={collapsed ? "chevron" : "collapse"}/></button>
@@ -72,6 +73,6 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
       </header>
       <main className={styles.main}>{children}</main>
     </div>
-    <nav className={styles.bottomNav} aria-label="Мобильная навигация">{visiblePrimary.map((item) => <Link key={item.href} href={item.href} className={active(item.href) ? styles.current : ""} aria-current={active(item.href) ? "page" : undefined}><AdminIcon name={item.icon}/><span>{item.label}</span></Link>)}</nav>
+    <nav className={styles.bottomNav} aria-label="Мобильная навигация">{visiblePrimary.map((item) => <Link key={item.href} href={item.href} className={active(item.href) ? styles.current : ""} aria-current={active(item.href) ? "page" : undefined}><AdminIcon name={item.icon}/><span>{item.label}</span>{item.href === "/admin" && newOrdersCount > 0 && <em aria-label={`Новых заказов: ${newOrdersCount}`}>{newOrdersCount}</em>}{item.href === "/admin/bookings" && newBookingsCount > 0 && <em aria-label={`Новых броней: ${newBookingsCount}`}>{newBookingsCount}</em>}</Link>)}</nav>
   </div>;
 }

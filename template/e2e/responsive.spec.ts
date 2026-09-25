@@ -68,6 +68,10 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
   await assertResponsivePage(page, "/admin");
+  const brand = page.locator('aside[aria-label="Панель ресторана"] a[href="/admin"]');
+  const restaurantName = await brand.locator("strong").textContent();
+  await brand.locator("img").evaluate((image) => image.dispatchEvent(new Event("error")));
+  await expect(brand.locator("span").first()).toHaveText(restaurantName?.slice(0, 1) ?? "");
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/admin/bookings");
   await expect(page.getByRole("heading", { name: "Предстоящие" })).toBeVisible();
@@ -100,6 +104,16 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   await page.setViewportSize({ width: 360, height: 800 });
   const mobile = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(mobile.content, "admin bookings overflow on mobile").toBeLessThanOrEqual(mobile.viewport + 1);
+  const themeButton = page.getByRole("button", { name: "Включить тёмную тему" });
+  await expect(themeButton.getByText("Светлая")).toBeVisible();
+  await expect(themeButton.locator("svg")).toBeVisible();
+  const mobileNav = page.getByRole("navigation", { name: "Мобильная навигация" });
+  for (const href of ["/admin", "/admin/bookings"]) {
+    const sidebarCount = page.locator(`aside[aria-label="Панель ресторана"] a[href="${href}"] em`);
+    if (await sidebarCount.count()) {
+      await expect(mobileNav.locator(`a[href="${href}"] em`)).toHaveText(await sidebarCount.textContent() ?? "");
+    }
+  }
 });
 
 test("admin orders use two readable columns with bookings below at 1280px", async ({ page }) => {

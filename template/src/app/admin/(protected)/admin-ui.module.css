@@ -177,6 +177,8 @@
   .orderSummary { grid-column:1/-1; grid-row:2; display:flex; justify-content:space-between; align-items:center; padding-top:7px; border-top:1px solid var(--order-line); }
   .orderPreview>svg { display:none; }.tabs { margin-left:-11px; margin-right:-11px; padding-left:11px; }
   .pendingBooking { min-height:72px; }.bottomNav { height:70px; }
+  .themeButton span.themeThumb { display:grid; }.themeButton>span:last-child { display:inline; }
+  .bottomNav a { position:relative; }.bottomNav em { position:absolute; top:0; right:13px; min-width:17px; height:17px; padding:0 3px; display:grid; place-items:center; border-radius:50%; background:var(--admin-accent); color:white; font-size:10px; font-style:normal; line-height:1; }
 }
 @media (max-width:380px) { .orderPreview { grid-template-columns:102px minmax(0,1fr); padding:8px; }.orderType { padding:7px 8px; font-size:11px; }.orderMeta strong,.orderMeta small { font-size:10px; }.orderGuest strong { font-size:11px; } }
 .detailTitle { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }

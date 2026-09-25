@@ -32,12 +32,12 @@ export function SoundSettings({ initial }: { initial: PublicAdminSound }) {
     catch { setMessage("Браузер не смог воспроизвести звук"); }
   }
 
-  return <section className={styles.card} aria-label="Звук уведомлений">
-    <h2>Звук уведомлений</h2>
-    <p className={styles.soundHint}>Для новых заказов и броней. Выбор сохраняется сразу.</p>
+  return <section className={styles.card} aria-label="Звук уведомления">
+    <h2>Звук уведомления</h2>
+    <p className={styles.soundHint}>Для новых заказов и бронирований</p>
     {(["standard1", "standard2"] as const).map((choice, index) => <div className={styles.soundRow} key={choice}>
-      <label><input type="radio" name="admin-sound" checked={sound.selected === choice} disabled={busy} onChange={() => choose(choice)}/> Сигнал {index + 1}</label>
-      <button type="button" onClick={() => void preview(choice)} aria-label={`Прослушать сигнал ${index + 1}`}>▶</button>
+      <label><input type="radio" name="admin-sound" checked={sound.selected === choice} disabled={busy} onChange={() => choose(choice)}/> Звук {index + 1}</label>
+      <button type="button" onClick={() => void preview(choice)} aria-label={`Прослушать звук ${index + 1}`}>▶</button>
     </div>)}
     {sound.customName && <div className={styles.soundRow}>
       <label><input type="radio" name="admin-sound" checked={sound.selected === "custom"} disabled={busy} onChange={() => choose("custom")}/><span title={sound.customName}>{sound.customName}</span></label>
@@ -53,6 +53,7 @@ export function SoundSettings({ initial }: { initial: PublicAdminSound }) {
         event.target.value = "";
       }}/>
     </label>
+    <button type="button" className={styles.soundTest} onClick={() => void preview(sound.selected)}>Проверить звук</button>
     <p className={styles.soundHint}>MP3, WAV или Ogg до 2 МБ. После удаления своего звука выбирается сигнал 1.</p>
     {message && <p role="status" className={styles.soundHint}>{message}</p>}
   </section>;

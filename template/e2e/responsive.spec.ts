@@ -134,6 +134,17 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   await page.getByRole("button", { name: "Отмена" }).click();
   const menuWidth = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(menuWidth.content, "admin menu overflows on mobile").toBeLessThanOrEqual(menuWidth.viewport + 1);
+
+  await page.goto("/admin/settings");
+  await expect(page.getByRole("region", { name: "Внешний вид панели" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Звук уведомления" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Профиль администратора" })).toBeVisible();
+  for (const section of ["restaurant", "site-theme", "delivery", "pricing", "guest-contact", "channels", "booking", "promos", "gallery", "banquets", "pages", "sync", "print-materials", "billing", "team"]) {
+    await expect(page.locator(`section#${section}`)).toBeAttached();
+  }
+  await expect(page.locator("section#delivery").getByRole("button", { name: "Сохранить" })).toBeVisible();
+  const settingsWidth = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
+  expect(settingsWidth.content, "admin settings overflow on mobile").toBeLessThanOrEqual(settingsWidth.viewport + 1);
 });
 
 test("admin orders use two readable columns with bookings below at 1280px", async ({ page }) => {

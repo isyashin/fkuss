@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import Link from "next/link";
-import { saveAllAdminSettings, saveGuestContactChannels } from "./actions";
+import { useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
+import { saveAllAdminSettings, saveBackground, saveGuestContactChannels, saveSettings, saveTheme } from "./actions";
 import { contentAssetUrl } from "@/lib/assets";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { ThemeConfig } from "@/lib/content";
@@ -10,6 +9,7 @@ import styles from "./settings-admin.module.css";
 import type { PublicAdminSound } from "@/lib/admin-sound";
 import { SoundSettings } from "./sound-settings";
 import { visibleGuestChannels, type GuestChannels } from "@/lib/guest-contact";
+import { AdminIcon } from "../admin-icon";
 
 const PRESETS = [
   { id: "warm", name: "Тёплый (трактир)" },
@@ -17,8 +17,21 @@ const PRESETS = [
   { id: "elegant", name: "Тёмный (fine dining)" },
 ];
 
-export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSettings; theme: ThemeConfig; sound: PublicAdminSound }) {
+function subscribeTheme(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener("restaurant-admin-theme-change", callback);
+  return () => { window.removeEventListener("storage", callback); window.removeEventListener("restaurant-admin-theme-change", callback); };
+}
+
+type SaveFeedback = { section: string; text: string; error: boolean };
+
+function SaveButton({ section, onSave, pending, feedback }: { section: string; onSave: () => void; pending: boolean; feedback: SaveFeedback }) {
+  return <div className={styles.sectionActions}><button type="button" className={styles.saveButton} disabled={pending} onClick={onSave}>{pending && feedback.section === section ? "Сохраняю…" : "Сохранить"}</button>{feedback.section === section && feedback.text && <span role={feedback.error ? "alert" : "status"} className={feedback.error ? styles.error : styles.saved}>{feedback.text}</span>}</div>;
+}
+
+export function SettingsAdmin({ settings, theme, sound, actor, restaurantSection, otherSections }: { settings: ContentSettings; theme: ThemeConfig; sound: PublicAdminSound; actor: { name: string; role: string }; restaurantSection: ReactNode; otherSections: ReactNode }) {
   const [s, setS] = useState({ ...settings, guestContact: visibleGuestChannels(settings) });
+  const savedSettings = useRef(settings);
   const [contactSaving, setContactSaving] = useState(false);
   const [contactError, setContactError] = useState("");
   const [preset, setPreset] = useState(theme.preset);
@@ -32,22 +45,45 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
     dimPercent: theme.background?.dimPercent ?? 40,
     disableOnMobile: theme.background?.disableOnMobile ?? true,
   });
+  const savedTheme = useRef({ preset: theme.preset, accent: theme.accent });
+  const savedBackground = useRef(bg);
   const [pending, startTransition] = useTransition();
-  const [saved, setSaved] = useState("");
-  const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState({ section: "", text: "", error: false });
+  const dark = useSyncExternalStore(subscribeTheme, () => localStorage.getItem("restaurant-admin-theme") === "dark", () => false);
 
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
 
-  function saveAll() {
+  function setDark(next: boolean) {
+    localStorage.setItem("restaurant-admin-theme", next ? "dark" : "light");
+    window.dispatchEvent(new Event("restaurant-admin-theme-change"));
+  }
+
+  function saveSection(section: string, action: () => Promise<void>) {
     startTransition(async () => {
-      setError(""); setSaved("");
+      setFeedback({ section, text: "", error: false });
       try {
-        await saveAllAdminSettings({ settings: s, theme: { preset, accent }, pricing: { globalMode: pricingMode, globalPercent: pricingPercent }, background: bg });
-        setSaved("Сохранено ✓");
-        setTimeout(() => setSaved(""), 3000);
+        await action();
+        setFeedback({ section, text: "Сохранено", error: false });
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Не удалось сохранить настройки");
+        setFeedback({ section, text: cause instanceof Error ? cause.message : "Не удалось сохранить настройки", error: true });
       }
+    });
+  }
+
+  function saveContent(section: "delivery" | "channels" | "booking") {
+    saveSection(section, async () => {
+      const next: ContentSettings = { ...savedSettings.current, [section]: s[section], ...(section === "delivery" ? { timezone: s.timezone } : {}) };
+      await saveSettings(next);
+      savedSettings.current = next;
+    });
+  }
+
+  function savePricePaymentLoyalty() {
+    saveSection("pricing", async () => {
+      const pricing = { globalMode: pricingMode, globalPercent: pricingPercent };
+      const next: ContentSettings = { ...savedSettings.current, pricing, payment: s.payment, loyalty: s.loyalty };
+      await saveAllAdminSettings({ settings: next, pricing, theme: savedTheme.current, background: savedBackground.current });
+      savedSettings.current = next;
     });
   }
 
@@ -57,7 +93,7 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
     setContactSaving(true);
     setContactError("");
     setS((current) => ({ ...current, guestContact: next }));
-    try { await saveGuestContactChannels(next); }
+    try { await saveGuestContactChannels(next); savedSettings.current = { ...savedSettings.current, guestContact: next }; }
     catch (cause) {
       setS((current) => ({ ...current, guestContact: previous }));
       setContactError(cause instanceof Error ? cause.message : "Не удалось сохранить каналы связи");
@@ -66,21 +102,25 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
 
   return (
     <div className={styles.page}>
-      <div className={styles.intro}><span>Управление</span><h1>Настройки</h1><p>Параметры сайта текущего ресторана. Тема панели переключается в верхней строке и не меняет гостевой сайт.</p></div>
-      <div className={styles.saveBar}>
-        <button
-          onClick={saveAll}
-          disabled={pending}
-          className="min-h-12 px-8 rounded-full bg-accent text-white font-medium disabled:opacity-50 shadow-lg"
-        >
-          {pending ? "Сохраняю…" : "Сохранить всё"}
-        </button>
-        {saved && <span className="text-green-600">{saved}</span>}
-        {error && <span className={styles.error} role="alert">{error}</span>}
-      </div>
+      <section className={styles.card} aria-label="Внешний вид панели">
+        <h2>Внешний вид</h2>
+        <p className={styles.cardHint}>Только для панели: тема сайта ресторана не меняется</p>
+        <div className={styles.themeChoices} role="group" aria-label="Тема панели">
+          <button type="button" aria-pressed={!dark} className={!dark ? styles.activeTheme : ""} onClick={() => setDark(false)}><AdminIcon name="sun"/> Светлая {!dark && <span aria-hidden="true">✓</span>}</button>
+          <button type="button" aria-pressed={dark} className={dark ? styles.activeTheme : ""} onClick={() => setDark(true)}><AdminIcon name="moon"/> Тёмная {dark && <span aria-hidden="true">✓</span>}</button>
+        </div>
+        <button type="button" className={styles.outlineButton} onClick={() => window.dispatchEvent(new Event("restaurant-admin-sidebar-toggle"))}>Свернуть / развернуть боковую панель</button>
+      </section>
       <SoundSettings initial={sound}/>
+      <section className={styles.card} aria-label="Профиль администратора">
+        <h2>Администратор</h2>
+        <p className={styles.cardHint}>Профиль администратора ресторана.</p>
+        <div className={styles.adminCard}><span>{actor.name.trim().slice(0, 1).toLocaleUpperCase("ru-RU") || "А"}</span><div><strong>{actor.name}</strong><small>{actor.role === "owner" ? "Владелец ресторана" : "Сотрудник ресторана"}</small></div></div>
+      </section>
+      {restaurantSection}
       <section className={styles.card} id="site-theme">
-        <h2 className="text-xl mb-3">Оформление сайта</h2>
+        <h2>Оформление сайта</h2>
+        <p className={styles.cardHint}>Эти параметры относятся к сайту ресторана. Переключатель темы панели работает отдельно.</p>
         <div className="space-y-3">
           <label className="block">
             <span className="text-sm text-muted">Пресет</span>
@@ -97,10 +137,7 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
             <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} className="mt-1 w-16 h-11 rounded" />
           </label>
         </div>
-      </section>
-
-      <section className={styles.card} id="background">
-        <h2 className="text-xl mb-3">Фоновое изображение</h2>
+        <h3 className={styles.subhead}>Фоновое изображение</h3>
         <div className="space-y-3">
           <label className="flex items-center gap-3 min-h-11">
             <input
@@ -181,6 +218,7 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
             Отключить фон на мобильных
           </label>
         </div>
+        <SaveButton section="site-theme" pending={pending} feedback={feedback} onSave={() => saveSection("site-theme", async () => { await saveTheme({ preset, accent }); savedTheme.current = { preset, accent }; await saveBackground(bg); savedBackground.current = bg; })}/>
       </section>
 
       <section className={styles.card} id="delivery">
@@ -286,10 +324,13 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
             + Зона
           </button>
         </div>
+        <SaveButton section="delivery" pending={pending} feedback={feedback} onSave={() => saveContent("delivery")}/>
       </section>
 
       <section className={styles.card} id="pricing">
-        <h2 className="text-xl mb-3">Ценообразование (общее)</h2>
+        <h2>Цены, оплата и лояльность</h2>
+        <p className={styles.cardHint}>Общие параметры оплаты и программы лояльности</p>
+        <h3 className={styles.subhead}>Ценообразование (общее)</h3>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-sm text-muted">Режим цен меню</span>
@@ -314,10 +355,7 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
         <p className="text-muted text-xs mt-2">
           Индивидуальный режим блюда приоритетнее общего. Коэффициент действует и на платные добавки без ручной цены.
         </p>
-      </section>
-
-      <section className={styles.card} id="payment">
-        <h2 className="text-xl mb-3">Оплата</h2>
+        <h3 className={styles.subhead}>Оплата</h3>
         <label className="block">
           <span className="text-sm text-muted">Онлайн-оплата заказов</span>
           <select
@@ -333,10 +371,7 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
         <p className="text-muted text-xs mt-2">
           Ключи провайдера — в env сайта ({s.payment.shopIdRef}, {s.payment.secretRef}), не в админке.
         </p>
-      </section>
-
-      <section className={styles.card} id="loyalty">
-        <h2 className="text-xl mb-3">Лояльность</h2>
+        <h3 className={styles.subhead}>Лояльность</h3>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-sm text-muted">Кэшбэк, %</span>
@@ -361,6 +396,7 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
             />
           </label>
         </div>
+        <SaveButton section="pricing" pending={pending} feedback={feedback} onSave={savePricePaymentLoyalty}/>
       </section>
 
       <section className={styles.card} id="guest-contact">
@@ -449,6 +485,7 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
             />
           )}
         </div>
+        <SaveButton section="channels" pending={pending} feedback={feedback} onSave={() => saveContent("channels")}/>
       </section>
 
       <section className={styles.card} id="booking">
@@ -497,23 +534,10 @@ export function SettingsAdmin({ settings, theme, sound }: { settings: ContentSet
             </label>
           </div>
         )}
+        <SaveButton section="booking" pending={pending} feedback={feedback} onSave={() => saveContent("booking")}/>
       </section>
 
-      <section className={styles.more} aria-label="Другие настройки ресторана">
-        <h2>Другие разделы</h2><p>Каждый раздел сохраняет изменения на сервере и сразу обновляет сайт.</p>
-        <div className={styles.links}>
-          <Link href="/admin/restaurant"><strong>Ресторан</strong><span>Контакты, часы работы, логотип и ссылки</span></Link>
-          <Link href="/admin/delivery"><strong>Варианты доставки</strong><span>Интервалы, стоимость и особые дни</span></Link>
-          <Link href="/admin/promos"><strong>Акции</strong><span>Тексты и изображения предложений</span></Link>
-          <Link href="/admin/gallery"><strong>Галерея</strong><span>Фотографии ресторана</span></Link>
-          <Link href="/admin/banquets"><strong>Банкеты</strong><span>Залы и описание услуги</span></Link>
-          <Link href="/admin/pages"><strong>Страницы сайта</strong><span>Заголовки и тексты</span></Link>
-          <Link href="/admin/sync"><strong>Синхронизация</strong><span>Яндекс.Еда и расписание обновлений</span></Link>
-          <Link href="/admin/print-materials"><strong>Печатные материалы</strong><span>Визитки и магниты с QR-кодом</span></Link>
-          <Link href="/admin/billing"><strong>Подписка</strong><span>Баланс, тариф и счета</span></Link>
-          <Link href="/admin/team"><strong>Сотрудники</strong><span>Личные аккаунты и права доступа</span></Link>
-        </div>
-      </section>
+      {otherSections}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { logoutAction } from "./admin-shell-actions";
 import type { AdminActor } from "@/lib/admin-users";
 import { AdminNotifications } from "./admin-notifications";
@@ -41,6 +41,11 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
   const [logoFailed, setLogoFailed] = useState(false);
   const dark = useSyncExternalStore(subscribeTheme, readTheme, () => false);
   const changeTheme = () => { localStorage.setItem("restaurant-admin-theme", dark ? "light" : "dark"); window.dispatchEvent(new Event("restaurant-admin-theme-change")); };
+  useEffect(() => {
+    const toggleSidebar = () => setCollapsed((value) => !value);
+    window.addEventListener("restaurant-admin-sidebar-toggle", toggleSidebar);
+    return () => window.removeEventListener("restaurant-admin-sidebar-toggle", toggleSidebar);
+  }, []);
   const section = [...primary, ...secondary].find((item) => item.href === pathname)?.label ?? "Управление";
   const active = (href: string) => href === "/admin" ? pathname === href : pathname.startsWith(href);
   const visiblePrimary = actor.role === "owner" ? primary : primary.filter((item) => item.href === "/admin" || item.href === "/admin/bookings");

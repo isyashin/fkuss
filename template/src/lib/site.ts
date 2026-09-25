@@ -19,6 +19,10 @@ import { getContentDir } from "./content-dir";
 
 export { contentAssetUrl } from "./assets";
 
+function withSettingsDefaults(settings: ContentSettings): ContentSettings {
+  return { ...settings, pricing: settings.pricing ?? { globalMode: "yandex", globalPercent: 0 } };
+}
+
 export async function getSiteRestaurant(): Promise<Restaurant> {
   try {
     const prisma = getPrisma();
@@ -45,14 +49,14 @@ export async function getSiteSettings(): Promise<ContentSettings> {
   try {
     const prisma = getPrisma();
     const row = await prisma.settings.findUnique({ where: { key: "settings" } });
-    if (row) return row.value as unknown as ContentSettings;
+    if (row) return withSettingsDefaults(row.value as unknown as ContentSettings);
   } catch {
     // fallback ниже
   }
   const { readFile } = await import("node:fs/promises");
   const path = await import("node:path");
   const raw = await readFile(path.join(getContentDir(), "settings.json"), "utf-8");
-  return JSON.parse(raw) as ContentSettings;
+  return withSettingsDefaults(JSON.parse(raw) as ContentSettings);
 }
 
 export async function getSiteMenu(): Promise<Menu> {

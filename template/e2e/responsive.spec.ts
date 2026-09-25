@@ -17,7 +17,7 @@ async function assertResponsivePage(page: Page, path: string) {
     const layout = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
       content: document.documentElement.scrollWidth,
-      controls: [...document.querySelectorAll("button, input, select, textarea")]
+      controls: [...document.querySelectorAll("button, input:not([type='hidden']), select, textarea")]
         .filter((element) => {
           const style = getComputedStyle(element);
           return style.display !== "none" && style.visibility !== "hidden";

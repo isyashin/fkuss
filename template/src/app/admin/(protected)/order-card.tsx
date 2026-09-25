@@ -29,7 +29,7 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
   const [pending, startTransition] = useTransition();
   const [tab, setTab] = useState<"items" | "info">("items");
   const editBlocked = orderEditBlockReason(order);
-  const [editing, setEditing] = useState(!editBlocked);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const actions = orderActionsFor(order.type, order.status);
   const dishes = new Map(catalog.flatMap((category) => category.dishes).map((dish) => [dish.id, dish]));

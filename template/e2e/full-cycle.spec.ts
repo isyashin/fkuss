@@ -41,10 +41,13 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
 
   await page.getByRole("button", { name: `Открыть заказ № ${orderNumber}` }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
-  for (const action of ["Принять", "Готовится", "Готов", "Выдан"]) {
-    await detail.getByRole("button", { name: action, exact: true }).click();
+  const status = detail.getByLabel("Статус заказа");
+  for (const [value, label] of [["accepted", "Принят"], ["cooking", "Готовится"], ["ready", "Готов"], ["issued", "Выдан"]] as const) {
+    await status.selectOption(value);
+    await expect(status).toHaveValue(value);
+    await expect(detail.getByText(label, { exact: true }).first()).toBeVisible();
   }
-  await expect(detail.getByRole("button", { name: "Выдан", exact: true })).toHaveCount(0);
+  await expect(status.locator("option")).toHaveCount(1);
   await expect(detail.getByText("Выдан", { exact: true })).toBeVisible();
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)

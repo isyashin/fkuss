@@ -14,10 +14,11 @@ test("ресторатор входит в админку и двигает за
   await expect(page.getByRole("heading", { name: "Заказы" })).toBeVisible();
 
   const detail = page.getByRole("region", { name: "Детали заказа" });
-  const accept = detail.getByRole("button", { name: "Принять" });
-  if (await accept.isVisible().catch(() => false)) {
-    await accept.click();
-    await expect(detail.getByText("Принят", { exact: true })).toBeVisible();
+  const status = detail.getByLabel("Статус заказа");
+  if (await status.isVisible().catch(() => false) && await status.locator('option[value="accepted"]').count()) {
+    await status.selectOption("accepted");
+    await expect(status).toHaveValue("accepted");
+    await expect(detail.getByText("Принят", { exact: true }).first()).toBeVisible();
   }
 });
 
@@ -37,10 +38,12 @@ test("ближайшая бронь доступна на общем экран�
     await page.goto("/admin/login");
     await loginAdminUi(page);
     const widget = page.getByRole("region", { name: "Ближайшие брони" });
-    const row = widget.getByText(guestName).locator("xpath=../..");
-    await expect(row.getByText("Новая")).toBeVisible();
-    await row.getByRole("button", { name: "Подтвердить" }).click();
-    await expect(row.getByText("Подтверждена")).toBeVisible();
+    await expect(widget.getByText(guestName)).toBeVisible();
+    await widget.getByRole("link", { name: new RegExp(`Открыть бронь .*${guestName}`) }).click();
+    const detail = page.getByRole("region", { name: "Детали брони" });
+    await expect(detail.getByText(guestName)).toBeVisible();
+    await detail.getByRole("button", { name: "Подтвердить" }).click();
+    await expect(detail.getByText("Подтверждена").first()).toBeVisible();
     expect((await db.query<{ status: string }>('SELECT "status" FROM "Reservation" WHERE "id" = $1', [id])).rows[0]?.status).toBe("confirmed");
     const layout = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
     expect(layout.content).toBeLessThanOrEqual(layout.viewport + 1);

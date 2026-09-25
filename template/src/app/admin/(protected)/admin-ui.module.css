@@ -103,7 +103,7 @@
 .themeThumb { position:absolute; top:3px; left:3px; width:36px; height:36px; display:grid; place-items:center; border-radius:50%; background:white; color:#252320; box-shadow:0 1px 5px #0002; transition:transform .25s; }
 .themeDark .themeThumb { transform:translateX(80px); }
 .profileWrap { position:relative; }
-.profileButton { min-height:44px; display:flex; align-items:center; gap:10px; border:0; background:transparent; color:var(--admin-text); text-align:left; cursor:pointer; }
+.profileButton { min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; gap:10px; border:0; background:transparent; color:var(--admin-text); text-align:left; cursor:pointer; }
 .avatar { width:42px; height:42px; flex:0 0 42px; display:grid; place-items:center; border-radius:50%; background:var(--admin-surface-3); font-size:12px; font-weight:700; }
 .profileText { display:grid; gap:3px; white-space:nowrap; font-size:12px; }.profileText small { color:var(--admin-muted); font-size:11px; }
 .profilePopover { position:absolute; z-index:70; right:0; top:54px; width:min(275px,calc(100vw - 20px)); max-height:75vh; overflow:auto; display:grid; gap:5px; padding:16px; border:1px solid var(--admin-line); border-radius:14px; background:var(--admin-surface); box-shadow:0 15px 35px #0002; font-size:13px; }
@@ -166,12 +166,13 @@
 @media (max-width:780px) { .sidebarFoot { display:none; }.dashboard { grid-template-columns:1fr; }.ordersPanel,.detailPanel { min-height:0; } }
 @media (max-width:600px) {
   .shell { padding-bottom:70px; }.topbar { min-height:64px; padding:10px 13px; justify-content:flex-end; }.topActions { gap:5px; }
-  .profileText,.profileButton>svg { display:none; }.avatar { width:36px; height:36px; flex-basis:36px; }
+  .profileText,.profileButton>svg { display:none; }.avatar { width:44px; height:44px; flex-basis:44px; }
   .themeButton { width:100px; flex:0 0 100px; padding-left:42px; font-size:11px; }.themeDark { padding-left:8px; padding-right:42px; }.themeDark .themeThumb { transform:translateX(56px); }
   .main { padding:0 8px 20px; }.dashboard { gap:8px; }.ordersPanel,.detailPanel { padding:16px 11px; }.pendingBookings { padding:16px 11px; }
   .panelTitle { flex-wrap:wrap; padding:0 5px 14px; }.panelTitle h1 { font-size:24px; }.dashboardShortcuts { justify-content:flex-start; }
   .orderPreview { grid-template-columns:112px minmax(0,1fr); gap:7px 9px; align-items:start; }
   .orderLead { grid-column:1; grid-row:1; }.orderGuest { grid-column:2; grid-row:1; }
+  .orderGuest .contactIcon { justify-self:end; }
   .orderSummary { grid-column:1/-1; grid-row:2; display:flex; justify-content:space-between; align-items:center; padding-top:7px; border-top:1px solid var(--order-line); }
   .orderPreview>svg { display:none; }.tabs { margin-left:-11px; margin-right:-11px; padding-left:11px; }
   .pendingBooking { min-height:72px; }.bottomNav { height:70px; }

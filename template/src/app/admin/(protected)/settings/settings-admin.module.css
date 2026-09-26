@@ -34,6 +34,9 @@
 .wrapActions { display:flex; flex-wrap:wrap; width:100%; }
 .zoneList { display:grid; gap:7px; }.zoneRow { padding:12px; border:1px solid var(--admin-line); border-radius:10px; grid-template-columns:minmax(0,1fr) 100px 120px auto; }
 .note { margin:0; color:var(--admin-muted); font-size:11px; line-height:1.4; }
+.soundHead { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }.soundHead p { margin:5px 0 0; color:var(--admin-muted); font-size:12px; line-height:1.45; }.soundHead>svg { flex:0 0 auto; color:var(--admin-accent); }
+.soundRow { border-top:0; }.soundRow button { min-width:44px; width:44px; height:44px; padding:0; border-radius:50%; display:grid; place-items:center; }
+.soundUpload { gap:8px; }
 .extraCard :global(.max-w-2xl),.extraCard :global(.max-w-xl) { max-width:none; }
 .extraCard :global(.rounded-full) { border-radius:9px; }
 .extraCard[id="delivery-options"]>div>button,.extraCard[id="gallery"]>div>button { width:100%; border:1px solid var(--admin-line); background:var(--admin-surface); color:var(--admin-text); font-size:12px; font-weight:700; }

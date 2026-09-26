@@ -84,9 +84,10 @@ export function BanquetsAdmin({
               setTimeout(() => setSaved(false), 3000);
             })
           }
-          className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
+          className="justify-self-start min-h-11 px-4 rounded-[9px] bg-accent text-white text-xs font-bold disabled:opacity-50"
+          aria-label="Сохранить настройки"
         >
-          Сохранить настройки
+          Сохранить
         </button>
         {saved && <span className="ml-3 text-green-600 text-sm">Сохранено ✓</span>}
       </section>

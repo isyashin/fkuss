@@ -46,6 +46,9 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
     window.addEventListener("restaurant-admin-sidebar-toggle", toggleSidebar);
     return () => window.removeEventListener("restaurant-admin-sidebar-toggle", toggleSidebar);
   }, []);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("restaurant-admin-sidebar-state", { detail: collapsed }));
+  }, [collapsed]);
   const section = [...primary, ...secondary].find((item) => item.href === pathname)?.label ?? "Управление";
   const active = (href: string) => href === "/admin" ? pathname === href : pathname.startsWith(href);
   const visiblePrimary = actor.role === "owner" ? primary : primary.filter((item) => item.href === "/admin" || item.href === "/admin/bookings");

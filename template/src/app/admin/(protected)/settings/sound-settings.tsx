@@ -4,6 +4,7 @@ import { useState } from "react";
 import { playAdminSound } from "@/lib/admin-audio";
 import type { AdminSoundChoice, PublicAdminSound } from "@/lib/admin-sound";
 import styles from "./settings-admin.module.css";
+import { AdminIcon } from "../admin-icon";
 
 export function SoundSettings({ initial }: { initial: PublicAdminSound }) {
   const [sound, setSound] = useState(initial);
@@ -33,18 +34,17 @@ export function SoundSettings({ initial }: { initial: PublicAdminSound }) {
   }
 
   return <section className={styles.card} aria-label="Звук уведомления">
-    <h2>Звук уведомления</h2>
-    <p className={styles.soundHint}>Для новых заказов и бронирований</p>
+    <div className={styles.soundHead}><div><h2>Звук уведомления</h2><p>Для новых заказов и бронирований</p></div><AdminIcon name="sound" size={20}/></div>
     {(["standard1", "standard2"] as const).map((choice, index) => <div className={styles.soundRow} key={choice}>
       <label><input type="radio" name="admin-sound" checked={sound.selected === choice} disabled={busy} onChange={() => choose(choice)}/> Звук {index + 1}</label>
-      <button type="button" onClick={() => void preview(choice)} aria-label={`Прослушать звук ${index + 1}`}>▶</button>
+      <button type="button" onClick={() => void preview(choice)} aria-label={`Прослушать звук ${index + 1}`}><AdminIcon name="play" size={16}/></button>
     </div>)}
     {sound.customName && <div className={styles.soundRow}>
       <label><input type="radio" name="admin-sound" checked={sound.selected === "custom"} disabled={busy} onChange={() => choose("custom")}/><span title={sound.customName}>{sound.customName}</span></label>
-      <button type="button" onClick={() => void preview("custom")} aria-label="Прослушать свой звук">▶</button>
-      <button type="button" onClick={() => void request("DELETE")} disabled={busy} aria-label="Удалить свой звук">Удалить</button>
+      <button type="button" onClick={() => void preview("custom")} aria-label="Прослушать свой звук"><AdminIcon name="play" size={16}/></button>
+      <button type="button" onClick={() => void request("DELETE")} disabled={busy} aria-label="Удалить свой звук"><AdminIcon name="trash" size={17}/></button>
     </div>}
-    <label className={styles.soundUpload}>Загрузить свой звук
+    <label className={styles.soundUpload}><AdminIcon name="upload" size={17}/> Загрузить свой звук
       <input type="file" accept=".mp3,.wav,.ogg,audio/mpeg,audio/wav,audio/ogg" disabled={busy} onChange={(event) => {
         const file = event.target.files?.[0];
         if (!file) return;

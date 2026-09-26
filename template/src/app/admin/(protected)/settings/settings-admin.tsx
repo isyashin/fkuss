@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
 import { saveAllAdminSettings, saveBackground, saveGuestContactChannels, saveSettings, saveTheme } from "./actions";
 import { contentAssetUrl } from "@/lib/assets";
 import type { ContentSettings } from "@/lib/content-schema";
@@ -49,7 +49,13 @@ export function SettingsAdmin({ settings, theme, sound, actor, restaurantSection
   const savedBackground = useRef(bg);
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState({ section: "", text: "", error: false });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const dark = useSyncExternalStore(subscribeTheme, () => localStorage.getItem("restaurant-admin-theme") === "dark", () => false);
+  useEffect(() => {
+    const update = (event: Event) => setSidebarCollapsed((event as CustomEvent<boolean>).detail);
+    window.addEventListener("restaurant-admin-sidebar-state", update);
+    return () => window.removeEventListener("restaurant-admin-sidebar-state", update);
+  }, []);
 
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
 
@@ -109,7 +115,7 @@ export function SettingsAdmin({ settings, theme, sound, actor, restaurantSection
           <button type="button" aria-pressed={!dark} className={!dark ? styles.activeTheme : ""} onClick={() => setDark(false)}><AdminIcon name="sun"/> Светлая {!dark && <span aria-hidden="true">✓</span>}</button>
           <button type="button" aria-pressed={dark} className={dark ? styles.activeTheme : ""} onClick={() => setDark(true)}><AdminIcon name="moon"/> Тёмная {dark && <span aria-hidden="true">✓</span>}</button>
         </div>
-        <button type="button" className={styles.outlineButton} onClick={() => window.dispatchEvent(new Event("restaurant-admin-sidebar-toggle"))}>Свернуть / развернуть боковую панель</button>
+        <button type="button" className={styles.outlineButton} onClick={() => window.dispatchEvent(new Event("restaurant-admin-sidebar-toggle"))}>{sidebarCollapsed ? "Развернуть" : "Свернуть"} боковую панель</button>
       </section>
       <SoundSettings initial={sound}/>
       <section className={styles.card} aria-label="Профиль администратора">

@@ -21,7 +21,7 @@ export function PromosAdmin({ promos }: { promos: Promo[] }) {
             onClick={() => {
               if (confirm(`Удалить «${promo.title}»?`)) startTransition(() => deletePromo(promo.id));
             }}
-            className="min-h-11 px-4 rounded-full border border-red-300 text-red-600 text-sm shrink-0"
+            className="min-h-11 px-4 rounded-[9px] border border-foreground/20 bg-card text-sm shrink-0"
           >
             Удалить
           </button>
@@ -36,7 +36,7 @@ export function PromosAdmin({ promos }: { promos: Promo[] }) {
             setForm({ title: "", text: "" });
           });
         }}
-        className="bg-card rounded-[var(--radius)] p-4 space-y-2"
+        className="bg-card rounded-[var(--radius)] p-4 space-y-3"
       >
         <div className="grid grid-cols-2 gap-3">
         <label className="block text-xs text-muted">Заголовок акции<input
@@ -54,7 +54,7 @@ export function PromosAdmin({ promos }: { promos: Promo[] }) {
           className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15"
         /></label>
         </div>
-        <button disabled={pending} className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50">
+        <button disabled={pending} className="min-h-11 px-4 rounded-[9px] border border-foreground/20 bg-card text-sm font-medium disabled:opacity-50">
           Добавить акцию
         </button>
       </form>

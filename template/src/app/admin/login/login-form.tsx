@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginAction } from "./actions";
+import styles from "./login.module.css";
 
 export function LoginForm() {
   const router = useRouter();
@@ -25,9 +26,9 @@ export function LoginForm() {
           setError("Неверный логин или пароль");
         }
       }}
-      className="space-y-4"
+      className={styles.form}
     >
-      <input
+      <label>Логин<input
         type="text"
         value={login}
         onChange={(e) => setLogin(e.target.value)}
@@ -35,9 +36,9 @@ export function LoginForm() {
         aria-label="Логин"
         autoComplete="username"
         required
-        className="w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-      />
-      <input
+        className={styles.input}
+      /></label>
+      <label>Пароль<input
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
@@ -45,13 +46,13 @@ export function LoginForm() {
         aria-label="Пароль"
         required
         autoComplete="current-password"
-        className="w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-      />
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+        className={styles.input}
+      /></label>
+      {error && <p className={styles.error} role="alert">{error}</p>}
       <button
         type="submit"
         disabled={sending || !login || !password}
-        className="w-full min-h-12 rounded-full bg-accent text-white font-medium disabled:opacity-50"
+        className={styles.submit}
       >
         {sending ? "Вхожу…" : "Войти"}
       </button>

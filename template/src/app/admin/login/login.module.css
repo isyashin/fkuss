@@ -1,0 +1,13 @@
+.page { --login-bg:#f7f5f1; --login-surface:#fffefd; --login-line:#e8e2dc; --login-text:#252320; --login-muted:#77716d; --login-accent:#a65335; display:grid; flex:1; place-items:center; min-height:calc(100vh - 80px); padding:24px 12px 72px; background:var(--login-bg); color:var(--login-text); }
+.card { width:min(100%,440px); padding:28px; border:1px solid var(--login-line); border-radius:15px; background:var(--login-surface); }
+.eyebrow { color:var(--login-accent); font-size:11px; font-weight:700; letter-spacing:.12em; }
+.card h1 { margin:8px 0 5px; font:34px/1.15 Georgia,serif; }
+.card p { margin:0 0 22px; color:var(--login-muted); font-size:13px; line-height:1.5; }
+.form { display:grid; gap:14px; }
+.form label { display:grid; gap:6px; color:var(--login-muted); font-size:11px; }
+.input { width:100%; min-height:44px; padding:0 11px; border:1px solid var(--login-line); border-radius:9px; background:var(--login-surface); color:var(--login-text); font-size:13px; }
+.submit { width:100%; min-height:44px; border:1px solid var(--login-accent); border-radius:9px; background:var(--login-accent); color:#fff; font-size:12px; font-weight:700; cursor:pointer; }
+.submit:disabled { opacity:.55; cursor:not-allowed; }
+.form .error { margin:0; color:#b53434; font-size:12px; }
+.form :is(input,button):focus-visible { outline:2px solid var(--login-accent); outline-offset:2px; }
+@media(max-width:600px) { .page { padding:10px 8px 40px; }.card { padding:17px; }.card h1 { font-size:30px; } }

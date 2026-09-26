@@ -98,10 +98,12 @@
 .topbar { min-height:84px; padding:17px 24px; }
 .topActions { gap:15px; }
 .breadcrumb span { opacity:.6; }
-.themeButton { position:relative; width:124px; height:44px; padding:0 8px 0 45px; justify-content:center; border-color:#dad6d1; background:#f4f2f0; color:#272523; font-weight:700; }
-.themeDark { padding:0 45px 0 8px; border-color:#131615; background:#1f2322; color:white; }
+.themeButton { position:relative; width:124px; height:44px; padding:0; justify-content:center; border-color:#dad6d1; background:#f4f2f0; color:#272523; font-weight:700; }
+.themeDark { border-color:#131615; background:#1f2322; color:white; }
 .themeThumb { position:absolute; top:3px; left:3px; width:36px; height:36px; display:grid; place-items:center; border-radius:50%; background:white; color:#252320; box-shadow:0 1px 5px #0002; transition:transform .25s; }
 .themeDark .themeThumb { transform:translateX(80px); }
+.themeButton>span:last-child { position:absolute; top:0; right:8px; width:70px; height:42px; display:grid; place-items:center; white-space:nowrap; }
+.themeDark>span:last-child { left:8px; right:auto; }
 .profileWrap { position:relative; }
 .profileButton { min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; gap:10px; border:0; background:transparent; color:var(--admin-text); text-align:left; cursor:pointer; }
 .avatar { width:42px; height:42px; flex:0 0 42px; display:grid; place-items:center; border-radius:50%; background:var(--admin-surface-3); font-size:12px; font-weight:700; }
@@ -168,7 +170,8 @@
 @media (max-width:600px) {
   .shell { padding-bottom:70px; }.topbar { min-height:64px; padding:10px 13px; justify-content:flex-end; }.topActions { gap:5px; }
   .profileText,.profileButton>svg { display:none; }.avatar { width:44px; height:44px; flex-basis:44px; }
-  .themeButton { width:100px; flex:0 0 100px; padding-left:42px; font-size:11px; }.themeDark { padding-left:8px; padding-right:42px; }.themeDark .themeThumb { transform:translateX(56px); }
+  .themeButton { width:100px; flex:0 0 100px; font-size:11px; }.themeDark .themeThumb { transform:translateX(56px); }
+  .themeButton>span:last-child { right:3px; width:56px; font-size:11px; }.themeDark>span:last-child { left:3px; right:auto; }
   .main { padding:0 8px 20px; }.dashboard { gap:8px; }.ordersPanel,.detailPanel { padding:16px 11px; }.pendingBookings { padding:16px 11px; }
   .panelTitle { flex-wrap:wrap; padding:0 5px 14px; }.panelTitle h1 { font-size:24px; }.dashboardShortcuts { justify-content:flex-start; }
   .orderPreview { grid-template-columns:112px minmax(0,1fr); gap:7px 9px; align-items:start; }

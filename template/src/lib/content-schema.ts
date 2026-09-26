@@ -148,6 +148,11 @@ export const themeSchema = z.object({
     .default({ enabled: false, image: "", position: "center", dimPercent: 40, disableOnMobile: false }),
 });
 
+export const guestContactSchema = z.object({
+  whatsapp: z.boolean().default(true),
+  telegram: z.boolean().default(true),
+});
+
 export const settingsSchema = z.object({
   domains: z.object({
     canonical: z.string().min(1),
@@ -187,6 +192,7 @@ export const settingsSchema = z.object({
       phone: z.string().default(""),
     }),
   }),
+  guestContact: guestContactSchema.default({ whatsapp: true, telegram: true }),
   payment: z.object({
     provider: z.enum(["none", "mock", "yookassa"]).default("none"),
     shopIdRef: z.string().default("YOOKASSA_SHOP_ID"),

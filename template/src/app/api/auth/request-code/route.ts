@@ -29,5 +29,8 @@ export async function POST(request: Request) {
   }
 
   const result = await requestAuthCode(email);
+  if (result.deliveryFailed) {
+    return NextResponse.json({ error: "Не удалось отправить код. Попробуйте позже." }, { status: 503 });
+  }
   return NextResponse.json({ ok: true, devCode: result.devCode });
 }

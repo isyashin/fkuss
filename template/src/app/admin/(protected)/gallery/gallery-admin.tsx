@@ -58,9 +58,9 @@ export function GalleryAdmin({ images }: { images: GalleryImage[] }) {
       <button
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="mt-4 min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
+        className="mt-4 w-full min-h-11 px-4 rounded-[9px] border border-foreground/20 bg-card text-sm font-medium disabled:opacity-50"
       >
-        {uploading ? "Загружаю…" : "+ Фото"}
+        {uploading ? "Загружаю…" : "+ Добавить фото"}
       </button>
     </div>
   );

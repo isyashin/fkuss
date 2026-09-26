@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginAdminUi } from "./login-admin";
 
 // Полный путь доставки: админ создаёт scheduled-вариант через UI, гость заказывает
 function ip(project: string, n: number) {
@@ -12,8 +13,7 @@ test("админ создаёт scheduled-вариант, гость заказ�
 
   // 1. Админка → Доставка → новый вариант
   await page.goto("/admin/login");
-  await page.getByPlaceholder("Пароль").fill("admin");
-  await page.getByRole("button", { name: "Войти" }).click();
+  await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
   await page.goto("/admin/delivery");

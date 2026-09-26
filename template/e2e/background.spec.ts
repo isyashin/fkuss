@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginAdminUi } from "./login-admin";
 import sharp from "sharp";
 
 // Настоящий PNG, сгенерированный в тесте
@@ -17,20 +18,23 @@ async function makePng(): Promise<Buffer> {
 
 test("VIS-01/03: загрузка фона через админку, применение на витрине, удаление", async ({ page }) => {
   await page.goto("/admin/login");
-  await page.getByPlaceholder("Пароль").fill("admin");
-  await page.getByRole("button", { name: "Войти" }).click();
+  await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
   await page.goto("/admin/settings");
   await page.getByLabel("Фон включён").check();
+  const appearance = page.locator("section#site-theme");
+  const saveAppearance = async () => {
+    await appearance.getByRole("button", { name: "Сохранить" }).click();
+    await expect(appearance.getByRole("status")).toHaveText("Сохранено", { timeout: 15000 });
+  };
 
   // Загрузка PNG
-  const fileInput = page.locator('section:has-text("Фоновое изображение") input[type="file"]');
+  const fileInput = appearance.locator('input[type="file"]');
   await fileInput.setInputFiles({ name: "bg-test.png", mimeType: "image/png", buffer: await makePng() });
   await expect(page.getByAltText("Фон — превью")).toBeVisible({ timeout: 15000 });
 
-  await page.getByRole("button", { name: "Сохранить всё" }).click({ force: true });
-  await expect(page.getByText("Сохранено ✓")).toBeVisible({ timeout: 15000 });
+  await saveAppearance();
 
   // На мобильном проекте фон по умолчанию ВКЛЮЧЁН (disableOnMobile: false) —
   // флаг «Отключить на мобильных» выключаем, чтобы проверить применение
@@ -38,8 +42,7 @@ test("VIS-01/03: загрузка фона через админку, приме
   if (isMobile) {
     await page.goto("/admin/settings");
     await page.getByLabel("Отключить фон на мобильных").uncheck();
-    await page.getByRole("button", { name: "Сохранить всё" }).click({ force: true });
-    await expect(page.getByText("Сохранено ✓")).toBeVisible({ timeout: 15000 });
+    await saveAppearance();
   }
 
   // На витрине — background-image в стилях body (ждём применения)
@@ -50,16 +53,14 @@ test("VIS-01/03: загрузка фона через админку, приме
 
   // Удаление
   await page.goto("/admin/settings");
-  await page.locator('section:has-text("Фоновое изображение")').getByRole("button", { name: "Удалить" }).click({ force: true });
-  await page.getByRole("button", { name: "Сохранить всё" }).click({ force: true });
-  await expect(page.getByText("Сохранено ✓")).toBeVisible({ timeout: 15000 });
+  await appearance.getByRole("button", { name: "Удалить" }).click({ force: true });
+  await saveAppearance();
 
   await page.getByLabel("Фон включён").uncheck();
   if (isMobile) {
     await page.getByLabel("Отключить фон на мобильных").check();
   }
-  await page.getByRole("button", { name: "Сохранить всё" }).click({ force: true });
-  await expect(page.getByText("Сохранено ✓")).toBeVisible({ timeout: 15000 });
+  await saveAppearance();
   await page.goto("/");
   await expect
     .poll(async () => page.evaluate(() => getComputedStyle(document.body).backgroundImage), { timeout: 15000 })
@@ -68,8 +69,7 @@ test("VIS-01/03: загрузка фона через админку, приме
 
 test("VIS-02: SVG отклоняется сервером загрузки", async ({ page }) => {
   await page.goto("/admin/login");
-  await page.getByPlaceholder("Пароль").fill("admin");
-  await page.getByRole("button", { name: "Войти" }).click();
+  await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
   // page.request делит куки со страницей

@@ -1,4 +1,5 @@
 import { getPrisma } from "@/lib/db";
+import { applyPaymentEvent } from "@/lib/payments/apply-event";
 import { notFound, redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -19,14 +20,7 @@ export default async function MockPaymentPage({
 
   const prisma = getPrisma();
   const record = await prisma.order.findUnique({ where: { number: orderNumber } });
-  if (record && record.paymentStatus !== "paid") {
-    await prisma.order.update({
-      where: { id: record.id },
-      data: {
-        paymentStatus: "paid",
-        status: record.status === "new" ? "accepted" : record.status,
-      },
-    });
+  if (record && await applyPaymentEvent(prisma, { orderId: record.id, paymentId: record.paymentId ?? `mock_${record.id}`, status: "paid" })) {
     try {
       const { notifyNewOrder } = await import("@/lib/notify");
       await notifyNewOrder(record.id);

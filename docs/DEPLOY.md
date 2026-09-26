@@ -61,11 +61,18 @@ bash ~/resto/src/scripts/update.sh --no-restart  # только сборка
 ```
 
 Работающие сервисы:
-- `template-app-1` (u-mamy) — :3000, БД `resto`
-- `buxara-app-1` — :3001, БД `buxara`, content volume
+- `template-app-1` (u-mamy) — :3000, БД `resto`, прежний образ
+- `buxara-app-1` — :3001, БД `buxara`, content volume, `resto-template:admin-pr10-130355a`
+- `ochag-grill-app-1` — :3003, БД `ochag-grill`, content volume, `resto-template:admin-pr10-130355a`
 - `platform-platform-1` — :3100, БД `platform`
 - `template-db-1` — общий PostgreSQL (базы разделены по сайтам)
 - Caddy :80 — маршрутизация по Host (LAN-режим, без реального TLS)
+
+Образ `130355a` собран из отдельного `/home/ilya/resto/admin-pr10-checkout`
+после зелёного CI PR № 10. Переопределения двух сайтов находятся в
+`sites/{ochag-grill,buxara}/admin-pr10.override.yml`; копии предыдущего
+варианта сохранены рядом с суффиксом `.rollback-761de83`. Основной checkout
+`src` и работающие сервисы «У мамы» и платформы не переключались.
 
 Cron на хосте:
 - `0 */6 * * *` — POST /api/jobs/report-metrics на сайтах (метрики → платформа)
@@ -83,6 +90,32 @@ Tenant-джобы устанавливает `install-site-jobs.sh`: секре�
 На dev-ВМ tenant-джобы buxara (report-metrics, sync-menu) идут через
 `run-site-job.sh` с секретом из `sites/buxara/.env` (600). Синхронизация buxara
 включена: placeSlug `chajxana_buxara_xalyal`, `intervalMinutes` 60.
+
+После контролируемого переключения 2026-09-25 «Бухара» и «Очаг гриль» запущены
+с отдельным compose override `admin-pr10.override.yml` на закреплённом образе
+`resto-template:admin-pr10-1f5d932` (первый визуальный срез PR № 10);
+их БД мигрированы до `0007`. Задания
+report-metrics и sync-menu для обоих сайтов работают. Демо «У мамы» сохранено
+на прежнем образе и схеме. Рабочий checkout `~/resto/src` остался на `main`;
+код новой версии находится в отдельном `~/resto/admin-pr10-checkout`.
+После зелёного CI первого визуального среза обновлены только compose override
+и app-контейнеры `buxara` и `ochag-grill`; checkout `~/resto/src`, схема БД,
+демо «У мамы» и платформа не менялись. Предыдущий образ и копии override
+сохранены для отката. Оба сайта и страницы входа админки отвечают HTTP 200;
+визуальная приёмка остальных разделов прототипа продолжается.
+`scripts/update.sh` до общего обновления всех сайтов применять нельзя: он
+затронет демо-сайт и снимет выбор закреплённого образа в обычном compose.
+
+На dev оба сайта подключены к внутреннему Mailpit по `SMTP_URL` через
+`admin-pr10.override.yml`. SMTP-порт 1025 доступен только в Docker-сети;
+web-интерфейс Mailpit привязан к `127.0.0.1:8025` самой ВМ и не опубликован
+через Caddy. Письма хранятся в Docker volume `admin-pr10-mailpit-data`, не в
+Git. Гостевой OTP с обоих публичных адресов проверен до входа в кабинет;
+код в HTTP-ответ не попадает, `AUTH_DEV_CODE` выключен. Отправка уведомлений
+о тестовых заказах и бронях подтверждена в Mailpit; после теста каналы
+выключены обратно. Это доставка в локальную песочницу, не во внешний ящик.
+Для prod нужно заменить `SMTP_URL`/`SMTP_FROM` на реальный SMTP, включить
+нужные каналы после настройки адреса или чата и проверить внешнюю доставку.
 
 ⚠️ Перед включением sync на сайте, наполненным инжестом ДО этапа ТЗ-1
 (ids блюд `dish-<edaId>`, `externalId` пустой, `source='manual'`), применить
@@ -155,13 +188,35 @@ install -d -m 755 ~/resto/backups/export
 bash ~/resto/src/scripts/deploy.sh <slug> [--domain=example.ru]
 # deploy.sh сам: выделяет порт (registry.json), создаёт per-site
 # пользователя БД с паролем и базу, пишет .env (DATABASE_URL,
-# ADMIN_PASSWORD, CRON_SECRET, права 600), поднимает контейнер,
+# ADMIN_PASSWORD для прежней версии, CRON_SECRET, права 600), поднимает контейнер,
 # ставит cron-джобы (install-site-jobs.sh + install-platform-jobs.sh).
 ```
 
-⚠️ deploy.sh требует собранный `resto-template-migrator:latest` (шаг миграции):
-перед первым деплоем после чистки образов выполни `update.sh --no-restart`
-или `docker build --target migrator -t resto-template-migrator:latest template/`.
+⚠️ deploy.sh требует собранный `resto-template-migrator:latest` (шаг миграции).
+Собери его отдельно: `docker build --target migrator -t resto-template-migrator:latest template/`.
+`update.sh --no-restart` не подходит для обновления со старых статусов заказов:
+он мигрирует БД, пока старый код ещё принимает записи.
+
+### Первый владелец новой админки
+
+После миграций до `0007_guest_contact`, до запуска нового кода, создай первого
+владельца в каждой ресторанной БД отдельно. Команда `bootstrap-admin.ts`
+принимает `DATABASE_URL`, `ADMIN_BOOTSTRAP_LOGIN`, `ADMIN_BOOTSTRAP_NAME` и
+`ADMIN_BOOTSTRAP_PASSWORD` из закрытых env-файлов. Повторный запуск при наличии
+учётной записи запрещён. Пароль не передавай аргументом командной строки и не
+выводи в журнал; после создания владельца удали временный bootstrap env-файл.
+
+```bash
+docker run --rm --network template_default \
+  --env-file /закрытый/путь/db.env \
+  --env-file /закрытый/путь/admin-bootstrap.env \
+  resto-template-migrator:latest \
+  node_modules/.bin/tsx scripts/bootstrap-admin.ts
+```
+
+В новой версии `ADMIN_PASSWORD` не используется для входа. Учётки и сессии
+живут в БД конкретного ресторана; при переносе на prod задаются новые
+доступы через bootstrap или раздел «Сотрудники», без изменения кода.
 
 ⚠️ deploy.sh НЕ регистрирует сайт в платформе. Для метрик/биллинга добавь
 запись вручную: строку `Site` (siteKey — случайный hex) и стартовый `BalanceTransaction`

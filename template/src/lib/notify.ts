@@ -1,6 +1,7 @@
 /** Уведомления о заказах/бронях в каналы ресторана. Этап 4 наполняет реализации. */
 import { getPrisma } from "./db";
 import { getSiteSettings } from "./site";
+import { orderStatusLabel } from "./order-status";
 
 export async function notifyNewOrder(orderId: string): Promise<void> {
   const prisma = getPrisma();
@@ -30,6 +31,7 @@ export async function notifyNewOrder(orderId: string): Promise<void> {
     order.bonusSpent > 0 ? `Бонусы: −${order.bonusSpent} ₽` : null,
     `Итого: ${order.total} ₽`,
     `Оплата: ${order.paymentMethod === "online" ? "онлайн" : "при получении"}`,
+    `Статус: ${orderStatusLabel(order.status)}`,
     "",
     `Гость: ${order.customerName}, ${order.customerPhone}`,
     order.addressText ? `Адрес: ${order.addressText}` : null,

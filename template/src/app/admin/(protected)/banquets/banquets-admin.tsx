@@ -51,6 +51,7 @@ export function BanquetsAdmin({
             <input value={s.contactPhone} onChange={(e) => setS({ ...s, contactPhone: e.target.value })} className={inputCls} />
           </label>
         </div>
+        <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="text-sm text-muted">Описание</span>
           <textarea rows={2} value={s.description} onChange={(e) => setS({ ...s, description: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-[var(--radius)] bg-card border border-foreground/15" />
@@ -59,6 +60,7 @@ export function BanquetsAdmin({
           <span className="text-sm text-muted">Условия</span>
           <textarea rows={3} value={s.conditions} onChange={(e) => setS({ ...s, conditions: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-[var(--radius)] bg-card border border-foreground/15" />
         </label>
+        </div>
         <label className="block">
           <span className="text-sm text-muted">Цены (опционально)</span>
           <textarea rows={2} value={s.pricesText} onChange={(e) => setS({ ...s, pricesText: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-[var(--radius)] bg-card border border-foreground/15" />
@@ -82,9 +84,10 @@ export function BanquetsAdmin({
               setTimeout(() => setSaved(false), 3000);
             })
           }
-          className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
+          className="justify-self-start min-h-11 px-4 rounded-[9px] bg-accent text-white text-xs font-bold disabled:opacity-50"
+          aria-label="Сохранить настройки"
         >
-          Сохранить настройки
+          Сохранить
         </button>
         {saved && <span className="ml-3 text-green-600 text-sm">Сохранено ✓</span>}
       </section>
@@ -205,7 +208,7 @@ function AddHallForm() {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="min-h-11 px-4 rounded-full border border-dashed border-foreground/30 text-sm text-muted">
+      <button onClick={() => setOpen(true)} className="w-full min-h-11 px-4 rounded-[9px] border border-foreground/20 bg-card text-sm">
         + Зал
       </button>
     );

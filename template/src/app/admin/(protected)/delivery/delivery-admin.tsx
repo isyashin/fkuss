@@ -80,7 +80,7 @@ export function DeliveryAdmin({ options }: { options: DeliveryOption[] }) {
       ))}
 
       {!editing ? (
-        <button onClick={() => setEditing({ ...EMPTY })} className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium">
+        <button onClick={() => setEditing({ ...EMPTY })} className="w-full min-h-11 px-4 rounded-[9px] border border-foreground/20 bg-card text-sm font-medium">
           + Вариант доставки
         </button>
       ) : (

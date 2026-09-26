@@ -111,6 +111,7 @@
     "email": { "enabled": true, "address": "orders@u-mamy.ru" },
     "whatsapp": { "enabled": true, "phone": "+79991234567" }
   },
+  "guestContact": { "whatsapp": true, "telegram": true },
   "payment": { "provider": "none", "shopIdRef": "YOOKASSA_SHOP_ID", "secretRef": "YOOKASSA_SECRET" },
   "loyalty": { "cashbackPercent": 5, "maxSpendPercent": 20 },
   "pricing": { "globalMode": "yandex", "globalPercent": 0 },
@@ -122,6 +123,8 @@
 
 ВАЖНО: значения секретов здесь не хранятся — только ИМЕНА переменных
 (`*Ref`), сами значения в `secrets/sites/<slug>.env`.
+`guestContact` управляет только ручными ссылками сотрудников на гостей и
+вариантами выбора при заказе; при отсутствии поля оба канала разрешены.
 
 ## theme.json
 

@@ -94,6 +94,53 @@ model Session {
   createdAt DateTime @default(now())
 }
 
+model AdminUser {
+  id           String   @id @default(cuid())
+  login        String   @unique
+  name         String
+  role         String   @default("staff") // owner | staff
+  passwordHash String
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sessions     AdminSession[]
+  notificationReceipts AdminEventReceipt[]
+}
+
+model AdminSession {
+  tokenHash String   @id
+  userId    String
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AdminEvent {
+  id        String   @id @default(cuid())
+  kind      String   // order | booking
+  reference String   // идентификатор заказа или брони
+  label     String
+  createdAt DateTime @default(now())
+  receipts  AdminEventReceipt[]
+
+  @@unique([kind, reference])
+  @@index([createdAt])
+}
+
+model AdminEventReceipt {
+  eventId   String
+  userId    String
+  event     AdminEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([eventId, userId])
+  @@index([userId])
+}
+
 model AuthCode {
   id        String   @id @default(cuid())
   customerId String?
@@ -123,7 +170,7 @@ model Order {
   number         Int      @unique @default(autoincrement())
   customerId     String?
   customer       Customer? @relation(fields: [customerId], references: [id])
-  status         String   @default("new") // new | accepted | cooking | delivering | done | cancelled
+  status         String   @default("new") // new | accepted | cooking | ready | handed_to_courier | delivered | issued | cancelled (по типу заказа)
   type           String   // delivery | pickup
   items          OrderItem[]
   itemsTotal     Int      // пересчитано на сервере
@@ -136,6 +183,7 @@ model Order {
   paymentId      String?
   customerName   String
   customerPhone  String
+  preferredChannel String? // phone | whatsapp | telegram; NULL — старые заказы без выбора
   addressText    String   @default("")
   comment        String   @default("")
   desiredTime    String   @default("") // человекочитаемый текст (обратная совместимость)

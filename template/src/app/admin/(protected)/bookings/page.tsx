@@ -1,27 +1,27 @@
 import { getPrisma } from "@/lib/db";
-import { BookingCard } from "./booking-card";
+import { requireAdminPermission } from "@/lib/admin-auth";
+import { parseBookingListQuery, type RawAdminQuery } from "@/lib/admin-list-query";
+import { loadBookingsPage } from "../admin-list-data";
+import { BookingsDashboard } from "./bookings-dashboard";
+import { getSiteSettings } from "@/lib/site";
+import { visibleGuestChannels } from "@/lib/guest-contact";
+import { loadUpcomingBookings } from "@/lib/admin-bookings-service";
+import { nowInTimeZone } from "@/lib/hours";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminBookingsPage() {
+export default async function AdminBookingsPage({ searchParams }: { searchParams: Promise<RawAdminQuery> }) {
+  await requireAdminPermission("bookings");
   const prisma = getPrisma();
-  const bookings = await prisma.reservation.findMany({
-    orderBy: [{ date: "desc" }, { time: "desc" }],
-    take: 100,
-  });
+  const raw = await searchParams;
+  const query = parseBookingListQuery(raw);
+  const selectedId = typeof raw.selected === "string" && raw.selected.length <= 100 ? raw.selected : null;
+  const [listing, settings, selectedBooking] = await Promise.all([
+    loadBookingsPage(prisma, query), getSiteSettings(),
+    selectedId ? prisma.reservation.findUnique({ where: { id: selectedId } }) : Promise.resolve(null),
+  ]);
+  const upcomingBookings = await loadUpcomingBookings(prisma, settings.timezone);
 
-  return (
-    <div>
-      <h1 className="text-2xl mb-4">Брони</h1>
-      {bookings.length === 0 ? (
-        <p className="text-muted">Броней пока нет.</p>
-      ) : (
-        <div className="space-y-3">
-          {bookings.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <BookingsDashboard {...listing} upcomingBookings={upcomingBookings} query={{ ...query, page: listing.page }} guestContact={visibleGuestChannels(settings)} timeZone={settings.timezone} today={nowInTimeZone(settings.timezone).date}
+    initialSelectedId={selectedId} selectedBooking={selectedBooking}/>;
 }

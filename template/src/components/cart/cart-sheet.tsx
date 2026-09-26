@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart/store";
 import { dishImageUrl } from "@/lib/assets";
 import type { ContentSettings } from "@/lib/content-schema";
+import type { GuestChannels, PreferredChannel } from "@/lib/guest-contact";
 
 function formatPrice(price: number): string {
   return `${price.toLocaleString("ru-RU")} ₽`;
@@ -16,6 +17,7 @@ export function CartSheet({
   delivery,
   loyalty,
   whatsapp,
+  guestContact,
   paymentProvider = "none",
   bonusBalance = 0,
   initialAddress = "",
@@ -24,6 +26,7 @@ export function CartSheet({
   delivery: ContentSettings["delivery"];
   loyalty: ContentSettings["loyalty"];
   whatsapp: ContentSettings["channels"]["whatsapp"];
+  guestContact: GuestChannels;
   paymentProvider?: string;
   bonusBalance?: number;
   initialAddress?: string;
@@ -39,6 +42,7 @@ export function CartSheet({
   const [type, setType] = useState<"delivery" | "pickup">(delivery.enabled ? "delivery" : "pickup");
   const [zoneName, setZoneName] = useState(delivery.zones[0]?.name ?? "");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "online">("cash");
+  const [preferredChannel, setPreferredChannel] = useState<PreferredChannel>("phone");
   const [bonusSpend, setBonusSpend] = useState(0);
   const [form, setForm] = useState({ address: initialAddress, name: "", phone: "", email: "", comment: "", website: "" });
 
@@ -111,6 +115,7 @@ export function CartSheet({
           address: form.address,
           customerName: form.name,
           customerPhone: form.phone,
+          preferredChannel,
           customerEmail: form.email,
           comment: form.comment,
           website: form.website, // honeypot
@@ -350,6 +355,12 @@ export function CartSheet({
                 className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
               />
             </label>
+            <fieldset className="space-y-1">
+              <legend className="text-sm text-muted mb-1">Как с вами связаться</legend>
+              <label className="flex items-center gap-2 min-h-11 text-sm"><input type="radio" name="preferred-channel" checked={preferredChannel === "phone"} onChange={() => setPreferredChannel("phone")}/> Позвонить</label>
+              {guestContact.whatsapp && <label className="flex items-center gap-2 min-h-11 text-sm"><input type="radio" name="preferred-channel" checked={preferredChannel === "whatsapp"} onChange={() => setPreferredChannel("whatsapp")}/> WhatsApp</label>}
+              {guestContact.telegram && <label className="flex items-center gap-2 min-h-11 text-sm"><input type="radio" name="preferred-channel" checked={preferredChannel === "telegram"} onChange={() => setPreferredChannel("telegram")}/> Telegram</label>}
+            </fieldset>
             <label className="block">
               <span className="text-sm text-muted">Email (для бонусов и истории заказов)</span>
               <input
@@ -468,7 +479,7 @@ export function CartSheet({
           <div className="text-center py-8">
             <p className="text-5xl mb-4">✓</p>
             <p className="text-xl font-medium">Заказ №{orderNumber} принят</p>
-            <p className="text-muted mt-2">Мы позвоним для подтверждения.</p>
+            <p className="text-muted mt-2">Мы свяжемся с вами выбранным способом для подтверждения.</p>
             {whatsapp.enabled && whatsapp.phone && (
               <a
                 href={`https://wa.me/${whatsapp.phone.replace(/\D/g, "")}?text=${encodeURIComponent(orderText)}`}

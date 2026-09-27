@@ -34,12 +34,18 @@ test("админ платформы: дашборд, карточка сайта
   await expect(page.getByText("Ручная операция: E2E корректировка")).toBeVisible({ timeout: 15000 });
   await expect(page.getByText("+500.00 ₽")).toBeVisible();
 
-  // Запрос экспорта из карточки (перезагрузка после refresh — страховка от гонки рендера)
-  await page.waitForLoadState("networkidle");
-  await page.reload();
-  const expBtn = page.getByRole("button", { name: /Запросить экспорт сайта|Подготовить новый архив/ });
-  await expect(expBtn.first()).toBeVisible({ timeout: 15000 });
-  await expBtn.first().click();
+  // Запрос экспорта из карточки (полная навигация — гарантия свежего SSR)
+  await page.goto("/admin/sites/buxara");
+  const expBtn = page.getByTestId("request-export");
+  try {
+    await expect(expBtn).toBeVisible({ timeout: 15000 });
+  } catch (error) {
+    const html = await page.content();
+    const i = html.indexOf("Экспорт сайта");
+    console.log("EXPORT SECTION:", html.slice(Math.max(0, i - 100), i + 600).replace(/\s+/g, " "));
+    throw error;
+  }
+  await expBtn.click();
   await expect(page.getByText(/Экспорт запрошен/)).toBeVisible({ timeout: 15000 });
 });
 

@@ -74,7 +74,7 @@ export async function AccountDashboard({ customer, ordersPage }: { customer: Cus
           <div className={styles.stat}>
             <div>
               <p className={styles.statLabel}>Бонусы</p>
-              <p className={styles.statValue}>{balance.toLocaleString("ru-RU")}</p>
+              <p className={styles.statValue} data-testid="bonus-balance">{balance.toLocaleString("ru-RU")}</p>
             </div>
           </div>
           <div style={{ marginTop: 12 }}>

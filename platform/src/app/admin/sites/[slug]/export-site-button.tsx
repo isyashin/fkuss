@@ -23,7 +23,7 @@ export function ExportSiteButton({ slug, requested, readyPath }: { slug: string;
     return <p className="pf-note">Экспорт запрошен — архив появится здесь после обработки (cron на хосте, ~5 мин).</p>;
   }
   return (
-    <button type="button" className="pf-btn pf-btnOutline" disabled={pending}
+    <button type="button" data-testid="request-export" className="pf-btn pf-btnOutline" disabled={pending}
       onClick={() => startTransition(async () => { await requestSiteExport(slug); router.refresh(); })}>
       {pending ? "Запрашиваю…" : "Запросить экспорт сайта"}
     </button>

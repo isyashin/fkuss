@@ -11,63 +11,56 @@ export function OwnerLoginForm() {
   const [step, setStep] = useState<"email" | "code">("email");
   const [devCode, setDevCode] = useState<string | null>(null);
   const [error, setError] = useState("");
-
-  const inputCls = "w-full min-h-11 px-3 rounded-lg border border-zinc-300";
+  const [sending, setSending] = useState(false);
 
   return (
-    <div className="space-y-4 max-w-sm">
+    <div style={{ display: "grid", gap: 14 }}>
       {step === "email" ? (
         <>
-          <p className="text-zinc-500">Введите email — пришлём код входа.</p>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.ru"
-            className={inputCls}
-          />
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-          <button
+          <label>
+            Email
+            <input type="email" value={email} inputMode="email" autoComplete="email"
+              onChange={(e) => setEmail(e.target.value)} placeholder="you@example.ru" className="pf-input" />
+          </label>
+          {error && <p role="alert" style={{ color: "var(--pf-red)", fontSize: 13, margin: 0 }}>{error}</p>}
+          <button type="button" className="pf-btn pf-btnPrimary" disabled={sending || !email.includes("@")}
             onClick={async () => {
+              setSending(true);
               setError("");
               const result = await requestCodeAction(email);
-              if (result.error) {
-                setError(result.error);
-                return;
-              }
+              setSending(false);
+              if (result.error) { setError(result.error); return; }
               if (result.devCode) setDevCode(result.devCode);
               setStep("code");
-            }}
-            className="w-full min-h-12 rounded-full bg-zinc-900 text-white font-medium"
-          >
-            Получить код
+            }}>
+            {sending ? "Отправляю…" : "Получить код"}
           </button>
         </>
       ) : (
         <>
-          <p className="text-zinc-500">
+          <p className="pf-note" style={{ margin: 0 }}>
             Код отправлен на {email}.
-            {devCode && <span className="block font-mono mt-1">DEV: {devCode}</span>}
+            {devCode && <span style={{ display: "block", fontFamily: "monospace", color: "var(--pf-accent)" }}>DEV: {devCode}</span>}
           </p>
-          <input
-            inputMode="numeric"
-            maxLength={6}
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-            className={`${inputCls} text-center text-2xl tracking-[0.5em] font-mono`}
-          />
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-          <button
+          <label>
+            Код из письма
+            <input inputMode="numeric" maxLength={6} autoComplete="one-time-code" value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              className="pf-input" style={{ textAlign: "center", fontSize: 22, letterSpacing: "0.5em", fontFamily: "monospace" }} />
+          </label>
+          {error && <p role="alert" style={{ color: "var(--pf-red)", fontSize: 13, margin: 0 }}>{error}</p>}
+          <button type="button" className="pf-btn pf-btnPrimary" disabled={sending || code.length !== 6}
             onClick={async () => {
+              setSending(true);
               setError("");
               const result = await verifyCodeAction(email, code);
+              setSending(false);
               if (result.ok) router.refresh();
               else setError(result.reason ?? "Ошибка");
-            }}
-            className="w-full min-h-12 rounded-full bg-zinc-900 text-white font-medium"
-          >
-            Войти
+            }}>
+            {sending ? "Проверяю…" : "Войти"}
           </button>
+          <button type="button" className="pf-btn pf-btnGhost" onClick={() => setStep("email")}>Изменить email</button>
         </>
       )}
     </div>

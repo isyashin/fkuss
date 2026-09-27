@@ -1,0 +1,50 @@
+[
+  {
+    "site": "ochag",
+    "order": {
+      "number": 6,
+      "total": 790,
+      "created": true,
+      "acceptedPersisted": true
+    },
+    "booking": {
+      "id": "cmuhpxohl000301ocp7zrq2y1",
+      "date": "2026-10-03",
+      "time": "17:30",
+      "created": true,
+      "confirmedPersisted": true
+    },
+    "menu": {
+      "stopListPersisted": true,
+      "restored": true
+    },
+    "settings": {
+      "bookingSlotPersisted": true,
+      "restored": true
+    }
+  },
+  {
+    "site": "buxara",
+    "order": {
+      "number": 5,
+      "total": 450,
+      "created": true,
+      "acceptedPersisted": true
+    },
+    "booking": {
+      "id": "cmuhpy4fs000301n1qfo96767",
+      "date": "2026-10-03",
+      "time": "17:30",
+      "created": true,
+      "confirmedPersisted": true
+    },
+    "menu": {
+      "stopListPersisted": true,
+      "restored": true
+    },
+    "settings": {
+      "bookingSlotPersisted": true,
+      "restored": true
+    }
+  }
+]

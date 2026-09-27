@@ -92,6 +92,8 @@ model OwnerAccount {
   email     String   @unique
   siteId    String
   site      Site     @relation(fields: [siteId], references: [slug])
+  notifyChannel String @default("email") // email | telegram
+  notifyTelegramChatId String @default("") // chat id, если канал telegram
   createdAt DateTime @default(now())
 }
 

@@ -1,26 +1,258 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Дизайн-система платформы — визуальный язык прототипа админки (test-front).
+   Токены на .pf-app; тёмная тема — класс .pf-dark на том же элементе. */
+
+.pf-app {
+  --pf-bg: #f7f5f1;
+  --pf-surface: #fffefd;
+  --pf-surface-2: #f6f1ec;
+  --pf-surface-3: #eee7e0;
+  --pf-text: #252320;
+  --pf-muted: #77716d;
+  --pf-line: #e8e2dc;
+  --pf-accent: #a65335;
+  --pf-accent-hover: #91462d;
+  --pf-accent-soft: #f8ece5;
+  --pf-blue: #436e8b;
+  --pf-blue-soft: #e8f0f6;
+  --pf-green: #327051;
+  --pf-green-soft: #e9f4ed;
+  --pf-red: #b3402f;
+  --pf-red-soft: #f9e9e5;
+  --pf-shadow: 0 8px 28px rgba(67, 48, 37, .035);
+  --pf-radius: 15px;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: Arial, Helvetica, sans-serif;
-  --font-mono: Consolas, "Liberation Mono", monospace;
+.pf-app.pf-dark {
+  --pf-bg: #1b1e1d;
+  --pf-surface: #242827;
+  --pf-surface-2: #2b302e;
+  --pf-surface-3: #343936;
+  --pf-text: #f4f0e9;
+  --pf-muted: #b0b2ad;
+  --pf-line: #3b413e;
+  --pf-accent: #cf8664;
+  --pf-accent-hover: #dda27f;
+  --pf-accent-soft: #493a32;
+  --pf-blue: #8bb9d4;
+  --pf-blue-soft: #304451;
+  --pf-green: #8fceac;
+  --pf-green-soft: #2b4839;
+  --pf-red: #e08a7a;
+  --pf-red-soft: #4a2f2a;
+  --pf-shadow: none;
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
+.pf-app {
+  display: flex;
+  min-height: 100vh;
+  background: var(--pf-bg);
+  color: var(--pf-text);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ---------- каркас: сайдбар + рабочая область ---------- */
+.pf-sidebar {
+  width: 232px;
+  flex: 0 0 232px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 12px;
+  background: var(--pf-surface);
+  border-right: 1px solid var(--pf-line);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.pf-brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px 16px; text-decoration: none; color: var(--pf-text); }
+.pf-brand .pf-brandLogo {
+  width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center;
+  border-radius: 11px; background: var(--pf-accent); color: #fff;
+  font: 700 19px Georgia, serif;
+}
+.pf-brand strong { display: block; font: 700 15px Georgia, serif; letter-spacing: -.01em; }
+.pf-brand small { color: var(--pf-muted); font-size: 11px; }
+.pf-nav { display: grid; gap: 3px; }
+.pf-nav a {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px;
+  border-radius: 10px; color: var(--pf-text); text-decoration: none; font-size: 13px; font-weight: 600;
+}
+.pf-nav a:hover { background: var(--pf-surface-2); }
+.pf-nav a[data-active="true"] { background: var(--pf-accent-soft); color: var(--pf-accent); }
+.pf-sideFoot { margin-top: auto; padding: 10px 8px 2px; color: var(--pf-muted); font-size: 11px; line-height: 1.5; border-top: 1px solid var(--pf-line); }
+
+.pf-workspace { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pf-topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 22px; background: var(--pf-surface); border-bottom: 1px solid var(--pf-line);
+  position: sticky; top: 0; z-index: 20;
+}
+.pf-crumb { font-size: 12px; color: var(--pf-muted); }
+.pf-crumb strong { color: var(--pf-text); font-size: 13px; }
+.pf-topActions { display: flex; align-items: center; gap: 10px; }
+
+.pf-main { flex: 1; padding: 22px; max-width: 1180px; width: 100%; margin: 0 auto; }
+
+/* переключатель темы */
+.pf-theme {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 13px;
+  border: 1px solid var(--pf-line); border-radius: 999px; background: var(--pf-surface);
+  color: var(--pf-text); cursor: pointer; font-size: 12px; font-weight: 600;
+}
+.pf-theme .pf-themeThumb {
+  width: 20px; height: 20px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--pf-surface-3); color: var(--pf-muted); font-size: 12px;
+}
+
+/* профиль */
+.pf-profile { position: relative; }
+.pf-profileButton {
+  display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 6px 0 6px;
+  border: 1px solid var(--pf-line); border-radius: 999px; background: var(--pf-surface);
+  color: var(--pf-text); cursor: pointer; font-size: 12px;
+}
+.pf-avatar {
+  width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--pf-accent); color: #fff; font-weight: 700; font-size: 13px;
+}
+.pf-popover {
+  position: absolute; right: 0; top: 50px; z-index: 50; width: 240px;
+  padding: 14px; border: 1px solid var(--pf-line); border-radius: 12px;
+  background: var(--pf-surface); box-shadow: 0 14px 30px rgba(0, 0, 0, .18);
+  display: grid; gap: 8px; font-size: 12px;
+}
+.pf-popover form { margin: 0; }
+.pf-popover a, .pf-popover button.pf-link {
+  color: var(--pf-text); text-decoration: none; background: none; border: 0; padding: 0;
+  cursor: pointer; font-size: 12px; text-align: left; min-height: 32px; display: flex; align-items: center;
+}
+.pf-popover a:hover, .pf-popover button.pf-link:hover { color: var(--pf-accent); }
+
+/* ---------- типографика ---------- */
+.pf-intro { margin-bottom: 18px; }
+.pf-intro span { color: var(--pf-accent); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.pf-intro h1 { margin: 5px 0 7px; font: 30px Georgia, serif; letter-spacing: -.02em; }
+.pf-intro p { margin: 0; color: var(--pf-muted); font-size: 13px; line-height: 1.5; }
+.pf-h2 { margin: 0 0 12px; font: 20px Georgia, serif; }
+.pf-muted { color: var(--pf-muted); }
+
+/* ---------- панели и карточки ---------- */
+.pf-panel {
+  background: var(--pf-surface);
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius);
+  box-shadow: var(--pf-shadow);
+  padding: 18px;
+}
+.pf-panel + .pf-panel { margin-top: 16px; }
+.pf-panelTitle { margin: 0 0 4px; font: 18px Georgia, serif; }
+.pf-panelHint { margin: 0 0 14px; color: var(--pf-muted); font-size: 12px; line-height: 1.5; }
+
+.pf-grid { display: grid; gap: 14px; }
+.pf-grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pf-grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.pf-stat .pf-statLabel { margin: 0 0 6px; color: var(--pf-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.pf-stat .pf-statValue { margin: 0; font: 26px Georgia, serif; }
+.pf-stat .pf-statNote { margin: 6px 0 0; color: var(--pf-muted); font-size: 12px; }
+
+/* ---------- кнопки ---------- */
+.pf-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 18px; border-radius: 999px; cursor: pointer;
+  font-size: 13px; font-weight: 700; text-decoration: none; border: 1px solid transparent;
+}
+.pf-btn:disabled { opacity: .5; cursor: not-allowed; }
+.pf-btnPrimary { background: var(--pf-accent); color: #fff; }
+.pf-btnPrimary:hover:not(:disabled) { background: var(--pf-accent-hover); }
+.pf-btnOutline { border-color: var(--pf-line); background: var(--pf-surface); color: var(--pf-text); }
+.pf-btnOutline:hover:not(:disabled) { border-color: var(--pf-accent); color: var(--pf-accent); }
+.pf-btnDanger { border-color: var(--pf-red); background: transparent; color: var(--pf-red); }
+.pf-btnGhost { background: transparent; color: var(--pf-muted); }
+.pf-btnGhost:hover:not(:disabled) { color: var(--pf-accent); }
+
+/* ---------- формы ---------- */
+.pf-input, .pf-select {
+  width: 100%; min-height: 44px; padding: 0 12px;
+  border: 1px solid var(--pf-line); border-radius: 9px;
+  background: var(--pf-surface); color: var(--pf-text); font-size: 13px; outline: none;
+}
+.pf-textarea { padding: 10px 12px; min-height: 88px; }
+.pf-input:focus, .pf-select:focus, .pf-textarea:focus { border-color: var(--pf-accent); }
+.pf-field { display: grid; gap: 5px; }
+.pf-field > span { font-size: 12px; color: var(--pf-muted); }
+.pf-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; cursor: pointer; }
+.pf-check input { width: 18px; height: 18px; accent-color: var(--pf-accent); }
+
+/* ---------- бейджи состояний ---------- */
+.pf-badge {
+  display: inline-flex; align-items: center; min-height: 24px; padding: 0 9px;
+  border-radius: 999px; font-size: 11px; font-weight: 700;
+}
+.pf-badgeGreen { background: var(--pf-green-soft); color: var(--pf-green); }
+.pf-badgeRed { background: var(--pf-red-soft); color: var(--pf-red); }
+.pf-badgeBlue { background: var(--pf-blue-soft); color: var(--pf-blue); }
+.pf-badgeNeutral { background: var(--pf-surface-3); color: var(--pf-muted); }
+
+/* ---------- списки и таблицы ---------- */
+.pf-rows { display: grid; gap: 8px; }
+.pf-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 14px; border: 1px solid var(--pf-line); border-radius: 11px;
+  background: var(--pf-surface); font-size: 13px;
+}
+.pf-rowMain { display: grid; gap: 2px; min-width: 0; }
+.pf-rowMain small { color: var(--pf-muted); font-size: 11px; }
+.pf-amountPos { color: var(--pf-green); font-weight: 700; white-space: nowrap; }
+.pf-amountNeg { color: var(--pf-red); font-weight: 700; white-space: nowrap; }
+
+.pf-tableWrap { overflow-x: auto; border: 1px solid var(--pf-line); border-radius: 11px; background: var(--pf-surface); }
+.pf-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
+.pf-table th {
+  text-align: left; padding: 10px 14px; color: var(--pf-muted); font-size: 11px;
+  text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--pf-line);
+  background: var(--pf-surface-2); white-space: nowrap;
+}
+.pf-table td { padding: 10px 14px; border-bottom: 1px solid var(--pf-line); }
+.pf-table tr:last-child td { border-bottom: 0; }
+
+/* карточка-ссылка (список сайтов) */
+.pf-siteCard {
+  display: grid; gap: 8px; padding: 16px 18px;
+  border: 1px solid var(--pf-line); border-radius: var(--pf-radius);
+  background: var(--pf-surface); box-shadow: var(--pf-shadow);
+  color: var(--pf-text); text-decoration: none;
+}
+.pf-siteCard:hover { border-color: var(--pf-accent); }
+.pf-siteCardHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.pf-siteCardHead strong { font: 18px Georgia, serif; }
+.pf-siteCardMeta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--pf-muted); font-size: 12px; }
+
+/* ---------- вход ---------- */
+.pf-loginPage { min-height: 100vh; display: grid; place-items: center; padding: 20px; }
+.pf-loginCard {
+  width: 100%; max-width: 420px; padding: 28px;
+  border: 1px solid var(--pf-line); border-radius: var(--pf-radius);
+  background: var(--pf-surface); box-shadow: var(--pf-shadow);
+}
+.pf-loginCard .pf-eyebrow { color: var(--pf-accent); font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.pf-loginCard h1 { margin: 8px 0 6px; font: 28px Georgia, serif; }
+.pf-loginCard > p { margin: 0 0 18px; color: var(--pf-muted); font-size: 13px; }
+.pf-loginCard form { display: grid; gap: 12px; }
+.pf-loginCard label { display: grid; gap: 5px; font-size: 12px; color: var(--pf-muted); }
+
+.pf-actionsRow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.pf-note { font-size: 12px; color: var(--pf-muted); }
+
+/* ---------- мобильная адаптация ---------- */
+@media (max-width: 860px) {
+  .pf-sidebar { display: none; }
+  .pf-main { padding: 14px; }
+  .pf-topbar { padding: 10px 14px; }
+  .pf-grid3, .pf-grid2 { grid-template-columns: 1fr; }
+  .pf-crumb span { display: none; }
 }

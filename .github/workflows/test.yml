@@ -85,6 +85,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/platform_test
       PLATFORM_DATABASE_URL: postgresql://test:test@localhost:5432/platform_test
+      PLATFORM_ADMIN_PASSWORD: platform-e2e-admin
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

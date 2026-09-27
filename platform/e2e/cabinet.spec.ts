@@ -19,7 +19,7 @@ test("владелец входит и пополняет баланс", async (
   await expect(page.getByText("Чайхана Бухара")).toBeVisible();
 
   // Пополнение через mock-провайдер
-  const balanceBefore = await page.locator("p.text-3xl").textContent();
+  const balanceBefore = await page.locator("p.pf-statValue").first().textContent();
   await page.locator('input[type="number"]').fill("1000");
   const mockNavigation = page.waitForRequest(
     (request) => new URL(request.url()).pathname === "/payment/mock",
@@ -40,7 +40,7 @@ test("владелец входит и пополняет баланс", async (
     .poll(
       async () => {
         await page.goto("/cabinet", { waitUntil: "domcontentloaded" }).catch(() => {});
-        return toNumber(await page.locator("p.text-3xl").textContent().catch(() => null));
+        return toNumber(await page.locator("p.pf-statValue").first().textContent().catch(() => null));
       },
       { timeout: 20000, intervals: [1000, 2000, 3000] },
     )

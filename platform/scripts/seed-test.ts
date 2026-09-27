@@ -29,6 +29,8 @@ async function main() {
     "owner@buxara.test",
     "owner-mobile@buxara.test",
     "owner-desktop@buxara.test",
+    "owner-notify-mobile@buxara.test",
+    "owner-notify-desktop@buxara.test",
   ]) {
     await prisma.ownerAccount.upsert({
       where: { email },

@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { hasRecentAdminEvent, playAdminSound, primeAdminAudio } from "@/lib/admin-audio";
 import type { PublicAdminSound } from "@/lib/admin-sound";
 import styles from "./admin-ui.module.css";
@@ -12,6 +12,7 @@ type EventItem = { id: string; kind: string; label: string; createdAt: string };
 type ResponseData = { events: EventItem[]; latestId: string | null; sound: PublicAdminSound };
 
 const ENABLED_KEY = "admin-sound-on";
+const ENABLED_EVENT = "admin-sound-flag";
 const DEFAULT_HINT = "Включите звук нажатием кнопки — браузер требует вашего действия.";
 
 function readEnabledFlag(): boolean {
@@ -23,31 +24,37 @@ function writeEnabledFlag(value: boolean) {
     else sessionStorage.removeItem(ENABLED_KEY);
   } catch { /* private mode */ }
 }
+function subscribeEnabled(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(ENABLED_EVENT, callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(ENABLED_EVENT, callback);
+  };
+}
 
 export function AdminNotifications() {
   const router = useRouter();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
-  const [enabled, setEnabled] = useState(false);
-  const [hint, setHint] = useState(DEFAULT_HINT);
-  // Восстанавливаем разблокировку звука после перезагрузки (через sessionStorage).
-  const [flagRestored, setFlagRestored] = useState(false);
-  if (!flagRestored) {
-    setFlagRestored(true);
-    if (readEnabledFlag()) {
-      setEnabled(true);
-      setHint("Звук включён для этой вкладки.");
-    }
-  }
+  // sessionStorage — источник истины: серверный снапшот false совпадает с SSR,
+  // после гидрации читается реальное значение (без рассинхрона #418).
+  const enabled = useSyncExternalStore(subscribeEnabled, readEnabledFlag, () => false);
+  const [errorHint, setErrorHint] = useState<string | null>(null);
+  const hint = errorHint ?? (enabled ? "Звук включён для этой вкладки." : DEFAULT_HINT);
   const sound = useRef<PublicAdminSound>({ selected: "standard1", customName: "", customUrl: "" });
   const latestId = useRef<string | null | undefined>(undefined);
   const enabledRef = useRef(enabled);
 
   useEffect(() => {
     enabledRef.current = enabled;
-    writeEnabledFlag(enabled);
   }, [enabled]);
+
+  function setSoundEnabled(value: boolean) {
+    writeEnabledFlag(value);
+    window.dispatchEvent(new Event(ENABLED_EVENT));
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -56,8 +63,7 @@ export function AdminNotifications() {
     const onFirstGesture = () => {
       void primeAdminAudio().then((ok) => {
         if (cancelled || !ok || enabledRef.current) return;
-        setEnabled(true);
-        setHint("Звук включён для этой вкладки.");
+        setSoundEnabled(true);
       });
     };
     document.addEventListener("click", onFirstGesture, { once: true });
@@ -79,8 +85,8 @@ export function AdminNotifications() {
           if (enabledRef.current && hasRecentAdminEvent(data.events)) {
             try { await playAdminSound(data.sound); }
             catch {
-              setEnabled(false);
-              setHint("Браузер не воспроизвёл звук. Нажмите «Включить звук» ещё раз.");
+              setSoundEnabled(false);
+              setErrorHint("Браузер не воспроизвёл звук. Нажмите «Включить звук» ещё раз.");
             }
           }
         }
@@ -92,16 +98,21 @@ export function AdminNotifications() {
     const timer = window.setInterval(() => void poll(), 10000);
     const onSoundChange = (event: Event) => { sound.current = (event as CustomEvent<PublicAdminSound>).detail; };
     window.addEventListener("admin-sound-change", onSoundChange);
-    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("click", onFirstGesture); window.removeEventListener("admin-sound-change", onSoundChange); };
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("click", onFirstGesture);
+      window.removeEventListener("admin-sound-change", onSoundChange);
+    };
   }, [router]);
 
   async function enableSound() {
     try {
       await playAdminSound(sound.current);
-      setEnabled(true);
-      setHint("Звук включён для этой вкладки.");
+      setErrorHint(null);
+      setSoundEnabled(true);
     } catch {
-      setHint("Браузер не воспроизвёл звук. Проверьте разрешение звука для сайта.");
+      setErrorHint("Браузер не воспроизвёл звук. Проверьте разрешение звука для сайта.");
     }
   }
 

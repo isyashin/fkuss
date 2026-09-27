@@ -213,9 +213,10 @@ test("admin dark theme colors the shell and panels consistently", async ({ page 
   await expect(page.getByRole("button", { name: "Включить светлую тему" })).toBeVisible();
   await expect.poll(colors).toMatchObject({ background: "rgb(27, 30, 29)", panel: "rgb(36, 40, 39)" });
   await page.goto("/admin/menu");
-  const menuColors = await page.getByRole("article").first().evaluate((element) => ({
+  // Опрос уведомлений может перерисовать страницу прямо во время замера —
+  // ждём стабильного состояния, как в проверках выше.
+  await expect.poll(async () => page.getByRole("article").first().evaluate((element) => ({
     background: getComputedStyle(element).backgroundColor,
     text: getComputedStyle(element).color,
-  }));
-  expect(menuColors).toEqual({ background: "rgb(36, 40, 39)", text: "rgb(244, 240, 233)" });
+  }))).toEqual({ background: "rgb(36, 40, 39)", text: "rgb(244, 240, 233)" });
 });

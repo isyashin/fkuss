@@ -256,7 +256,7 @@ export function PrintMaterialsAdmin({
             {trackedUrl && (
               <div className="rounded-[var(--radius)] bg-foreground/5 p-3 text-xs break-all">
                 <p className="text-muted mb-1">В QR-коде:</p>
-                <a href={trackedUrl} target="_blank" rel="noreferrer" className="text-accent underline">
+                <a href={trackedUrl} target="_blank" rel="noreferrer" className="text-accent underline inline-flex items-center min-h-11">
                   {trackedUrl}
                 </a>
               </div>

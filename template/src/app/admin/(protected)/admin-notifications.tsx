@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { hasRecentAdminEvent, playAdminSound } from "@/lib/admin-audio";
+import { hasRecentAdminEvent, playAdminSound, primeAdminAudio } from "@/lib/admin-audio";
 import type { PublicAdminSound } from "@/lib/admin-sound";
 import styles from "./admin-ui.module.css";
 import { AdminIcon } from "./admin-icon";
@@ -11,20 +11,57 @@ import { AdminIcon } from "./admin-icon";
 type EventItem = { id: string; kind: string; label: string; createdAt: string };
 type ResponseData = { events: EventItem[]; latestId: string | null; sound: PublicAdminSound };
 
+const ENABLED_KEY = "admin-sound-on";
+const DEFAULT_HINT = "Включите звук нажатием кнопки — браузер требует вашего действия.";
+
+function readEnabledFlag(): boolean {
+  try { return sessionStorage.getItem(ENABLED_KEY) === "1"; } catch { return false; }
+}
+function writeEnabledFlag(value: boolean) {
+  try {
+    if (value) sessionStorage.setItem(ENABLED_KEY, "1");
+    else sessionStorage.removeItem(ENABLED_KEY);
+  } catch { /* private mode */ }
+}
+
 export function AdminNotifications() {
   const router = useRouter();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const [enabled, setEnabled] = useState(false);
-  const [hint, setHint] = useState("Включите звук нажатием кнопки — браузер требует вашего действия.");
+  const [hint, setHint] = useState(DEFAULT_HINT);
+  // Восстанавливаем разблокировку звука после перезагрузки (через sessionStorage).
+  const [flagRestored, setFlagRestored] = useState(false);
+  if (!flagRestored) {
+    setFlagRestored(true);
+    if (readEnabledFlag()) {
+      setEnabled(true);
+      setHint("Звук включён для этой вкладки.");
+    }
+  }
   const sound = useRef<PublicAdminSound>({ selected: "standard1", customName: "", customUrl: "" });
   const latestId = useRef<string | null | undefined>(undefined);
-  const enabledRef = useRef(false);
+  const enabledRef = useRef(enabled);
+
+  useEffect(() => {
+    enabledRef.current = enabled;
+    writeEnabledFlag(enabled);
+  }, [enabled]);
 
   useEffect(() => {
     let cancelled = false;
     let busy = false;
+    // Первый клик в документе беззвучно будит AudioContext — без отдельной кнопки.
+    const onFirstGesture = () => {
+      void primeAdminAudio().then((ok) => {
+        if (cancelled || !ok || enabledRef.current) return;
+        setEnabled(true);
+        setHint("Звук включён для этой вкладки.");
+      });
+    };
+    document.addEventListener("click", onFirstGesture, { once: true });
+
     async function poll() {
       if (busy || cancelled) return;
       busy = true;
@@ -41,7 +78,10 @@ export function AdminNotifications() {
           setUnread((previous) => Math.min(99, previous + data.events.length));
           if (enabledRef.current && hasRecentAdminEvent(data.events)) {
             try { await playAdminSound(data.sound); }
-            catch { enabledRef.current = false; setEnabled(false); setHint("Браузер не воспроизвёл звук. Нажмите «Включить звук» ещё раз."); }
+            catch {
+              setEnabled(false);
+              setHint("Браузер не воспроизвёл звук. Нажмите «Включить звук» ещё раз.");
+            }
           }
         }
       } catch {
@@ -52,13 +92,12 @@ export function AdminNotifications() {
     const timer = window.setInterval(() => void poll(), 10000);
     const onSoundChange = (event: Event) => { sound.current = (event as CustomEvent<PublicAdminSound>).detail; };
     window.addEventListener("admin-sound-change", onSoundChange);
-    return () => { cancelled = true; window.clearInterval(timer); window.removeEventListener("admin-sound-change", onSoundChange); };
+    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("click", onFirstGesture); window.removeEventListener("admin-sound-change", onSoundChange); };
   }, [router]);
 
   async function enableSound() {
     try {
       await playAdminSound(sound.current);
-      enabledRef.current = true;
       setEnabled(true);
       setHint("Звук включён для этой вкладки.");
     } catch {
@@ -68,7 +107,7 @@ export function AdminNotifications() {
 
   return <div className={styles.notificationWrap}>
     <button type="button" className={styles.notificationButton} aria-label={`Оповещения${unread ? `: ${unread}` : ""}`} aria-expanded={open} onClick={() => { setOpen((value) => !value); setUnread(0); }}>
-      <AdminIcon name="bell"/>{unread > 0 && <span className={styles.notificationCount}>{unread}</span>}
+      <AdminIcon name="bell"/>{unread > 0 && <span className={styles.notificationCount}>{unread}</span>}{enabled && <span className={styles.notificationOn} title="Звук новых заказов включён"/>}
     </button>
     {open && <div className={styles.notificationPanel} role="region" aria-label="Новые события">
       <strong>Новые события</strong>

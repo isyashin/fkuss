@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export function AdminIcon({ name, size = 20 }: { name: string; size?: number }) {
   const paths: Record<string, ReactNode> = {
-    orders: <><circle cx="10.5" cy="4" r="1.5"/><rect x="1.5" y="9" width="4" height="4" rx=".5"/><path d="M5.5 11h2l1.2-3c.4-.9 1.7-1.1 2.4-.4l2.6 2.5 2.4.5m-7.4 1.2 3.5 1.2 3.2M3.5 16.5h12.2l1.5-5h1.7m-1.4 1 1.5 4"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></>,
+    orders: <><circle cx="10.5" cy="4" r="1.5"/><rect x="1.5" y="9" width="4" height="4" rx=".5"/><path d="M5.5 11h2l1.2-3c.4-.9 1.7-1.1 2.4-.4l2.6 2.5 2.4.5m-7.4 1.2 3.5 1.2M3.5 16.5h12.2l1.5-5h1.7m-1.4 1 1.5 4"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></>,
     bookings: <><circle cx="5" cy="5" r="1.5"/><circle cx="19" cy="5" r="1.5"/><path d="M5 8v5l3 2h2m9-7v5l-3 2h-2M3 11v6h5v3m13-9v6h-5v3M9.5 12h5M12 12v8"/></>,
     menu: <><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18M17 21V3c-3 2-4 5-4 10h4"/></>,
     settings: <><circle cx="12" cy="12" r="3"/><path d="m19.4 15 1.1 1.9-2.1 2.1-1.9-1.1a8 8 0 0 1-2 .8l-.6 2.2h-3l-.6-2.2a8 8 0 0 1-2-.8l-1.9 1.1-2.1-2.1L5.4 15a8 8 0 0 1-.8-2L2.4 12l2.2-1a8 8 0 0 1 .8-2L4.3 7.1 6.4 5l1.9 1.1a8 8 0 0 1 2-.8L10.9 3h3l.6 2.3a8 8 0 0 1 2 .8L18.4 5l2.1 2.1L19.4 9a8 8 0 0 1 .8 2l2.2 1-2.2 1a8 8 0 0 1-.8 2Z"/></>,

@@ -108,6 +108,11 @@ export function SettingsAdmin({ settings, theme, sound, actor, restaurantSection
 
   return (
     <div className={styles.page}>
+      <div className={styles.intro}>
+        <span>Управление рестораном</span>
+        <h1>Настройки</h1>
+        <p>Параметры панели, сайта, доставки, цен, каналов связи и бронирования.</p>
+      </div>
       <section className={styles.card} aria-label="Внешний вид панели">
         <h2>Внешний вид</h2>
         <p className={styles.cardHint}>Только для панели: тема сайта ресторана не меняется</p>

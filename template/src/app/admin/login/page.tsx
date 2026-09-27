@@ -12,6 +12,7 @@ export default async function AdminLoginPage() {
 
   return (
     <main className={styles.page}>
+      <style>{"body > header:first-of-type { display: none; }"}</style>
       <div className={styles.card}>
         <span className={styles.eyebrow}>ПАНЕЛЬ РЕСТОРАНА</span>
         <h1>Вход в админку</h1>

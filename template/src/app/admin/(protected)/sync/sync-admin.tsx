@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { saveSyncSettings, runSyncNow } from "./actions";
 import type { ContentSettings } from "@/lib/content-schema";
+import { formatAdminDate } from "@/lib/admin-date";
 import styles from "./sync-admin.module.css";
 
 export function SyncAdmin({
@@ -22,6 +23,10 @@ export function SyncAdmin({
   const lastSuccess = typeof syncState.lastSuccess === "string" ? syncState.lastSuccess : null;
   const lastAttempt = typeof syncState.lastAttempt === "string" ? syncState.lastAttempt : null;
   const running = syncState.running === true;
+  // Единый формат дат на сервере и в браузере, в часовом поясе ресторана.
+  const timeZone = (settings as { timezone?: string }).timezone ?? "Europe/Moscow";
+  const attemptText = lastAttempt ? formatAdminDate(new Date(lastAttempt), timeZone) : "—";
+  const successText = lastSuccess ? formatAdminDate(new Date(lastSuccess), timeZone) : "—";
 
   return (
     <div className={styles.form}>
@@ -93,7 +98,7 @@ export function SyncAdmin({
         {saved && <span className="text-green-600 text-sm">Сохранено ✓</span>}
         </div>
         <div className={styles.status}>
-          <p>Последняя попытка: {lastAttempt ? new Date(lastAttempt).toLocaleString("ru-RU") : "—"} · Последний успех: {lastSuccess ? new Date(lastSuccess).toLocaleString("ru-RU") : "—"}</p>
+          <p>Последняя попытка: {attemptText} · Последний успех: {successText}</p>
           {running && <p>Синхронизация выполняется…</p>}
           {lastError && !running && <p role="alert">Ошибка: {lastError}</p>}
           {result && <p role="status">{result}</p>}

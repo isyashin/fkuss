@@ -2,12 +2,13 @@ import { test, expect, type Page } from "@playwright/test";
 
 // Личный кабинет гостя: профиль, адреса, заказ → детали → повтор → отмена.
 
-async function loginAsFreshCustomer(page: Page, request: import("@playwright/test").APIRequestContext, tag: string) {
+async function loginAsFreshCustomer(page: Page, request: import("@playwright/test").APIRequestContext, tag: string, ip: string) {
   const email = `account-${tag}-${Date.now()}@example.com`;
   const codeResponse = await request.post("/api/auth/request-code", {
     data: { email },
-    headers: { "x-forwarded-for": "10.99.30.1" },
+    headers: { "x-forwarded-for": ip },
   });
+  expect(codeResponse.ok()).toBe(true);
   const { devCode } = await codeResponse.json();
   await request.post("/api/auth/verify", { data: { email, code: devCode } });
   const cookies = await request.storageState();
@@ -18,7 +19,8 @@ async function loginAsFreshCustomer(page: Page, request: import("@playwright/tes
 
 test("гость управляет профилем и адресами", async ({ page, request }, testInfo) => {
   testInfo.setTimeout(90_000);
-  await loginAsFreshCustomer(page, request, "profile");
+  const ipPart = testInfo.project.name === "webkit-mobile" ? 3 : testInfo.project.name.includes("mobile") ? 1 : 2;
+  await loginAsFreshCustomer(page, request, "profile", `10.99.40.${ipPart}`);
 
   // Профиль: имя и телефон
   await page.getByRole("button", { name: "Изменить имя и телефон" }).click();
@@ -47,7 +49,8 @@ test("гость управляет профилем и адресами", async
 
 test("заказ гостя: детали, повтор и отмена из кабинета", async ({ page, request }, testInfo) => {
   testInfo.setTimeout(120_000);
-  await loginAsFreshCustomer(page, request, "order");
+  const ipPart = testInfo.project.name === "webkit-mobile" ? 3 : testInfo.project.name.includes("mobile") ? 1 : 2;
+  await loginAsFreshCustomer(page, request, "order", `10.99.41.${ipPart}`);
 
   // Заказ через витрину (сессия уже в контексте → заказ привяжется к гостю)
   await page.setExtraHTTPHeaders({ "x-forwarded-for": "10.99.31.1" });

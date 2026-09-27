@@ -7,6 +7,9 @@ import { LogoutButton } from "./logout-button";
 import { CancelBookingButton } from "./cancel-booking-button";
 import { AddressSection } from "./address-section";
 import { RepeatOrderButton } from "./repeat-order-button";
+import { CancelOrderButton } from "./cancel-order-button";
+import { ProfileForm } from "./profile-form";
+import styles from "./account.module.css";
 
 const BOOKING_STATUS: Record<string, string> = {
   new: "ожидает подтверждения",
@@ -15,13 +18,32 @@ const BOOKING_STATUS: Record<string, string> = {
   cancelled: "отменена",
 };
 
-export async function AccountDashboard({ customer }: { customer: Customer }) {
+const TX_LABEL: Record<string, string> = {
+  accrual: "начисление",
+  spend: "списание",
+  reversal: "сторно",
+  refund: "возврат",
+};
+
+const ORDERS_PER_PAGE = 8;
+
+function orderBadgeClass(status: string): string {
+  if (status === "cancelled") return styles.badgeRed;
+  if (status === "new") return styles.badgeBlue;
+  if (status === "delivered" || status === "issued") return styles.badgeGreen;
+  return styles.badgeNeutral;
+}
+
+export async function AccountDashboard({ customer, ordersPage }: { customer: Customer; ordersPage: number }) {
   const prisma = getPrisma();
-  const [orders, bookings, balance, addresses] = await Promise.all([
+  const page = Math.max(1, ordersPage);
+  const [ordersTotal, orders, bookings, balance, transactions, addresses] = await Promise.all([
+    prisma.order.count({ where: { customerId: customer.id } }),
     prisma.order.findMany({
       where: { customerId: customer.id },
       orderBy: { createdAt: "desc" },
-      take: 20,
+      skip: (page - 1) * ORDERS_PER_PAGE,
+      take: ORDERS_PER_PAGE,
       include: { items: true },
     }),
     prisma.reservation.findMany({
@@ -30,80 +52,141 @@ export async function AccountDashboard({ customer }: { customer: Customer }) {
       take: 10,
     }),
     getBonusBalance(prisma, customer.id),
+    prisma.bonusTransaction.findMany({
+      where: { customerId: customer.id },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+    }),
     prisma.address.findMany({ where: { customerId: customer.id } }),
   ]);
+  const pageCount = Math.max(1, Math.ceil(ordersTotal / ORDERS_PER_PAGE));
 
   return (
-    <div className="space-y-8">
-      <div className="bg-card rounded-[var(--radius)] p-5 flex items-center justify-between">
-        <div>
-          <p className="text-muted text-sm">Бонусы</p>
-          <p className="text-3xl font-semibold text-accent">{balance.toLocaleString("ru-RU")}</p>
-        </div>
-        <LogoutButton />
+    <>
+      <div className={styles.intro}>
+        <span>Личный кабинет</span>
+        <h1>Здравствуйте{customer.name ? `, ${customer.name}` : ""}!</h1>
+        <p>Ваши заказы, бонусы, брони и адреса.</p>
       </div>
 
-      <section>
-        <h2 className="text-xl mb-3">История заказов</h2>
+      <div className={styles.grid2} style={{ marginBottom: 14 }}>
+        <div className={styles.panel}>
+          <div className={styles.stat}>
+            <div>
+              <p className={styles.statLabel}>Бонусы</p>
+              <p className={styles.statValue}>{balance.toLocaleString("ru-RU")}</p>
+            </div>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            {transactions.length === 0 ? (
+              <p className={styles.note}>Операций пока не было — бонусы начисляются после каждого выполненного заказа.</p>
+            ) : (
+              <ul className={styles.orderItems}>
+                {transactions.map((tx) => (
+                  <li key={tx.id}>
+                    <span>
+                      {new Date(tx.createdAt).toLocaleDateString("ru-RU")} · {TX_LABEL[tx.type] ?? tx.type}
+                      {tx.comment ? ` · ${tx.comment}` : ""}
+                    </span>
+                    <span style={{ color: tx.amount >= 0 ? "#327051" : "#b3402f", fontWeight: 700 }}>
+                      {tx.amount >= 0 ? "+" : ""}{tx.amount}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.panel}>
+          <h2 className={styles.h2}>Профиль</h2>
+          <p className={styles.hint}>Контакты используются в заказах и бронях.</p>
+          <div className={styles.facts} style={{ marginTop: 0, marginBottom: 14 }}>
+            <div className={styles.fact}><span>Email</span>{customer.email}</div>
+            <div className={styles.fact}><span>Имя</span>{customer.name || "—"}</div>
+            <div className={styles.fact}><span>Телефон</span>{customer.phone || "—"}</div>
+          </div>
+          <ProfileForm initialName={customer.name} initialPhone={customer.phone} />
+        </div>
+      </div>
+
+      <div className={styles.panel} style={{ marginBottom: 14 }}>
+        <h2 className={styles.h2}>История заказов</h2>
+        <p className={styles.hint}>Всего {ordersTotal}. Клик по заказу — детали.</p>
         {orders.length === 0 ? (
-          <p className="text-muted">Пока пусто. <Link href="/menu" className="text-accent">Перейти в меню</Link></p>
+          <p className={styles.note}>Пока пусто. <Link href="/#menu" style={{ color: "var(--accent)" }}>Перейти в меню</Link></p>
         ) : (
-          <div className="space-y-3">
-            {orders.map((order) => (
-              <div key={order.id} className="bg-card rounded-[var(--radius)] p-4">
-                <div className="flex justify-between items-baseline gap-2">
-                  <p className="font-medium">№{order.number} · {orderStatusLabel(order.status).toLocaleLowerCase("ru-RU")}</p>
-                  <div className="flex items-center gap-2">
-                    <RepeatOrderButton
-                      items={order.items.map((i) => ({
-                        dishId: i.dishId,
-                        name: i.name,
-                        price: i.price,
-                        quantity: i.quantity,
-                        modifiers: (i.modifiers as { id: string; name: string; price: number }[]) ?? [],
-                      }))}
-                    />
-                    <p className="text-accent font-semibold">{order.total.toLocaleString("ru-RU")} ₽</p>
+          <>
+            <div className={styles.rows}>
+              {orders.map((order) => (
+                <div key={order.id} className={styles.row}>
+                  <div className={styles.rowMain} style={{ flex: 1 }}>
+                    <span>
+                      <Link href={`/account/orders/${order.id}`} className={styles.rowLink} style={{ fontWeight: 700 }}>
+                        Заказ №{order.number}
+                      </Link>{" "}
+                      <span className={styles.badge + " " + orderBadgeClass(order.status)}>
+                        {orderStatusLabel(order.status)}
+                      </span>
+                    </span>
+                    <small>
+                      {order.createdAt.toLocaleString("ru-RU")} · {order.type === "delivery" ? "доставка" : "самовывоз"}
+                      {order.bonusAccrued > 0 && ` · +${order.bonusAccrued} бонусов`}
+                    </small>
+                    <small>{order.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}</small>
+                  </div>
+                  <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
+                    <strong>{order.total.toLocaleString("ru-RU")} ₽</strong>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <RepeatOrderButton orderId={order.id} />
+                      {order.status === "new" && <CancelOrderButton orderId={order.id} />}
+                    </div>
                   </div>
                 </div>
-                <p className="text-muted text-sm mt-1">
-                  {order.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}
-                </p>
-                <p className="text-muted text-xs mt-1">
-                  {order.createdAt.toLocaleString("ru-RU")} · {order.type === "delivery" ? "доставка" : "самовывоз"}
-                  {order.bonusAccrued > 0 && ` · +${order.bonusAccrued} бонусов`}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {pageCount > 1 && (
+              <nav className={styles.pager} aria-label="Страницы заказов">
+                {page > 1 && <Link href={`/account?ordersPage=${page - 1}`}>← Назад</Link>}
+                <span>{page} / {pageCount}</span>
+                {page < pageCount && <Link href={`/account?ordersPage=${page + 1}`}>Вперёд →</Link>}
+              </nav>
+            )}
+          </>
         )}
-      </section>
+      </div>
 
-      <section>
-        <h2 className="text-xl mb-3">Мои брони</h2>
-        {bookings.length === 0 ? (
-          <p className="text-muted">Броней нет. <Link href="/booking" className="text-accent">Забронировать</Link></p>
-        ) : (
-          <div className="space-y-3">
-            {bookings.map((b) => (
-              <div key={b.id} className="bg-card rounded-[var(--radius)] p-4">
-                <div className="flex justify-between gap-2 items-baseline">
-                  <p className="font-medium">{b.date} в {b.time} · {b.guests} гостей</p>
-                  {["new", "confirmed"].includes(b.status) && (
-                    <CancelBookingButton id={b.id} />
-                  )}
+      <div className={styles.grid2}>
+        <div className={styles.panel}>
+          <h2 className={styles.h2}>Мои брони</h2>
+          <p className={styles.hint}>Бронирование столов в ресторане.</p>
+          {bookings.length === 0 ? (
+            <p className={styles.note}>Броней нет. <Link href="/booking" style={{ color: "var(--accent)" }}>Забронировать</Link></p>
+          ) : (
+            <div className={styles.rows}>
+              {bookings.map((b) => (
+                <div key={b.id} className={styles.row}>
+                  <div className={styles.rowMain}>
+                    <span>{b.date} в {b.time} · {b.guests} гостей</span>
+                    <small>{BOOKING_STATUS[b.status] ?? b.status}</small>
+                  </div>
+                  {["new", "confirmed"].includes(b.status) && <CancelBookingButton id={b.id} />}
                 </div>
-                <p className="text-muted text-sm mt-0.5">{BOOKING_STATUS[b.status] ?? b.status}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </div>
 
-      <section>
-        <h2 className="text-xl mb-3">Адреса доставки</h2>
-        <AddressSection addresses={addresses} />
-      </section>
-    </div>
+        <div className={styles.panel}>
+          <h2 className={styles.h2}>Адреса доставки</h2>
+          <p className={styles.hint}>Сохранённые адреса подставляются при оформлении.</p>
+          <AddressSection addresses={addresses} />
+        </div>
+      </div>
+
+      <div style={{ marginTop: 18 }}>
+        <LogoutButton />
+      </div>
+    </>
   );
 }

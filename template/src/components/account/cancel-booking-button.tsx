@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { cancelBooking } from "@/app/account/actions";
+import styles from "./account.module.css";
 
 export function CancelBookingButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition();
@@ -11,9 +12,9 @@ export function CancelBookingButton({ id }: { id: string }) {
       onClick={() => {
         if (confirm("Отменить бронь?")) startTransition(() => cancelBooking(id));
       }}
-      className="min-h-11 px-4 rounded-full border border-red-300 text-red-600 text-sm"
+      className={styles.btn + " " + styles.btnDanger}
     >
-      Отменить
+      {pending ? "Отменяю…" : "Отменить"}
     </button>
   );
 }

@@ -10,7 +10,7 @@ export default async function AccountPage() {
   return (
     <main className="flex-1 mx-auto w-full max-w-2xl px-4 py-8">
       <h1 className="text-3xl mb-6">{customer ? "Личный кабинет" : "Вход"}</h1>
-      {customer ? <AccountDashboard customer={customer} /> : <LoginForm />}
+      {customer ? <AccountDashboard customer={customer} /> : <LoginForm devLogin={process.env.DEV_GUEST_LOGIN === "1"} />}
     </main>
   );
 }

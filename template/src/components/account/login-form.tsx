@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function LoginForm() {
+export function LoginForm({ devLogin = false }: { devLogin?: boolean }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -11,6 +11,28 @@ export function LoginForm() {
   const [devCode, setDevCode] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+
+  async function devEnter() {
+    setSending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/auth/dev-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error ?? "Не удалось войти");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Нет связи. Попробуйте ещё раз.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function requestCode() {
     setSending(true);
@@ -58,6 +80,35 @@ export function LoginForm() {
   }
 
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
+
+  if (devLogin) {
+    return (
+      <div className="space-y-4 max-w-sm">
+        <p className="text-muted">
+          DEV-режим: вход без кода на почту.
+        </p>
+        <label className="block">
+          <span className="text-sm text-muted">Email</span>
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={inputCls}
+          />
+        </label>
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+        <button
+          onClick={devEnter}
+          disabled={sending || !email.includes("@")}
+          className="w-full min-h-12 rounded-full bg-accent text-white font-medium disabled:opacity-50"
+        >
+          {sending ? "Входим…" : "Войти"}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 max-w-sm">

@@ -39,6 +39,8 @@ RUN addgroup -S app && adduser -S app -G app
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
+# standalone копируется с владельцем root, а процесс — app: runtime-кэш .next недоступен
+RUN mkdir -p /app/.next/cache && chown -R app:app /app/.next
 # content/ не запечён в образ — монтируется volume-ом при запуске сайта
 VOLUME ["/app/content"]
 

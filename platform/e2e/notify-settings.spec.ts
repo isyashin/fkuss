@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 // Кабинет владельца: канал уведомлений сохраняется и переживает перезагрузку.
+// Важно: email должен существовать в сиде (код не запрашивается для неизвестных).
 test("владелец настраивает канал уведомлений о балансе", async ({ page }, testInfo) => {
-  const email = `notify-${testInfo.project.name}@buxara.test`;
+  const email = testInfo.project.name === "mobile" ? "owner-mobile@buxara.test" : "owner-desktop@buxara.test";
   await page.goto("/cabinet");
   await page.getByPlaceholder("you@example.ru").fill(email);
   await page.getByRole("button", { name: "Получить код" }).click();

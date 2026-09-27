@@ -35,7 +35,9 @@ test("админ платформы: дашборд, карточка сайта
   await expect(page.getByText("+500.00 ₽")).toBeVisible();
 
   // Запрос экспорта из карточки
-  await page.getByRole("button", { name: "Запросить экспорт сайта" }).click();
+  const expBtn = page.getByRole("button", { name: /Запросить экспорт сайта|Подготовить новый архив/ });
+  await expect(expBtn.first()).toBeVisible({ timeout: 15000 });
+  await expBtn.first().click();
   await expect(page.getByText(/Экспорт запрошен/)).toBeVisible({ timeout: 15000 });
 });
 

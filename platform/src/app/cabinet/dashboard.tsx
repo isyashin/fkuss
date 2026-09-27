@@ -38,7 +38,7 @@ export async function OwnerDashboard({ ownerId }: { ownerId: string }) {
           <p className="pf-statLabel">Баланс</p>
           <p className="pf-statValue">{rub(balance)}</p>
           <p className="pf-statNote">
-            {site.tariff ? `тариф «${site.tariff.name}», ${rub(site.tariff.monthlyPrice)}/мес` : "без тарифа"}
+            {site.tariff ? `тариф «${site.tariff.name}», ${site.tariff.monthlyPrice} ₽/мес` : "без тарифа"}
             {" · "}хватит на {days === Infinity ? "∞" : `${days} дн.`}
           </p>
           <div style={{ marginTop: 14 }}>

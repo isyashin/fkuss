@@ -54,7 +54,7 @@ export default async function SiteCardPage({ params }: { params: Promise<{ slug:
         <div className="pf-panel pf-stat">
           <p className="pf-statLabel">Тариф</p>
           <p className="pf-statValue">{site.tariff?.name ?? "—"}</p>
-          <p className="pf-statNote">{site.tariff ? `${rub(site.tariff.monthlyPrice)} в месяц` : "не назначен"}</p>
+          <p className="pf-statNote">{site.tariff ? `${site.tariff.monthlyPrice} ₽ в месяц` : "не назначен"}</p>
         </div>
         <div className="pf-panel pf-stat">
           <p className="pf-statLabel">Метрики</p>

@@ -46,7 +46,7 @@ export default async function PlatformAdminPage() {
       <div className="pf-grid pf-grid3" style={{ marginBottom: 18 }}>
         <div className="pf-panel pf-stat">
           <p className="pf-statLabel">MRR · тарифы активных</p>
-          <p className="pf-statValue">{rub(mrr)}</p>
+          <p className="pf-statValue">{mrr.toFixed(2)} ₽</p>
           <p className="pf-statNote">в месяц по {active.length} сайтам</p>
         </div>
         <div className="pf-panel pf-stat">

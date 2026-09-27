@@ -14,7 +14,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       {customer ? <AccountDashboard customer={customer} ordersPage={page} /> : (
         <>
           <h1 className="text-3xl mb-6">Вход</h1>
-          <LoginForm />
+          <LoginForm devLogin={process.env.DEV_GUEST_LOGIN === "1"} />
         </>
       )}
     </main>

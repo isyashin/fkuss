@@ -36,8 +36,10 @@ test("табы категорий листаются мышью и колесо�
   await lastTab.click();
   await expect(page.getByRole("heading", { name: lastName })).toBeInViewport();
 
-  // 4) драг НЕ выбирает категорию: тянем от первого таба — активный не меняется
+  // 4) драг НЕ выбирает категорию: активная до драга остаётся активной
+  await page.reload();
   const first = tabs.getByRole("tab").first();
+  await expect(first).toHaveAttribute("data-active", "true"); // предусловие: первая активна
   const firstBox = (await first.boundingBox())!;
   await page.mouse.move(firstBox.x + 20, firstBox.y + firstBox.height / 2);
   await page.mouse.down();

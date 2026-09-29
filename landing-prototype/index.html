@@ -94,7 +94,7 @@
             <div class="guest-visual" role="img" aria-label="Пример личного кабинета гостя с бонусами и повторным заказом">
               <div class="account-card">
                 <div class="account-header"><span class="avatar" aria-hidden="true">☺</span><strong data-text="included.guest.account"></strong><span aria-hidden="true">↗</span></div>
-                <div class="loyalty-ticket"><span class="loyalty-mark" aria-hidden="true">✳</span><strong data-text="included.guest.loyalty"></strong><span class="loyalty-line" aria-hidden="true"></span></div>
+                <div class="loyalty-ticket"><strong data-text="included.guest.loyalty"></strong><span class="loyalty-line" aria-hidden="true"></span></div>
                 <div class="history-title"><span data-text="included.guest.history"></span><span aria-hidden="true">↓</span></div>
                 <div class="repeat-order"><img id="repeat-food" width="80" height="80" loading="lazy" decoding="async" alt=""><div><small data-text="included.guest.order"></small><b data-text="included.guest.dish"></b></div></div>
                 <div class="repeat-button"><span aria-hidden="true">↻</span><span data-text="included.guest.repeat"></span></div>
@@ -104,15 +104,13 @@
           </article>
           <article class="product-card team-product">
             <div class="product-copy"><p class="product-label" data-text="included.team.label"></p><h3 data-text="included.team.title"></h3><p data-text="included.team.body"></p></div>
-            <div class="team-visual" role="img" aria-label="Пример панели ресторана: новые заказы, готовящиеся и готовые к выдаче">
-              <div class="orders-panel">
-                <div class="orders-heading"><strong data-text="included.team.panelTitle"></strong><span class="panel-controls" aria-hidden="true">≡</span></div>
-                <p class="panel-caption" data-text="included.team.panelBadge"></p>
-                <div id="demo-orders"></div>
-                <div class="panel-bottom" aria-hidden="true"><span></span><span></span><span></span></div>
-              </div>
-              <p class="sample-caption" data-text="included.team.sample"></p>
-            </div>
+            <figure class="team-visual">
+              <a id="admin-preview" class="admin-preview" target="_blank" rel="noopener noreferrer">
+                <img id="admin-screenshot" width="1000" height="868" loading="lazy" decoding="async">
+                <span class="admin-preview-action"><span data-text="included.team.zoomLabel"></span><span aria-hidden="true">↗</span></span>
+              </a>
+              <figcaption class="sample-caption" data-text="included.team.sample"></figcaption>
+            </figure>
           </article>
         </div>
         <div class="features-grid" id="features-grid"></div>

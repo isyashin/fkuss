@@ -126,13 +126,13 @@ h1 .accent{color:var(--forest)}
 .product-copy h3{font-size:30px;white-space:pre-line;margin-top:20px;line-height:1.16}
 .product-copy>p:last-child{font-size:14px;color:var(--muted);line-height:1.7;margin-top:16px;max-width:415px}
 .guest-visual,.team-visual{padding:28px 20px 17px}
+.team-visual{margin:0}
 .account-card{max-width:380px;margin:0 auto;background:#fff;border:1px solid #d2d9c9;border-radius:17px;padding:18px 18px 14px;box-shadow:0 16px 32px #253b2d0a}
 .account-header{display:flex;gap:9px;align-items:center;font-size:10px;line-height:1.3}
 .account-header>span:last-child{margin-left:auto;font-size:17px}
 .avatar{background:#eaf0df;width:30px;height:30px;font-size:20px;display:grid;place-content:center;border-radius:50%}
 .loyalty-ticket{position:relative;background:var(--forest);color:#edf3e5;border-radius:9px;padding:16px;margin-top:16px;display:flex;align-items:center;gap:15px;overflow:hidden}
 .loyalty-ticket strong{font-size:17px;line-height:1.4;max-width:170px;z-index:1;font-weight:500}
-.loyalty-mark{font-size:48px;line-height:1;color:#cdddaf}
 .loyalty-line{position:absolute;width:100px;height:100px;right:-47px;top:3px;border:1px solid #7e926b;border-radius:50%;box-shadow:0 0 0 12px #243e33,0 0 0 13px #7e926b,0 0 0 25px #243e33,0 0 0 26px #7e926b}
 .history-title{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin:21px 0 12px}
 .repeat-order{display:flex;gap:12px;align-items:center}
@@ -142,22 +142,11 @@ h1 .accent{color:var(--forest)}
 .repeat-button{margin-top:16px;padding:10px 12px;display:flex;justify-content:center;align-items:center;gap:8px;border-radius:8px;background:#eef2e6;font-size:11px;font-weight:600}
 .repeat-button>span:first-child{font-size:18px;line-height:1}
 .sample-caption{font-size:9px;text-align:center;color:#62685b;margin-top:15px}
-.orders-panel{max-width:380px;margin:auto;border:1px solid #d6d3cb;border-radius:17px;background:#fff;padding:20px 16px 14px;box-shadow:0 16px 32px #253b2d0a}
-.orders-heading{display:flex;justify-content:space-between;align-items:center;line-height:1}
-.orders-heading strong{font-size:23px;font-weight:600;letter-spacing:-.035em}
-.panel-controls{font-size:22px}
-.panel-caption{font-size:9px;color:var(--muted);margin-top:8px;margin-bottom:16px}
-.demo-order{display:flex;gap:8px;align-items:center;padding:14px 0;border-top:1px solid #e9eae3}
-.order-mark{display:grid;place-content:center;width:29px;height:29px;flex:none;border-radius:8px;background:#f5f5ef;font-size:13px}
-.order-copy{font-size:10px;line-height:1.5}
-.order-copy strong{font-weight:600;display:block}
-.order-copy small{font-size:8px;color:var(--muted)}
-.order-status{margin-left:auto;font-size:8px;line-height:1.3;border-radius:5px;padding:5px 6px;white-space:nowrap;background:#fce9d8;color:#854506}
-.demo-order:nth-child(2) .order-status{background:#edf0ff;color:#515da4}
-.demo-order:nth-child(3) .order-status{background:#e7f0de;color:#456333}
-.panel-bottom{border-top:1px solid #e9eae3;padding-top:13px;display:flex;gap:6px;justify-content:flex-end}
-.panel-bottom span{width:17px;height:5px;background:#e7e9e0;border-radius:5px}
-.panel-bottom span:first-child{background:#718466}
+.admin-preview{display:block;max-width:380px;margin:auto;border:1px solid #d6d3cb;border-radius:17px;overflow:hidden;background:#fff;box-shadow:0 16px 32px #253b2d0a}
+.admin-preview img{display:block;width:100%;height:auto}
+.admin-preview-action{display:flex;gap:12px;align-items:center;justify-content:center;min-height:44px;padding:8px 12px;border-top:1px solid #e9eae3;color:var(--forest);font-size:11px;font-weight:600}
+.admin-preview-action>span:last-child{font-size:17px}
+.admin-preview:hover .admin-preview-action{background:#f1f4eb}
 .features-grid{display:grid;margin-top:40px;gap:26px}
 .feature{display:grid;grid-template-columns:28px 1fr;column-gap:16px}
 .feature-icon{grid-row:1/3;padding-top:1px}
@@ -378,20 +367,11 @@ input[aria-invalid="true"]{border-color:#b42e25}
   .avatar{width:35px;height:35px}
   .loyalty-ticket{padding:20px;margin-top:20px}
   .loyalty-ticket strong{font-size:22px;max-width:220px}
-  .loyalty-mark{font-size:57px}
   .history-title{font-size:11px;margin:23px 0 14px}
   .repeat-order img{width:54px;height:54px}
   .repeat-order small{font-size:10px}
   .repeat-order b{font-size:14px}
   .repeat-button{font-size:12px;padding:12px}
-  .orders-panel{padding:24px 24px 17px}
-  .orders-heading strong{font-size:27px}
-  .panel-caption{font-size:10px;margin-bottom:21px}
-  .demo-order{padding:18px 0;gap:11px}
-  .order-mark{width:35px;height:35px;font-size:16px}
-  .order-copy{font-size:12px}
-  .order-copy small{font-size:9px}
-  .order-status{font-size:9px;padding:6px 8px}
   .features-grid{margin-top:48px;gap:55px}
   .feature h3{font-size:21px}
   .feature p{font-size:14px}

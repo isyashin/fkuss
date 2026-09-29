@@ -225,10 +225,10 @@ test("production serves complete HTML and metadata before JavaScript runs", asyn
   const html = await response.text();
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("x-robots-tag"), null);
-  assert.match(html, /<h1[^>]*>[\s\S]*?Сайт вашего ресторана/);
-  assert.match(html, /Синхронизация с\sЯндекс Едой/);
+  assert.match(html, /<h1[^>]*>[\s\S]*?Гости ваши/);
+  assert.match(html, /Меню из Яндекс Еды/);
   assert.match(html, /Data Insight/);
-  assert.match(html, /name="description" content="Сайт ресторана/);
+  assert.match(html, /name="description" content="Создадим сайт ресторана/);
   assert.match(html, /rel="canonical" href="https:\/\/fkuss\.ru\/"/);
   assert.match(html, /property="og:image" content="https:\/\/fkuss\.ru\/assets\//);
   assert.doesNotMatch(html, /noindex/);
@@ -289,4 +289,25 @@ test("storage failures never acknowledge a saved lead", async t => {
 test("letters in phone numbers are rejected instead of silently stripped", async t => {
   const app = await fixture(t);
   assert.equal((await app.post("/api/leads", {phone:"abc+79991234567"})).status, 422);
+});
+
+test("review deployment stays unindexed, labels test submissions and keeps a separate lead store", async t => {
+  const live = await fixture(t, {serverOptions:{production:true, origin:"https://fkuss.ru"}});
+  const review = await fixture(t, {serverOptions:{production:true, preview:true, origin:"https://design.fkuss.ru"}});
+  const response = await review.request("/");
+  const html = await response.text();
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("x-robots-tag"), /noindex/);
+  assert.match(html, /name="robots" content="noindex, nofollow"/);
+  assert.match(html, /Новая версия/);
+  assert.match(html, /Предпросмотр/);
+  assert.match(html, /Тестовая заявка сохранена/);
+  assert.match(html, /rel="canonical" href="https:\/\/design\.fkuss\.ru\/"/);
+  assert.equal(await (await review.request("/robots.txt")).text(), "User-agent: *\nDisallow: /\n");
+  assert.equal((await review.request("/sitemap.xml")).status, 404);
+  assert.equal((await review.request("/preview.html")).status, 404);
+  assert.equal((await review.request("/assets/manrope-cyrillic.woff2")).headers.get("content-type"), "font/woff2");
+  assert.equal((await review.post("/api/leads", {phone:"+79990000001", contactName:"Проверка макета"}, {Origin:"https://design.fkuss.ru"})).status, 201);
+  assert.equal((await review.leads(await review.login())).length, 1);
+  assert.equal((await live.leads(await live.login())).length, 0);
 });

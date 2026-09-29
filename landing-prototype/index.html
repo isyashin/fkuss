@@ -5,73 +5,115 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#fbf8f3">
+  <meta name="theme-color" content="#f6f5f0">
   <title>fkuss.ru</title>
-  <link rel="icon" type="image/svg+xml" sizes="any" href="assets/favicon.svg?v=1">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="assets/favicon.svg?v=2">
+  <link rel="preload" href="assets/manrope-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
-<body>
+<body id="top">
+  <a class="skip-link" href="#main" data-text="header.skip"></a>
+  <div id="review-banner"></div>
   <header class="site-header">
     <div class="container header-inner">
-      <a class="brand" href="#top"><img data-logo width="2172" height="724" alt="fkuss.ru"></a>
-      <nav class="main-nav" id="navigation"></nav>
+      <a class="brand" href="#top" aria-label="fkuss.ru — наверх"><img data-logo width="2172" height="724" alt="fkuss.ru"></a>
+      <nav class="main-nav" id="navigation" aria-label="Разделы сайта"></nav>
+      <a class="header-action" href="#request-form"><span data-text="header.action"></span><span aria-hidden="true">↗</span></a>
     </div>
   </header>
-  <main id="top">
-    <section class="hero section">
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-heading">
       <div class="container hero-layout">
         <div class="hero-copy">
-          <p class="eyebrow" data-text="hero.eyebrow"></p>
+          <p class="eyebrow hero-eyebrow"><span class="status-dot" aria-hidden="true"></span><span data-text="hero.eyebrow"></span></p>
           <h1 id="hero-heading"></h1>
-          <p class="lead" data-text="hero.description"></p>
-          <div class="hero-actions">
-            <a class="button button-primary" href="#request-form" data-primary></a>
-            <a class="text-link" href="#examples"><span data-text="hero.secondaryAction"></span><span aria-hidden="true">↗</span></a>
-          </div>
+          <p class="hero-description" data-text="hero.description"></p>
+          <a class="button button-primary hero-cta" href="#request-form" data-primary></a>
+          <a class="text-link hero-secondary" href="#examples"><span data-text="hero.secondaryAction"></span><span aria-hidden="true">↘</span></a>
           <p class="action-note" data-text="hero.note"></p>
-          <ul class="hero-tags" id="hero-tags"></ul>
         </div>
         <div class="screen-stage">
+          <div class="stage-grid" aria-hidden="true"></div>
+          <div class="stage-label"><span class="tiny-cross" aria-hidden="true">+</span><span data-text="hero.visualLabel"></span></div>
           <a class="hero-screen browser-frame" id="hero-preview" target="_blank" rel="noopener noreferrer">
             <div class="browser-bar"><span class="browser-dots" aria-hidden="true"><i></i><i></i><i></i></span><span data-text="hero.preview.domain"></span><span class="browser-open" aria-hidden="true">↗</span></div>
             <img id="hero-screenshot" width="1265" height="712" fetchpriority="high">
           </a>
-          <div class="floating-note"><span class="floating-icon" aria-hidden="true">↗</span><div><strong data-text="hero.preview.badgeTitle"></strong><span data-text="hero.preview.badgeText"></span></div></div>
-          <p class="screen-caption" data-text="hero.preview.caption"></p>
+          <div class="phone-mockup" role="img" aria-label="Иллюстрация мобильного меню: фото блюда, цена и переход к заказу">
+            <div class="phone-speaker" aria-hidden="true"></div>
+            <div class="phone-top"><b data-text="hero.phone.restaurant"></b><span aria-hidden="true">☰</span></div>
+            <p class="phone-mode" data-text="hero.phone.mode"></p>
+            <p class="phone-heading" data-text="hero.phone.title"></p>
+            <div class="phone-category"><span data-text="hero.phone.category"></span><span aria-hidden="true">↗</span></div>
+            <div class="phone-dish">
+              <img id="phone-food" width="400" height="300" decoding="async" alt="">
+              <div class="phone-dish-copy"><b data-text="hero.phone.dish"></b><small data-text="hero.phone.weight"></small><div><strong data-text="hero.phone.price"></strong><span class="phone-add" aria-hidden="true">+</span></div></div>
+            </div>
+            <div class="phone-cart"><span data-text="hero.phone.cart"></span><span aria-hidden="true">→</span></div>
+          </div>
+          <div class="launch-stamp"><strong data-text="hero.preview.badgeTitle"></strong><span data-text="hero.preview.badgeText"></span><span class="stamp-arrow" aria-hidden="true">↗</span></div>
+          <span class="mockup-caption" data-text="hero.phone.label"></span>
         </div>
       </div>
+      <div class="container hero-bottom"><ul id="hero-tags"></ul><span class="scroll-cue" aria-hidden="true">↓</span></div>
     </section>
 
     <section class="examples section" id="examples" aria-labelledby="examples-heading">
       <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow" data-text="examples.eyebrow"></p>
-          <h2 id="examples-heading" data-text="examples.heading"></h2>
+        <div class="section-heading split-heading">
+          <div><p class="eyebrow" data-text="examples.eyebrow"></p><h2 id="examples-heading" data-text="examples.heading"></h2></div>
           <p class="section-description" data-text="examples.description"></p>
         </div>
         <div class="examples-grid" id="examples-grid"></div>
+        <p class="section-note examples-note"><span aria-hidden="true">↗</span><span data-text="examples.note"></span></p>
       </div>
     </section>
 
     <section class="value section" id="value" aria-labelledby="value-heading">
       <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow" data-text="value.eyebrow"></p>
-          <h2 id="value-heading" data-text="value.heading"></h2>
+        <div class="section-heading split-heading">
+          <div><p class="eyebrow" data-text="value.eyebrow"></p><h2 id="value-heading" data-text="value.heading"></h2></div>
           <p class="section-description" data-text="value.description"></p>
         </div>
         <div class="scenario-grid" id="scenario-grid"></div>
-        <p class="economics-note" data-text="value.economicsNote"></p>
+        <p class="section-note economics-note" data-text="value.economicsNote"></p>
       </div>
     </section>
 
     <section class="included section" id="included" aria-labelledby="included-heading">
       <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow" data-text="included.eyebrow"></p>
-          <h2 id="included-heading" data-text="included.heading"></h2>
+        <div class="section-heading split-heading">
+          <div><p class="eyebrow" data-text="included.eyebrow"></p><h2 id="included-heading" data-text="included.heading"></h2></div>
           <p class="section-description" data-text="included.description"></p>
+        </div>
+        <div class="product-grid">
+          <article class="product-card guest-product">
+            <div class="product-copy"><p class="product-label" data-text="included.guest.label"></p><h3 data-text="included.guest.title"></h3><p data-text="included.guest.body"></p></div>
+            <div class="guest-visual" role="img" aria-label="Пример личного кабинета гостя с бонусами и повторным заказом">
+              <div class="account-card">
+                <div class="account-header"><span class="avatar" aria-hidden="true">☺</span><strong data-text="included.guest.account"></strong><span aria-hidden="true">↗</span></div>
+                <div class="loyalty-ticket"><span class="loyalty-mark" aria-hidden="true">✳</span><strong data-text="included.guest.loyalty"></strong><span class="loyalty-line" aria-hidden="true"></span></div>
+                <div class="history-title"><span data-text="included.guest.history"></span><span aria-hidden="true">↓</span></div>
+                <div class="repeat-order"><img id="repeat-food" width="80" height="80" loading="lazy" decoding="async" alt=""><div><small data-text="included.guest.order"></small><b data-text="included.guest.dish"></b></div></div>
+                <div class="repeat-button"><span aria-hidden="true">↻</span><span data-text="included.guest.repeat"></span></div>
+              </div>
+              <p class="sample-caption" data-text="included.guest.sample"></p>
+            </div>
+          </article>
+          <article class="product-card team-product">
+            <div class="product-copy"><p class="product-label" data-text="included.team.label"></p><h3 data-text="included.team.title"></h3><p data-text="included.team.body"></p></div>
+            <div class="team-visual" role="img" aria-label="Пример панели ресторана: новые заказы, готовящиеся и готовые к выдаче">
+              <div class="orders-panel">
+                <div class="orders-heading"><strong data-text="included.team.panelTitle"></strong><span class="panel-controls" aria-hidden="true">≡</span></div>
+                <p class="panel-caption" data-text="included.team.panelBadge"></p>
+                <div id="demo-orders"></div>
+                <div class="panel-bottom" aria-hidden="true"><span></span><span></span><span></span></div>
+              </div>
+              <p class="sample-caption" data-text="included.team.sample"></p>
+            </div>
+          </article>
         </div>
         <div class="features-grid" id="features-grid"></div>
         <div class="payment-note"><span class="payment-icon" aria-hidden="true"></span><div><strong data-text="included.payment.title"></strong><p data-text="included.payment.body"></p></div></div>
@@ -79,25 +121,27 @@
     </section>
 
     <section class="research section" id="research" aria-labelledby="research-heading">
-      <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow" data-text="research.eyebrow"></p>
-          <h2 id="research-heading" data-text="research.heading"></h2>
-          <p class="section-description" data-text="research.description"></p>
-        </div>
+      <div class="container research-layout">
+        <div class="research-intro"><p class="eyebrow" data-text="research.eyebrow"></p><h2 id="research-heading" data-text="research.heading"></h2><p class="section-description" data-text="research.description"></p><p class="section-note" data-text="research.note"></p></div>
         <div class="research-grid" id="research-grid"></div>
-        <p class="research-note" data-text="research.note"></p>
       </div>
     </section>
 
     <section class="launch section" id="launch" aria-labelledby="launch-heading">
       <div class="container">
-        <div class="section-heading">
-          <p class="eyebrow" data-text="launch.eyebrow"></p>
-          <h2 id="launch-heading" data-text="launch.heading"></h2>
+        <div class="section-heading split-heading">
+          <div><p class="eyebrow" data-text="launch.eyebrow"></p><h2 id="launch-heading" data-text="launch.heading"></h2></div>
+          <p class="launch-lead" data-text="launch.lead"></p>
         </div>
         <ol class="launch-grid" id="launch-grid"></ol>
-        <p class="launch-note"><span aria-hidden="true">↗</span><span data-text="launch.note"></span></p>
+        <p class="section-note" data-text="launch.note"></p>
+      </div>
+    </section>
+
+    <section class="faq section" id="faq" aria-labelledby="faq-heading">
+      <div class="container faq-layout">
+        <div><p class="eyebrow" data-text="faq.eyebrow"></p><h2 id="faq-heading" data-text="faq.heading"></h2></div>
+        <div class="faq-list" id="faq-list"></div>
       </div>
     </section>
 
@@ -108,9 +152,11 @@
           <h2 id="request-heading" data-text="request.heading"></h2>
           <p class="section-description" data-text="request.description"></p>
           <ul class="reassurance-list" id="reassurance-list"></ul>
+          <span class="request-decoration" aria-hidden="true">↗</span>
         </div>
         <form class="request-form" id="request-form" novalidate>
           <h3 data-text="request.formTitle"></h3>
+          <div id="review-form-note"></div>
           <div class="field">
             <label for="contact-name"><span data-text="request.nameLabel"></span><span class="optional" data-text="request.optional"></span></label>
             <input id="contact-name" name="contactName" type="text" autocomplete="name" maxlength="120" aria-describedby="contact-name-error">
@@ -121,16 +167,21 @@
             <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" required aria-describedby="phone-error">
             <p class="field-error" id="phone-error" role="alert" hidden></p>
           </div>
-          <div class="field">
-            <label for="restaurant"><span data-text="request.restaurantLabel"></span><span class="optional" data-text="request.optional"></span></label>
-            <input id="restaurant" name="restaurant" type="text" autocomplete="organization" maxlength="120">
-          </div>
-          <div class="field">
-            <label for="menu"><span data-text="request.menuLabel"></span><span class="optional" data-text="request.optional"></span></label>
-            <input id="menu" name="menu" type="url" inputmode="url" autocomplete="url" maxlength="2048" aria-describedby="menu-hint menu-error">
-            <p class="field-hint" id="menu-hint" data-text="request.menuHint"></p>
-            <p class="field-error" id="menu-error" role="alert" hidden></p>
-          </div>
+          <details class="form-details">
+            <summary><span data-text="request.detailsLabel"></span><span class="details-plus" aria-hidden="true">+</span></summary>
+            <div class="optional-fields">
+              <div class="field">
+                <label for="restaurant"><span data-text="request.restaurantLabel"></span><span class="optional" data-text="request.optional"></span></label>
+                <input id="restaurant" name="restaurant" type="text" autocomplete="organization" maxlength="120">
+              </div>
+              <div class="field">
+                <label for="menu"><span data-text="request.menuLabel"></span><span class="optional" data-text="request.optional"></span></label>
+                <input id="menu" name="menu" type="url" inputmode="url" autocomplete="url" maxlength="2048" aria-describedby="menu-hint menu-error">
+                <p class="field-hint" id="menu-hint" data-text="request.menuHint"></p>
+                <p class="field-error" id="menu-error" role="alert" hidden></p>
+              </div>
+            </div>
+          </details>
           <div class="form-honeypot" aria-hidden="true"><label for="website">Ваш сайт</label><input id="website" name="website" type="text" autocomplete="off" tabindex="-1"></div>
           <p class="field-error" id="submit-error" role="alert" hidden></p>
           <button class="button button-primary form-submit" type="submit" disabled><span data-text="request.submit"></span><span aria-hidden="true">↗</span></button>
@@ -139,15 +190,13 @@
       </div>
     </section>
   </main>
-
   <footer class="site-footer">
     <div class="container footer-inner">
-      <div><a class="brand footer-brand" href="#top"><img data-logo width="2172" height="724" alt="fkuss.ru"></a><p data-text="footer.copyright"></p></div>
-      <p class="prototype-note" data-text="footer.prototype"></p>
+      <div><a class="brand footer-brand" href="#top"><img data-logo width="2172" height="724" alt="fkuss.ru"></a><p data-text="footer.descriptor"></p></div>
+      <p class="footer-note" data-text="footer.copyright"></p>
       <a class="text-link" href="#top"><span data-text="footer.top"></span><span aria-hidden="true">↑</span></a>
     </div>
   </footer>
-
   <div class="mobile-action" id="mobile-action" hidden><a class="button button-primary" href="#request-form" data-primary></a></div>
   <dialog class="confirmation" id="confirmation" aria-labelledby="confirmation-title">
     <div class="confirmation-icon" aria-hidden="true">✓</div>

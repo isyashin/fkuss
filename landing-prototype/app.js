@@ -52,7 +52,7 @@ async function start() {
     menu.setAttribute("aria-invalid", String(!menuValid));
     if (!nameValid) { contactName.focus(); return; }
     if (!phoneValid) { phone.focus(); return; }
-    if (!menuValid) { menu.focus(); return; }
+    if (!menuValid) { menu.closest("details").open = true; menu.focus(); return; }
     pending = true;
     submitButton.disabled = true;
     submitLabel.textContent = content.request.pending;
@@ -67,10 +67,11 @@ async function start() {
       if (!response.ok) {
         if (result.fields?.phone) { phoneError.hidden = false; phone.setAttribute("aria-invalid", "true"); }
         if (result.fields?.contactName) { nameError.hidden = false; contactName.setAttribute("aria-invalid", "true"); }
-        if (result.fields?.menu) { menuError.hidden = false; menu.setAttribute("aria-invalid", "true"); }
+        if (result.fields?.menu) { menu.closest("details").open = true; menuError.hidden = false; menu.setAttribute("aria-invalid", "true"); }
         throw new Error(response.status === 429 ? content.request.rateError : content.request.sendError);
       }
       form.reset();
+      form.querySelector("details").open = false;
       confirmation.showModal();
       updateSticky();
     } catch (error) {

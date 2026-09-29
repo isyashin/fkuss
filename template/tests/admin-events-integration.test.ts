@@ -24,7 +24,7 @@ afterAll(async () => {
 });
 
 describe("durable admin events on PostgreSQL", () => {
-  it("delivers committed cash order and booking once per account, including simultaneous tabs", async () => {
+  it("delivers committed cash order and booking to every tab of an account, once per tab", async () => {
     const password = randomBytes(32).toString("base64url");
     const user = await createAdminUser(prisma, { login: `${prefix}-staff`, name: "Сотрудник", role: "staff", password });
     const second = await createAdminUser(prisma, { login: `${prefix}-other`, name: "Другой", role: "staff", password });
@@ -40,10 +40,16 @@ describe("durable admin events on PostgreSQL", () => {
     });
     eventIds.push(...(await prisma.adminEvent.findMany({ where: { reference: { in: [...orderIds, ...bookingIds] } }, select: { id: true } })).map((event) => event.id));
 
-    const [firstTab, secondTab] = await Promise.all([claimAdminEvents(prisma, user.id), claimAdminEvents(prisma, user.id)]);
-    expect([...firstTab, ...secondTab].filter((event) => eventIds.includes(event.id))).toHaveLength(2);
-    expect((await claimAdminEvents(prisma, user.id)).filter((event) => eventIds.includes(event.id))).toEqual([]);
-    expect((await claimAdminEvents(prisma, second.id)).filter((event) => eventIds.includes(event.id))).toHaveLength(2);
+    // Каждая вкладка учётки получает оба события; повторный опрос той же вкладки — пусто
+    expect((await claimAdminEvents(prisma, user.id, "tab-a")).filter((event) => eventIds.includes(event.id))).toHaveLength(2);
+    expect((await claimAdminEvents(prisma, user.id, "tab-b")).filter((event) => eventIds.includes(event.id))).toHaveLength(2);
+    expect((await claimAdminEvents(prisma, user.id, "tab-a")).filter((event) => eventIds.includes(event.id))).toEqual([]);
+    expect((await claimAdminEvents(prisma, second.id, "tab-a")).filter((event) => eventIds.includes(event.id))).toHaveLength(2);
+
+    // События приезжают со статусом ссылки (звук останавливается при обработке)
+    const claimed = await claimAdminEvents(prisma, user.id, "tab-c");
+    const orderEvent = claimed.find((event) => event.kind === "order");
+    expect(orderEvent?.status).toBe("new");
   });
 
   it("creates no event for failed payment and one for the first successful payment", async () => {

@@ -17,29 +17,40 @@ describe("admin event delivery", () => {
     expect(created).toEqual([{ data: { kind: "order", reference: "order-1", label: "Заказ №1" } }]);
   });
 
-  it("claims each new event once per employee, even with two open tabs", async () => {
+  it("claims each new event for every tab of an employee, once per tab", async () => {
     const started = new Date("2026-09-25T12:00:00Z");
     const rows = [
-      { id: "old", kind: "order", label: "Старый заказ", createdAt: new Date("2026-09-25T11:59:00Z") },
-      { id: "new", kind: "booking", label: "Новая бронь", createdAt: new Date("2026-09-25T12:01:00Z") },
+      { id: "old", kind: "order", label: "Старый заказ", createdAt: new Date("2026-09-25T11:59:00Z"), reference: "order-1" },
+      { id: "new", kind: "booking", label: "Новая бронь", createdAt: new Date("2026-09-25T12:01:00Z"), reference: "booking-1" },
     ];
     const receipts = new Set<string>();
     const tx = {
       adminUser: { findUnique: async () => ({ createdAt: started, active: true }) },
-      adminEvent: { findMany: async (args: { where: { createdAt: { gte: Date }; receipts: { none: { userId: string } } } }) =>
-        rows.filter((row) => row.createdAt >= args.where.createdAt.gte && !receipts.has(`${args.where.receipts.none.userId}:${row.id}`)) },
-      adminEventReceipt: { createManyAndReturn: async (args: { data: { eventId: string; userId: string }[] }) =>
-        args.data.filter((entry) => {
-          const key = `${entry.userId}:${entry.eventId}`;
-          if (receipts.has(key)) return false;
-          receipts.add(key);
-          return true;
-        }) },
+      adminEvent: { findMany: async (args: { where: { createdAt: { gte: Date }; receipts: { none: { userId: string; tabId: string } } } }) =>
+        rows.filter((row) => row.createdAt >= args.where.createdAt.gte &&
+          !receipts.has(`${args.where.receipts.none.userId}:${args.where.receipts.none.tabId}:${row.id}`)) },
+      adminEventReceipt: {
+        createManyAndReturn: async (args: { data: { eventId: string; userId: string; tabId: string }[] }) =>
+          args.data.filter((entry) => {
+            const key = `${entry.userId}:${entry.tabId}:${entry.eventId}`;
+            if (receipts.has(key)) return false;
+            receipts.add(key);
+            return true;
+          }),
+        deleteMany: async () => ({ count: 0 }),
+      },
+      order: { findMany: async () => [{ id: "order-1", status: "new" }] },
+      reservation: { findMany: async () => [{ id: "booking-1", status: "new" }] },
     };
     const prisma = { $transaction: async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx) } as unknown as PrismaClient;
-    const [firstTab, secondTab] = await Promise.all([claimAdminEvents(prisma, "staff-1"), claimAdminEvents(prisma, "staff-1")]);
-    expect([...firstTab, ...secondTab].map((event) => event.id)).toEqual(["new"]);
-    expect(await claimAdminEvents(prisma, "staff-1")).toEqual([]);
-    expect((await claimAdminEvents(prisma, "staff-2")).map((event) => event.id)).toEqual(["new"]);
+
+    // Две вкладки одной учётки — обе получают событие; повтор той же вкладки — пусто
+    expect((await claimAdminEvents(prisma, "staff-1", "tab-a")).map((event) => event.id)).toEqual(["new"]);
+    expect((await claimAdminEvents(prisma, "staff-1", "tab-b")).map((event) => event.id)).toEqual(["new"]);
+    expect(await claimAdminEvents(prisma, "staff-1", "tab-a")).toEqual([]);
+    // Событие приезжает с текущим статусом ссылки
+    const claimed = await claimAdminEvents(prisma, "staff-2", "tab-a");
+    expect(claimed.find((event) => event.id === "new")?.status).toBe("new");
+    expect((await claimAdminEvents(prisma, "staff-2", "tab-a"))).toEqual([]);
   });
 });

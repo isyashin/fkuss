@@ -9,12 +9,20 @@ import type { PublicAdminSound } from "@/lib/admin-sound";
 import styles from "./admin-ui.module.css";
 import { AdminIcon } from "./admin-icon";
 
-type EventItem = { id: string; kind: string; label: string; createdAt: string };
-type ResponseData = { events: EventItem[]; latestId: string | null; sound: PublicAdminSound };
+type EventItem = { id: string; kind: string; label: string; createdAt: string; status?: string | null };
+type ResponseData = {
+  events: EventItem[];
+  latestId: string | null;
+  sound: PublicAdminSound;
+  pending: { orders: number; bookings: number };
+};
 
 const ENABLED_KEY = "admin-sound-on";
 const ENABLED_EVENT = "admin-sound-flag";
+const TAB_KEY = "admin-tab-id";
 const DEFAULT_HINT = "Включите звук нажатием кнопки — браузер требует вашего действия.";
+const ALERT_REPEATS = 10;
+const REPEAT_GAP_MS = 1800;
 
 function readEnabledFlag(): boolean {
   try { return sessionStorage.getItem(ENABLED_KEY) === "1"; } catch { return false; }
@@ -33,6 +41,18 @@ function subscribeEnabled(callback: () => void) {
     window.removeEventListener(ENABLED_EVENT, callback);
   };
 }
+function tabId(): string {
+  try {
+    let id = sessionStorage.getItem(TAB_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem(TAB_KEY, id);
+    }
+    return id;
+  } catch {
+    return "default";
+  }
+}
 
 export function AdminNotifications() {
   const router = useRouter();
@@ -47,16 +67,19 @@ export function AdminNotifications() {
   const sound = useRef<PublicAdminSound>({ selected: "standard1", customName: "", customUrl: "" });
   const latestId = useRef<string | null | undefined>(undefined);
   const enabledRef = useRef(enabled);
+  const pendingRef = useRef({ orders: 0, bookings: 0 });
 
   useEffect(() => {
     enabledRef.current = enabled;
   }, [enabled]);
 
-  // Бейдж на фавиконе: счёт новых заказов+броней; снимается при открытии панели (unread=0).
+  // Бейдж на фавиконе = необработанные заказы + брони (как в сайдбаре):
+  // гаснет только когда их реально обработали, а не от взгляда на колокольчик.
   useEffect(() => {
-    if (unread > 0) void setFaviconBadge(unread);
+    const total = pendingRef.current.orders + pendingRef.current.bookings;
+    if (total > 0) void setFaviconBadge(total);
     else clearFaviconBadge();
-  }, [unread]);
+  });
 
   function setSoundEnabled(value: boolean) {
     writeEnabledFlag(value);
@@ -66,6 +89,52 @@ export function AdminNotifications() {
   useEffect(() => {
     let cancelled = false;
     let busy = false;
+    // Цикл повторения звука: до ALERT_REPEATS раз или пока заказы/брони не обработаны.
+    // Живёт внутри эффекта — только опрос его запускает.
+    const loopRefInner: { current: { remaining: number; kinds: Set<string> } | null } = { current: null };
+
+    const shouldKeepLooping = (): boolean => {
+      const current = loopRefInner.current;
+      if (!current) return false;
+      const { orders, bookings } = pendingRef.current;
+      if (current.kinds.has("order") && orders > 0) return true;
+      if (current.kinds.has("booking") && bookings > 0) return true;
+      return false;
+    };
+
+    const loopTick = async (): Promise<void> => {
+      const current = loopRefInner.current;
+      if (!current) return;
+      if (current.remaining <= 0 || !shouldKeepLooping()) {
+        loopRefInner.current = null;
+        return;
+      }
+      current.remaining -= 1;
+      try {
+        await playAdminSound(sound.current);
+      } catch {
+        loopRefInner.current = null;
+        setSoundEnabled(false);
+        setErrorHint("Браузер не воспроизвёл звук. Нажмите «Включить звук» ещё раз.");
+        return;
+      }
+      window.setTimeout(() => void loopTick(), REPEAT_GAP_MS);
+    };
+
+    const startAlertLoop = (kinds: string[]): void => {
+      let current = loopRefInner.current;
+      if (!current) {
+        current = { remaining: ALERT_REPEATS, kinds: new Set() };
+        loopRefInner.current = current;
+        for (const kind of kinds) current.kinds.add(kind);
+        void loopTick();
+        return;
+      }
+      // Цепочка уже крутится: продлеваем серию и добавляем виды событий
+      for (const kind of kinds) current.kinds.add(kind);
+      current.remaining = ALERT_REPEATS;
+    };
+
     // Первый клик в документе беззвучно будит AudioContext — без отдельной кнопки.
     const onFirstGesture = () => {
       void primeAdminAudio().then((ok) => {
@@ -79,22 +148,22 @@ export function AdminNotifications() {
       if (busy || cancelled) return;
       busy = true;
       try {
-        const response = await fetch("/api/admin/events", { cache: "no-store" });
+        const response = await fetch("/api/admin/events", {
+          cache: "no-store",
+          headers: { "X-Admin-Tab": tabId() },
+        });
         if (!response.ok) return;
         const data = await response.json() as ResponseData;
         if (cancelled) return;
         sound.current = data.sound;
+        pendingRef.current = data.pending;
         if (data.events.length || (latestId.current !== undefined && latestId.current !== data.latestId)) router.refresh();
         latestId.current = data.latestId;
         if (data.events.length) {
           setEvents((previous) => [...data.events, ...previous].slice(0, 10));
           setUnread((previous) => Math.min(99, previous + data.events.length));
           if (enabledRef.current && hasRecentAdminEvent(data.events)) {
-            try { await playAdminSound(data.sound); }
-            catch {
-              setSoundEnabled(false);
-              setErrorHint("Браузер не воспроизвёл звук. Нажмите «Включить звук» ещё раз.");
-            }
+            startAlertLoop(data.events.map((event) => event.kind));
           }
         }
       } catch {

@@ -133,11 +133,12 @@ model AdminEvent {
 model AdminEventReceipt {
   eventId   String
   userId    String
+  tabId     String   @default("") // вкладка админки — событие выдаётся каждой вкладке
   event     AdminEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  @@id([eventId, userId])
+  @@id([eventId, userId, tabId])
   @@index([userId])
 }
 

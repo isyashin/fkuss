@@ -42,11 +42,10 @@ test("фавикон показывает необработанные зака�
   await page.getByRole("button", { name: /Оповещения/ }).first().click();
   await expect.poll(async () => (await iconHref()).startsWith("data:image/png"), { timeout: 10_000, intervals: [700, 1200] }).toBe(true);
 
-  // Обработка брони (подтверждение в админке) — счёт возвращается к n0
-  await page.goto("/admin/bookings");
-  const bookingRow = page.locator("button", { hasText: "2026-12-05" }).first();
-  await bookingRow.click();
-  await page.getByRole("button", { name: "Подтвердить бронь" }).click();
+  // Обработка брони — быстрое подтверждение в виджете броней на дашборде; счёт возвращается к n0
+  await page.goto("/admin");
+  const pendingCard = page.locator("div").filter({ hasText: /2026-12-05/ }).filter({ has: page.getByRole("button", { name: "Подтвердить" }) }).first();
+  await pendingCard.getByRole("button", { name: "Подтвердить" }).click();
   await expect.poll(async () => await badgeCount(), { timeout: 30_000, intervals: [1000, 2000, 4000] }).toBe(n0);
 });
 

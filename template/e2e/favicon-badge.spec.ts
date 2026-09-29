@@ -93,3 +93,30 @@ test("витрина и кабинет гостя отдают фавикон с
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toBe("image/png");
 });
+
+// Повторы сигнала: настройка в карточке звука сохраняется и отдаётся опросу.
+test("повторы сигнала настраиваются и отдаются в опросе уведомлений", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("/admin/login");
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.goto("/admin/settings");
+  const repeats = page.getByLabel("Повторы сигнала");
+  await expect(repeats).toBeVisible();
+
+  await repeats.fill("3");
+  await expect.poll(async () => (await page.request.get("/api/admin/events")).json().then((d) => d.sound.repeats), {
+    timeout: 15_000,
+    intervals: [800, 1500],
+  }).toBe(3);
+
+  await page.reload();
+  await expect(page.getByLabel("Повторы сигнала")).toHaveValue("3", { timeout: 15000 });
+
+  // возвращаем дефолт
+  await page.getByLabel("Повторы сигнала").fill("10");
+  await expect.poll(async () => (await page.request.get("/api/admin/events")).json().then((d) => d.sound.repeats), {
+    timeout: 15_000,
+    intervals: [800, 1500],
+  }).toBe(10);
+});

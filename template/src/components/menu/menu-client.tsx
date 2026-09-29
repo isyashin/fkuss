@@ -94,6 +94,7 @@ export function MenuClient({
           className="mx-auto flex max-w-5xl cursor-grab gap-2 overflow-x-auto px-4 py-3 scrollbar-none select-none active:cursor-grabbing md:justify-[safe_center]"
           onPointerDown={(event) => {
             if (event.pointerType !== "mouse" || !tabsRef.current) return;
+            suppressClickUntil.current = 0; // новый жест отменяет подавление прошлого драга
             dragRef.current = { startX: event.clientX, startScroll: tabsRef.current.scrollLeft, moved: false };
             tabsRef.current.setPointerCapture(event.pointerId);
           }}

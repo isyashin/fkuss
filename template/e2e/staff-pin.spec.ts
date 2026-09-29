@@ -80,9 +80,8 @@ test("сотрудник: меню доступно, настройки откр
 
   // Загрузка фото сотрудником — только раздел dishes, остальные 403
   const png = Buffer.from(
-    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489" +
-      "0000000d49444154789c626001000000ffff03000006000557bfabd40000000049454e44ae426082",
-    "hex",
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+    "base64",
   );
   const forbidden = await page.request.post("/api/admin/upload", {
     multipart: {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { playAdminSound } from "@/lib/admin-audio";
 import type { AdminSoundChoice, PublicAdminSound } from "@/lib/admin-sound";
+import { MAX_SOUND_REPEATS, MIN_SOUND_REPEATS } from "@/lib/admin-sound-constants";
 import styles from "./settings-admin.module.css";
 import { AdminIcon } from "../admin-icon";
 
@@ -32,6 +33,10 @@ export function SoundSettings({ initial }: { initial: PublicAdminSound }) {
     try { await playAdminSound({ ...sound, selected: choice }); setMessage(""); }
     catch { setMessage("Браузер не смог воспроизвести звук"); }
   }
+  function saveRepeats(value: number) {
+    setSound((current) => ({ ...current, repeats: value }));
+    void request("PATCH", JSON.stringify({ repeats: value }));
+  }
 
   return <section className={styles.card} aria-label="Звук уведомления">
     <div className={styles.soundHead}><div><h2>Звук уведомления</h2><p>Для новых заказов и бронирований</p></div><AdminIcon name="sound" size={20}/></div>
@@ -54,6 +59,17 @@ export function SoundSettings({ initial }: { initial: PublicAdminSound }) {
       }}/>
     </label>
     <button type="button" className={styles.soundTest} onClick={() => void preview(sound.selected)}>Проверить звук</button>
+    <div className={styles.soundRow}>
+      <label htmlFor="admin-sound-repeats">Повторы сигнала при новом заказе</label>
+      <input id="admin-sound-repeats" type="number" min={MIN_SOUND_REPEATS} max={MAX_SOUND_REPEATS} step={1}
+        value={sound.repeats} disabled={busy}
+        onChange={(event) => {
+          const value = Number(event.target.value);
+          if (Number.isInteger(value) && value >= MIN_SOUND_REPEATS && value <= MAX_SOUND_REPEATS) saveRepeats(value);
+        }}
+        style={{ width: 76 }} aria-label="Повторы сигнала"/>
+      <span className={styles.soundHint}>раз (до обработки заказа или брони)</span>
+    </div>
     <p className={styles.soundHint}>MP3, WAV или Ogg до 2 МБ. После удаления своего звука выбирается сигнал 1.</p>
     {message && <p role="status" className={styles.soundHint}>{message}</p>}
   </section>;

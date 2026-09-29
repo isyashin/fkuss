@@ -21,7 +21,7 @@ const ENABLED_KEY = "admin-sound-on";
 const ENABLED_EVENT = "admin-sound-flag";
 const TAB_KEY = "admin-tab-id";
 const DEFAULT_HINT = "Включите звук нажатием кнопки — браузер требует вашего действия.";
-const ALERT_REPEATS = 10;
+const DEFAULT_REPEATS = 10;
 const REPEAT_GAP_MS = 1800;
 
 function readEnabledFlag(): boolean {
@@ -74,7 +74,7 @@ export function AdminNotifications() {
   const enabled = useSyncExternalStore(subscribeEnabled, readEnabledFlag, () => false);
   const [errorHint, setErrorHint] = useState<string | null>(null);
   const hint = errorHint ?? (enabled ? "Звук включён для этой вкладки." : DEFAULT_HINT);
-  const sound = useRef<PublicAdminSound>({ selected: "standard1", customName: "", customUrl: "" });
+  const sound = useRef<PublicAdminSound>({ selected: "standard1", customName: "", customUrl: "", repeats: DEFAULT_REPEATS });
   const latestId = useRef<string | null | undefined>(undefined);
   const enabledRef = useRef(enabled);
   const pendingRef = useRef({ orders: 0, bookings: 0 });
@@ -133,9 +133,10 @@ export function AdminNotifications() {
     };
 
     const startAlertLoop = (kinds: string[]): void => {
+      const repeats = Number.isInteger(sound.current.repeats) && sound.current.repeats > 0 ? sound.current.repeats : DEFAULT_REPEATS;
       let current = loopRefInner.current;
       if (!current) {
-        current = { remaining: ALERT_REPEATS, kinds: new Set() };
+        current = { remaining: repeats, kinds: new Set() };
         loopRefInner.current = current;
         for (const kind of kinds) current.kinds.add(kind);
         void loopTick();
@@ -143,7 +144,7 @@ export function AdminNotifications() {
       }
       // Цепочка уже крутится: продлеваем серию и добавляем виды событий
       for (const kind of kinds) current.kinds.add(kind);
-      current.remaining = ALERT_REPEATS;
+      current.remaining = repeats;
     };
 
     // Первый клик в документе беззвучно будит AudioContext — без отдельной кнопки.

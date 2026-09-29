@@ -3,14 +3,22 @@ import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { getContentDir, resolveContentPath } from "./content-dir";
+import { DEFAULT_SOUND_REPEATS, MAX_SOUND_REPEATS, MIN_SOUND_REPEATS } from "./admin-sound-constants";
 
 export type AdminSoundChoice = "standard1" | "standard2" | "custom";
-export type AdminSound = { selected: AdminSoundChoice; customName: string; customPath: string };
-export type PublicAdminSound = { selected: AdminSoundChoice; customName: string; customUrl: string };
+export type AdminSound = { selected: AdminSoundChoice; customName: string; customPath: string; repeats: number };
+export type PublicAdminSound = { selected: AdminSoundChoice; customName: string; customUrl: string; repeats: number };
 
-const DEFAULT_SOUND: AdminSound = { selected: "standard1", customName: "", customPath: "" };
+const DEFAULT_SOUND: AdminSound = { selected: "standard1", customName: "", customPath: "", repeats: DEFAULT_SOUND_REPEATS };
 const CUSTOM_PATH = /^audio\/admin-[a-f0-9]{32}\.(mp3|wav|ogg)$/;
 const MAX_AUDIO_BYTES = 2 * 1024 * 1024;
+
+/** Сколько раз повторять сигнал о новом заказе/брони (1–20). Мусор → дефолт 10. */
+export function parseSoundRepeats(value: unknown): number {
+  const n = typeof value === "number" ? Math.round(value) : Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(n) || n < MIN_SOUND_REPEATS) return DEFAULT_SOUND.repeats;
+  return Math.min(n, MAX_SOUND_REPEATS);
+}
 
 export function parseAdminSound(value: unknown): AdminSound {
   if (!value || typeof value !== "object" || Array.isArray(value)) return { ...DEFAULT_SOUND };
@@ -18,16 +26,17 @@ export function parseAdminSound(value: unknown): AdminSound {
   const customPath = typeof data.customPath === "string" && CUSTOM_PATH.test(data.customPath) ? data.customPath : "";
   const customName = customPath && typeof data.customName === "string" ? data.customName.slice(0, 100) : "";
   const selected = data.selected === "standard2" ? "standard2" : data.selected === "custom" && customPath ? "custom" : "standard1";
-  return { selected, customName, customPath };
+  return { selected, customName, customPath, repeats: parseSoundRepeats(data.repeats) };
 }
 
-export function soundAfterRemovingCustom(): AdminSound {
-  return { ...DEFAULT_SOUND };
+export function soundAfterRemovingCustom(current: AdminSound): AdminSound {
+  return { ...current, selected: "standard1", customName: "", customPath: "" };
 }
 
 export function publicAdminSound(sound: AdminSound): PublicAdminSound {
   return { selected: sound.selected, customName: sound.customName,
-    customUrl: sound.customPath ? `/api/admin/sound?file=1&v=${encodeURIComponent(sound.customPath)}` : "" };
+    customUrl: sound.customPath ? `/api/admin/sound?file=1&v=${encodeURIComponent(sound.customPath)}` : "",
+    repeats: sound.repeats };
 }
 
 export function detectAdminAudio(bytes: Buffer, contentType: string, size: number): { extension: "mp3" | "wav" | "ogg"; mime: string } | null {
@@ -74,6 +83,12 @@ export async function selectAdminSound(prisma: PrismaClient, choice: AdminSoundC
     if (choice === "custom" && !current.customPath) throw new Error("Сначала загрузите звуковой файл");
     return { ...current, selected: choice };
   });
+  return publicAdminSound(next);
+}
+
+/** Сколько раз повторять сигнал (1–20): настройка в карточке звука. */
+export async function saveAdminSoundRepeats(prisma: PrismaClient, repeats: number): Promise<PublicAdminSound> {
+  const { next } = await mutateAdminSound(prisma, (current) => ({ ...current, repeats: parseSoundRepeats(repeats) }));
   return publicAdminSound(next);
 }
 

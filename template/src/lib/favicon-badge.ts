@@ -7,7 +7,6 @@ const CANVAS_SIZE = 48;
 const BLINK_MS = 900;
 
 let baseHrefs: string[] = [];
-let baseImage: HTMLImageElement | null = null;
 let badgeUrl = "";
 let originalTitle = "";
 let blinkTimer: number | null = null;
@@ -22,44 +21,29 @@ function applyHrefs(href: string) {
   for (const link of iconLinks()) link.href = href;
 }
 
-function loadBaseImage(): Promise<HTMLImageElement | null> {
-  if (baseImage) return Promise.resolve(baseImage);
-  const href = baseHrefs[0];
-  if (!href) return Promise.resolve(null);
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => { baseImage = img; resolve(img); };
-    img.onerror = () => resolve(null);
-    img.src = href;
-  });
-}
-
+/** Индикатор на ВЕСЬ фавикон: красный круг по холсту с крупным счётом — читаемо на 16px. */
 function drawBadge(count: number): string {
   const canvas = document.createElement("canvas");
   canvas.width = CANVAS_SIZE;
   canvas.height = CANVAS_SIZE;
   const ctx = canvas.getContext("2d");
   if (!ctx) return badgeUrl;
-  if (baseImage) ctx.drawImage(baseImage, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-  const label = count > 9 ? "9+" : String(count);
-  const radius = label.length > 1 ? 12 : 10;
-  const cx = CANVAS_SIZE - radius - 1;
-  const cy = CANVAS_SIZE - radius - 1;
-
+  const c = CANVAS_SIZE / 2;
   ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.arc(c, c, c - 1, 0, Math.PI * 2);
   ctx.fillStyle = "#d92d20";
   ctx.fill();
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 3;
   ctx.strokeStyle = "#ffffff";
   ctx.stroke();
 
+  const label = count > 9 ? "9+" : String(count);
   ctx.fillStyle = "#ffffff";
-  ctx.font = `700 ${label.length > 1 ? 11 : 13}px Arial, sans-serif`;
+  ctx.font = `700 ${label.length > 1 ? 24 : 30}px Arial, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(label, cx, cy + 0.5);
+  ctx.fillText(label, c, c + 1);
 
   return canvas.toDataURL("image/png");
 }
@@ -86,8 +70,6 @@ export async function setFaviconBadge(count: number): Promise<void> {
     return;
   }
 
-  const img = await loadBaseImage();
-  if (!img) return;
   badgeUrl = drawBadge(count);
   reassertTitle();
 

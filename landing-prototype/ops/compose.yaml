@@ -1,0 +1,41 @@
+name: fkuss-landing
+services:
+  landing:
+    container_name: fkuss-landing
+    image: fkuss-landing:${FKUSS_LANDING_RELEASE:?Specify the tested Git commit}
+    build:
+      context: ..
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 192m
+    cpus: 0.50
+    pids_limit: 64
+    stop_grace_period: 20s
+    ports:
+      - "127.0.0.1:4185:4185"
+    env_file:
+      - ${FKUSS_LANDING_SECRETS_DIR:?Specify the private persistent directory}/runtime.env
+    environment:
+      NODE_ENV: production
+      FKUSS_LANDING_HOST: 0.0.0.0
+      FKUSS_LANDING_PORT: 4185
+      FKUSS_LANDING_ADMIN_FILE: /run/secrets/landing-admin.json
+      FKUSS_LANDING_DATABASE: /data/leads.db
+    volumes:
+      - ${FKUSS_LANDING_SECRETS_DIR}/admin.json:/run/secrets/landing-admin.json:ro
+      - ${FKUSS_LANDING_SECRETS_DIR}/data:/data
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    networks: [landing]
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+networks:
+  landing:
+    external: true
+    name: fkuss-landing

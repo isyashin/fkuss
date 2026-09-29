@@ -1,0 +1,14 @@
+[Unit]
+Description=Consistent backup of fkuss landing leads
+
+[Service]
+Type=oneshot
+User=ilya
+Group=ilya
+UMask=0077
+ExecStart=/usr/bin/python3 /home/ilya/resto/landing/current/ops/backup.py --database /home/ilya/resto/secrets/landing/data/leads.db --admin /home/ilya/resto/secrets/landing/admin.json --out /home/ilya/resto/backups/landing
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/home/ilya/resto/backups/landing /home/ilya/resto/secrets/landing/data

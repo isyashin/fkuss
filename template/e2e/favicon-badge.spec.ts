@@ -42,13 +42,11 @@ test("фавикон показывает необработанные зака�
   await page.getByRole("button", { name: /Оповещения/ }).first().click();
   await expect.poll(async () => (await iconHref()).startsWith("data:image/png"), { timeout: 10_000, intervals: [700, 1200] }).toBe(true);
 
-  // Обработка брони: открываем её на странице броней и подтверждаем в деталях; счёт возвращается к n0
-  await page.goto("/admin/bookings");
-  const row = page.getByRole("button", { name: /Открыть бронь 2026-12-05/ }).first();
-  await row.click();
-  const detail = page.getByRole("region", { name: "Детали брони" }).first();
-  await expect(detail.getByText("E2E Фавикон")).toBeVisible({ timeout: 20000 });
-  await detail.getByRole("button", { name: "Подтвердить бронь" }).click();
+  // Обработка брони: быстрое подтверждение в виджете «Ближайшие брони» на дашборде; счёт возвращается к n0
+  await page.goto("/admin");
+  const card = page.locator("div", { has: page.getByRole("link", { name: /Открыть бронь 2026-12-05/ }) }).last();
+  await expect(card.getByRole("button", { name: "Подтвердить" })).toBeVisible({ timeout: 20000 });
+  await card.getByRole("button", { name: "Подтвердить" }).click();
   await expect.poll(async () => await badgeCount(), { timeout: 30_000, intervals: [1000, 2000, 4000] }).toBe(n0);
 });
 

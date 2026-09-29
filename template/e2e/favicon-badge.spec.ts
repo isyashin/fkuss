@@ -48,6 +48,7 @@ test("фавикон показывает необработанные зака�
   await row.click();
   const detail = page.getByRole("region", { name: "Детали брони" });
   await expect(detail.getByText("E2E Фавикон")).toBeVisible({ timeout: 20000 });
+  console.log("DETAIL DUMP:", (await detail.innerText()).replace(/\s+/g, " ").slice(0, 300));
   await detail.getByRole("button", { name: "Подтвердить бронь" }).click();
   await expect.poll(async () => await badgeCount(), { timeout: 30_000, intervals: [1000, 2000, 4000] }).toBe(n0);
 });

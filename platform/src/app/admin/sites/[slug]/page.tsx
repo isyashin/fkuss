@@ -5,6 +5,8 @@ import { isPlatformAdmin } from "@/lib/platform-admin-auth";
 import { dailyChargeKopecks, daysLeft } from "@/lib/billing";
 import { SiteActions } from "./site-actions";
 import { ExportSiteButton } from "./export-site-button";
+import { OwnerPinPanel } from "./owner-pin-panel";
+import { getTenantOwnerPin } from "@/lib/tenant-api";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +75,12 @@ export default async function SiteCardPage({ params }: { params: Promise<{ slug:
         <h2 className="pf-panelTitle">Операции</h2>
         <p className="pf-panelHint">Тариф, состояние сайта и ручные корректировки баланса.</p>
         <SiteActions slug={slug} tariffs={tariffs} currentTariff={site.tariffId} state={site.state} />
+      </div>
+
+      <div className="pf-panel" style={{ marginBottom: 16 }}>
+        <h2 className="pf-panelTitle">PIN владельца</h2>
+        <p className="pf-panelHint">Открывает сотруднику владельческие разделы админки сайта (настройки и прочее) на сессию.</p>
+        <OwnerPinPanel slug={slug} initialPin={await getTenantOwnerPin(slug)} />
       </div>
 
       <div className="pf-panel" style={{ marginBottom: 16 }}>

@@ -3,11 +3,12 @@ import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { getContentDir } from "@/lib/content-dir";
-import { isAdmin } from "@/lib/admin-auth";
+import { getAdminActor } from "@/lib/admin-auth";
 
 /** Загрузка фото: sharp → WebP (max 1600px), в content/images/<section>/<name>.webp */
 export async function POST(request: Request) {
-  if (!(await isAdmin())) {
+  const actor = await getAdminActor();
+  if (!actor) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -15,6 +16,11 @@ export async function POST(request: Request) {
   const file = form.get("file");
   const section = String(form.get("section") ?? "dishes");
   const name = String(form.get("name") ?? `img-${Date.now().toString(36)}`);
+
+  // Сотруднику с правом "menu" доступен только раздел dishes (меню).
+  if (actor.role === "staff" && section !== "dishes") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   if (!(file instanceof File) || !file.type.startsWith("image/")) {
     return NextResponse.json({ error: "Нужен файл изображения" }, { status: 400 });

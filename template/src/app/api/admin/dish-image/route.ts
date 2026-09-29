@@ -6,7 +6,7 @@ import { isAdmin } from "@/lib/admin-auth";
 const schema = z.object({ dishId: z.string(), image: z.string().regex(/^images\//) });
 
 export async function POST(request: Request) {
-  if (!(await isAdmin())) {
+  if (!(await isAdmin("menu"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const parsed = schema.safeParse(await request.json());

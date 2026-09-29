@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { hasRecentAdminEvent, playAdminSound, primeAdminAudio } from "@/lib/admin-audio";
+import { setFaviconBadge, clearFaviconBadge } from "@/lib/favicon-badge";
 import type { PublicAdminSound } from "@/lib/admin-sound";
 import styles from "./admin-ui.module.css";
 import { AdminIcon } from "./admin-icon";
@@ -50,6 +51,12 @@ export function AdminNotifications() {
   useEffect(() => {
     enabledRef.current = enabled;
   }, [enabled]);
+
+  // Бейдж на фавиконе: счёт новых заказов+броней; снимается при открытии панели (unread=0).
+  useEffect(() => {
+    if (unread > 0) void setFaviconBadge(unread);
+    else clearFaviconBadge();
+  }, [unread]);
 
   function setSoundEnabled(value: boolean) {
     writeEnabledFlag(value);

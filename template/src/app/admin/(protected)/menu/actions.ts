@@ -7,7 +7,7 @@ import { isAdmin } from "@/lib/admin-auth";
 import { parseAdminInput, adminIdSchema, adminMoneySchema, adminPercentSchema, adminShortTextSchema, adminTextSchema } from "@/lib/admin-validation";
 
 async function guard() {
-  if (!(await isAdmin())) throw new Error("Forbidden");
+  if (!(await isAdmin("menu"))) throw new Error("Forbidden");
 }
 
 const updateDishSchema = z.object({

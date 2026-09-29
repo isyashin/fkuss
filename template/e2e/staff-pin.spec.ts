@@ -11,9 +11,10 @@ async function createStaff(page: Page) {
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
   await page.goto("/admin/team");
-  await page.getByLabel("Логин").fill(STAFF.login);
-  await page.getByLabel("Имя").fill(STAFF.name);
-  await page.getByLabel("Личный пароль").fill("staff-password-12");
+  const createForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Добавить сотрудника" }) });
+  await createForm.getByLabel("Логин").fill(STAFF.login);
+  await createForm.getByLabel("Имя").fill(STAFF.name);
+  await createForm.getByLabel("Личный пароль").fill("staff-password-12");
   await page.getByRole("button", { name: "Добавить сотрудника" }).click();
   await expect(page.getByText(STAFF.login)).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: /Профиль/ }).click();

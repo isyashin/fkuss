@@ -64,6 +64,14 @@ function drawBadge(count: number): string {
   return canvas.toDataURL("image/png");
 }
 
+/** Поддержание префикса "(N)" в заголовке: Next перезаписывает metadata.title при refresh — возвращаем. */
+function reassertTitle(): void {
+  if (currentCount > 0 && originalTitle) {
+    const expected = `(${currentCount}) ${originalTitle}`;
+    if (document.title !== expected) document.title = expected;
+  }
+}
+
 /** Показать/обновить бейдж; count<=0 — снять. */
 export async function setFaviconBadge(count: number): Promise<void> {
   if (typeof document === "undefined") return;
@@ -81,9 +89,7 @@ export async function setFaviconBadge(count: number): Promise<void> {
   const img = await loadBaseImage();
   if (!img) return;
   badgeUrl = drawBadge(count);
-
-  if (originalTitle && !document.title.startsWith("(")) originalTitle = document.title;
-  document.title = `(${count}) ${originalTitle}`;
+  reassertTitle();
 
   if (blinkTimer === null) {
     badgeVisible = true;
@@ -91,6 +97,7 @@ export async function setFaviconBadge(count: number): Promise<void> {
     blinkTimer = window.setInterval(() => {
       badgeVisible = !badgeVisible;
       applyHrefs(badgeVisible ? badgeUrl : baseHrefs[0]);
+      reassertTitle();
     }, BLINK_MS);
   }
 }

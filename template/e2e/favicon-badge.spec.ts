@@ -25,14 +25,16 @@ test("фавикон показывает новые заказы и брони"
   });
   expect(booking.ok()).toBe(true);
 
-  // Поллинг уведомлений раз в 10 с: ждём появления бейджа
+  // Поллинг уведомлений раз в 10 с: ждём появления бейджа (мигает — опрашиваем)
   await expect
     .poll(async () => page.evaluate(() => document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? ""), {
       timeout: 30_000,
       intervals: [1000, 2000, 4000],
     })
     .toContain("data:image/png");
-  await expect(page).toHaveTitle(new RegExp(`^\\(\\d+\\) ${originalTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  await expect
+    .poll(async () => page.title(), { timeout: 15_000, intervals: [700, 1200] })
+    .toMatch(new RegExp(`^\\(\\d+\\) ${originalTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
 
   // Открыли панель уведомлений — непрочитанные сброшены, бейдж снят
   await page.getByRole("button", { name: /Оповещения/ }).first().click();

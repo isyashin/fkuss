@@ -67,8 +67,9 @@ test("сотрудник: меню доступно, настройки откр
   await page.getByRole("button", { name: "Разблокировать" }).click();
   await expect(page.getByRole("alert")).toContainText("Неверный PIN", { timeout: 15000 });
 
-  // Верный PIN — кликами по визуальной панели (1-2-3-4-5)
+  // Верный PIN — кликами по визуальной панели (1-2-3-4-5) + кнопка подтверждения
   for (const key of ["1", "2", "3", "4", "5"]) await page.getByRole("button", { name: `Цифра ${key}` }).click();
+  await page.getByRole("button", { name: "Разблокировать" }).click();
   await expect(page.getByRole("heading", { name: "Настройки" })).toBeVisible({ timeout: 15000 });
 
   // Уровень владельца: «Сотрудники» открывается

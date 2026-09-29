@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Вход в админку — fkuss.ru</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="/assets/favicon.svg?v=1">
+  <link rel="stylesheet" href="/admin.css">
+  <script src="/admin.js" defer></script>
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <a class="login-brand" href="/" aria-label="Открыть лендинг fkuss.ru"><img src="/assets/fkuss-logo.png" width="2172" height="724" alt="fkuss.ru"></a>
+    <p class="eyebrow">Админка лендинга</p>
+    <h1>Вход в админку</h1>
+    <p class="login-description">Заявки на создание сайтов для ресторанов.</p>
+    <form id="login-form" class="login-form">
+      <label for="login">Логин</label>
+      <input id="login" name="login" autocomplete="username" maxlength="64" required autofocus>
+      <label for="password">Пароль</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" required>
+      <p id="login-error" class="error" role="alert" hidden></p>
+      <button type="submit" class="button primary" id="login-submit">Войти</button>
+    </form>
+    <a class="back-link" href="/">← На лендинг</a>
+    <noscript><p class="error">Включите JavaScript, чтобы войти.</p></noscript>
+  </main>
+</body>
+</html>

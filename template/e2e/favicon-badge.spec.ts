@@ -3,12 +3,19 @@ import { loginAdminUi } from "./login-admin";
 
 // Фавикон с живой индикацией: новая бронь → бейдж со счётом необработанных;
 // открытие колокольчика бейдж НЕ гасит — только обработка брони/заказа.
+// Счётчик считаем относительно начального состояния (БД общая с другими спеками).
 test("фавикон показывает необработанные заказы и брони", async ({ page, request }) => {
   test.setTimeout(150_000);
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
-  const originalTitle = await page.title();
+
+  const badgeCount = async () => {
+    const match = (await page.title()).match(/^\((\d+)\)/);
+    return match ? Number(match[1]) : 0;
+  };
+  const iconHref = () => page.evaluate(() => document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? "");
+  const n0 = await badgeCount();
 
   // Бронь через публичный API
   const slots = await (await request.get("/api/booking/slots?date=2026-12-05")).json();
@@ -25,34 +32,20 @@ test("фавикон показывает необработанные зака�
   });
   expect(booking.ok()).toBe(true);
 
-  // Бейдж появляется (поллинг раз в 10 с, мигает — опрашиваем)
-  await expect
-    .poll(async () => page.evaluate(() => document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? ""), {
-      timeout: 30_000,
-      intervals: [1000, 2000, 4000],
-    })
-    .toContain("data:image/png");
-  await expect
-    .poll(async () => page.title(), { timeout: 15_000, intervals: [700, 1200] })
-    .toMatch(new RegExp(`^\\(\\d+\\) ${originalTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  // Счёт вырос на 1, фавикон — с бейджем (поллинг раз в 10 с, мигает — опрашиваем)
+  await expect.poll(async () => (await iconHref()).startsWith("data:image/png"), { timeout: 30_000, intervals: [1000, 2000, 4000] }).toBe(true);
+  await expect.poll(async () => await badgeCount(), { timeout: 30_000, intervals: [800, 1500] }).toBe(n0 + 1);
 
   // Открытие колокольчика бейдж НЕ снимает
   await page.getByRole("button", { name: /Оповещения/ }).first().click();
-  await page.waitForTimeout(1500);
-  const hrefAfterPeek = await page.evaluate(() => document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? "");
-  expect(hrefAfterPeek).toContain("data:image/png");
+  await expect.poll(async () => (await iconHref()).startsWith("data:image/png"), { timeout: 10_000, intervals: [700, 1200] }).toBe(true);
 
-  // Обработка брони (подтверждение в админке) — бейдж гаснет
+  // Обработка брони (подтверждение в админке) — счёт возвращается к n0
   await page.goto("/admin/bookings");
   const bookingRow = page.locator("button", { hasText: "2026-12-05" }).first();
   await bookingRow.click();
   await page.getByRole("button", { name: "Подтвердить бронь" }).click();
-  await expect
-    .poll(async () => page.evaluate(() => document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? ""), {
-      timeout: 25_000,
-      intervals: [1000, 2000, 4000],
-    })
-    .not.toContain("data:image/png");
+  await expect.poll(async () => await badgeCount(), { timeout: 30_000, intervals: [1000, 2000, 4000] }).toBe(n0);
 });
 
 // Событие доезжает до КАЖДОЙ открытой вкладки админки (звук/бейдж работают везде).

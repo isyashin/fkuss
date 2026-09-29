@@ -78,6 +78,7 @@ export function AdminNotifications() {
   const latestId = useRef<string | null | undefined>(undefined);
   const enabledRef = useRef(enabled);
   const pendingRef = useRef({ orders: 0, bookings: 0 });
+  const [pendingCounts, setPendingCounts] = useState({ orders: 0, bookings: 0 });
 
   useEffect(() => {
     enabledRef.current = enabled;
@@ -86,10 +87,10 @@ export function AdminNotifications() {
   // Бейдж на фавиконе = необработанные заказы + брони (как в сайдбаре):
   // гаснет только когда их реально обработали, а не от взгляда на колокольчик.
   useEffect(() => {
-    const total = pendingRef.current.orders + pendingRef.current.bookings;
+    const total = pendingCounts.orders + pendingCounts.bookings;
     if (total > 0) void setFaviconBadge(total);
     else clearFaviconBadge();
-  });
+  }, [pendingCounts]);
 
   function setSoundEnabled(value: boolean) {
     writeEnabledFlag(value);
@@ -167,6 +168,7 @@ export function AdminNotifications() {
         if (cancelled) return;
         sound.current = data.sound;
         pendingRef.current = data.pending;
+        setPendingCounts(data.pending);
         if (data.events.length || (latestId.current !== undefined && latestId.current !== data.latestId)) router.refresh();
         latestId.current = data.latestId;
         if (data.events.length) {

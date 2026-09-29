@@ -104,6 +104,7 @@ export async function createLandingServer(options = {}) {
   const now = options.now || Date.now;
   const limits = new Map();
   const production = options.production === true;
+  const preview = options.preview === true;
   if (production && (!options.origin || new URL(options.origin).protocol !== "https:")) throw new Error("Production requires an HTTPS origin");
   const normalizeIP = value => value?.startsWith("::ffff:") ? value.slice(7) : value;
   const trustedProxyIPs = new Set((options.trustedProxyIPs || []).map(value => {
@@ -113,7 +114,7 @@ export async function createLandingServer(options = {}) {
   const staticCache = new Map();
   const renderIndex = async () => {
     const [template, rawContent] = await Promise.all([readFile(resolve(root, "index.html"), "utf8"), readFile(resolve(root, "content/landing.json"), "utf8")]);
-    return Buffer.from(renderLanding(template, JSON.parse(rawContent), {origin:options.origin, production}));
+    return Buffer.from(renderLanding(template, JSON.parse(rawContent), {origin:options.origin, production, preview}));
   };
   const productionIndex = production ? await renderIndex() : null;
 
@@ -184,7 +185,7 @@ export async function createLandingServer(options = {}) {
       let pathname;
       try { pathname = decodeURIComponent(new URL(request.url, "http://localhost").pathname); }
       catch { throw new HttpError(400, "Неверный адрес."); }
-      if (!production || pathname.startsWith("/admin") || pathname.startsWith("/api/") || pathname.startsWith("/preview") || pathname === "/login.html") response.setHeader("X-Robots-Tag", "noindex, nofollow");
+      if (!production || preview || pathname.startsWith("/admin") || pathname.startsWith("/api/") || pathname.startsWith("/preview") || pathname === "/login.html") response.setHeader("X-Robots-Tag", "noindex, nofollow");
       const get = request.method === "GET" || request.method === "HEAD";
       if (["POST", "PATCH"].includes(request.method)) checkOrigin(request);
       if (get && pathname === "/healthz") {
@@ -192,6 +193,11 @@ export async function createLandingServer(options = {}) {
         return json(response, 200, {ok:true});
       }
       if (get && production && ["/robots.txt", "/sitemap.xml"].includes(pathname)) {
+        if (preview) {
+          if (pathname === "/sitemap.xml") throw new HttpError(404, "Страница не найдена.");
+          response.writeHead(200, {"Content-Type":"text/plain; charset=utf-8", "Cache-Control":"no-cache"});
+          return response.end(request.method === "HEAD" ? undefined : "User-agent: *\nDisallow: /\n");
+        }
         const canonical = new URL("/", options.origin).href;
         const robots = "User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nDisallow: /preview\nSitemap: " + new URL("/sitemap.xml", canonical).href + "\n";
         const sitemap = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>' + escapeHtml(canonical) + '</loc></url></urlset>';
@@ -274,6 +280,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const server = await createLandingServer({
       origin:process.env.FKUSS_LANDING_ORIGIN || undefined,
       production:process.env.NODE_ENV === "production",
+      preview:process.env.FKUSS_LANDING_PREVIEW === "1",
       configFile:process.env.FKUSS_LANDING_ADMIN_FILE || undefined,
       databasePath:process.env.FKUSS_LANDING_DATABASE || undefined,
       trustedProxyIPs:(process.env.FKUSS_LANDING_TRUSTED_PROXY_IPS || "").split(",").map(value => value.trim()).filter(Boolean)

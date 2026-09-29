@@ -64,6 +64,32 @@ export function MenuClient({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
+  // Драг мышью: слушатели на window БЕЗ pointer capture — иначе click после
+  // capture уходит на контейнер (общий предок pointerdown/up) и кнопка его не получает.
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      const el = tabsRef.current;
+      if (!drag || !el || event.pointerType !== "mouse") return;
+      const dx = event.clientX - drag.startX;
+      if (!drag.moved && Math.abs(dx) > 6) drag.moved = true;
+      if (drag.moved) el.scrollLeft = drag.startScroll - dx;
+    };
+    const onUp = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      dragRef.current = null;
+      if (drag?.moved && event.pointerType === "mouse") suppressClickUntil.current = Date.now() + 400;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, []);
+
   // Активная категория доводится в видимую область ряда (только по горизонтали,
   // без вертикального скролла страницы).
   useEffect(() => {
@@ -93,30 +119,9 @@ export function MenuClient({
           style={{ touchAction: "pan-x" }}
           className="mx-auto flex max-w-5xl cursor-grab gap-2 overflow-x-auto px-4 py-3 scrollbar-none select-none active:cursor-grabbing md:justify-[safe_center]"
           onPointerDown={(event) => {
-            if (event.pointerType !== "mouse" || !tabsRef.current) return;
+            if (event.pointerType !== "mouse") return;
             suppressClickUntil.current = 0; // новый жест отменяет подавление прошлого драга
-            dragRef.current = { startX: event.clientX, startScroll: tabsRef.current.scrollLeft, moved: false };
-            tabsRef.current.setPointerCapture(event.pointerId);
-          }}
-          onPointerMove={(event) => {
-            const drag = dragRef.current;
-            const el = tabsRef.current;
-            if (!drag || !el || event.pointerType !== "mouse") return;
-            const dx = event.clientX - drag.startX;
-            if (!drag.moved && Math.abs(dx) > 6) drag.moved = true;
-            if (drag.moved) el.scrollLeft = drag.startScroll - dx;
-          }}
-          onPointerUp={(event) => {
-            const el = tabsRef.current;
-            const drag = dragRef.current;
-            dragRef.current = null;
-            if (!el) return;
-            if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId);
-            if (drag?.moved) suppressClickUntil.current = Date.now() + 400;
-          }}
-          onPointerCancel={(event) => {
-            dragRef.current = null;
-            if (tabsRef.current?.hasPointerCapture(event.pointerId)) tabsRef.current.releasePointerCapture(event.pointerId);
+            dragRef.current = { startX: event.clientX, startScroll: tabsRef.current?.scrollLeft ?? 0, moved: false };
           }}
           onClickCapture={(event) => {
             if (suppressClickUntil.current && Date.now() < suppressClickUntil.current) {

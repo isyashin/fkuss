@@ -15,6 +15,8 @@ test("фавикон показывает необработанные зака�
     return match ? Number(match[1]) : 0;
   };
   const iconHref = () => page.evaluate(() => document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href ?? "");
+  // Даём опросу применить текущее состояние (бэклог общей БД), затем фиксируем базу
+  await page.waitForTimeout(12_000);
   const n0 = await badgeCount();
 
   // Бронь через публичный API

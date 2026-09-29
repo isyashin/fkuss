@@ -12,7 +12,13 @@ async function assertResponsivePage(page: Page, path: string) {
 
   page.on("response", onResponse);
   try {
-    await page.goto(path);
+    // waitUntil: "commit" — убирает гонку с router.refresh() админки (RSC-стриминг
+    // прерывал goto ошибкой «interrupted by another navigation»); готовность ниже
+    // всё равно ждём опросом readyState. При прерывании повторяем переход один раз.
+    await page.goto(path, { waitUntil: "commit" }).catch(async () => {
+      await page.waitForLoadState("load").catch(() => {});
+      await page.goto(path, { waitUntil: "commit" });
+    });
     await expect.poll(() => page.evaluate(() => document.readyState)).toBe("complete");
     const layout = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,

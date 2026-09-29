@@ -38,6 +38,7 @@ test("сотрудник: меню доступно, настройки откр
     data: { pin: "12345" },
     headers: { "X-Site-Key": "e2e-test-site-key" },
   });
+  if (!pinResp.ok()) console.log("owner-pin resp:", pinResp.status(), await pinResp.text());
   expect(pinResp.ok()).toBe(true);
 
   await createStaff(page);

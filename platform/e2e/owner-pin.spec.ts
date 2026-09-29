@@ -12,7 +12,7 @@ test("в карточке сайта есть PIN владельца с вали
   await page.getByRole("link", { name: /Чайхана Бухара/ }).click();
   await expect(page).toHaveURL(/\/admin\/sites\/buxara$/);
 
-  const section = page.getByText("PIN владельца");
+  const section = page.getByRole("heading", { name: "PIN владельца" });
   await expect(section).toBeVisible();
   const pinInput = page.getByLabel("PIN владельца");
   await expect(pinInput).toBeVisible();

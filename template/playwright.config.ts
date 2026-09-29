@@ -19,6 +19,7 @@ export default defineConfig({
       AUTH_DEV_CODE: "1",
       INSECURE_HTTP: "1",
       SITE_KEY: "e2e-test-site-key",
+      ADMIN_LOGIN_ATTEMPTS: "1000",
     },
   },
   projects: [

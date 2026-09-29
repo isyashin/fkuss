@@ -42,6 +42,8 @@ export function MenuClient({
   const add = useCart((s) => s.add);
   const tabsRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startX: number; startScroll: number; moved: boolean } | null>(null);
+  // Гасим только клик, завершающий жест драга (400 мс), а не все следующие клики
+  const suppressClickUntil = useRef(0);
 
   // Вертикальное колесо над табами прокручивает ряд по горизонтали
   // (нативный слушатель: React вешает wheel пассивно и preventDefault не сработал бы).
@@ -109,17 +111,18 @@ export function MenuClient({
             dragRef.current = null;
             if (!el) return;
             if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId);
-            // После реального драга гасим клик, чтобы не сработал выбор категории
-            if (drag?.moved) {
-              el.addEventListener("click", (click) => {
-                click.preventDefault();
-                click.stopPropagation();
-              }, { capture: true, once: true });
-            }
+            if (drag?.moved) suppressClickUntil.current = Date.now() + 400;
           }}
           onPointerCancel={(event) => {
             dragRef.current = null;
             if (tabsRef.current?.hasPointerCapture(event.pointerId)) tabsRef.current.releasePointerCapture(event.pointerId);
+          }}
+          onClickCapture={(event) => {
+            if (suppressClickUntil.current && Date.now() < suppressClickUntil.current) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            suppressClickUntil.current = 0;
           }}
         >
           {menu.categories.map((c) => (

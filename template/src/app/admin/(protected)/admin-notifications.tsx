@@ -41,16 +41,26 @@ function subscribeEnabled(callback: () => void) {
     window.removeEventListener(ENABLED_EVENT, callback);
   };
 }
+function randomId(): string {
+  try {
+    // crypto.randomUUID недоступен вне secure context (http в LAN) — getRandomValues доступен везде
+    const bytes = new Uint8Array(12);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  } catch {
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+}
 function tabId(): string {
   try {
     let id = sessionStorage.getItem(TAB_KEY);
     if (!id) {
-      id = crypto.randomUUID();
+      id = randomId();
       sessionStorage.setItem(TAB_KEY, id);
     }
     return id;
   } catch {
-    return "default";
+    return randomId();
   }
 }
 

@@ -5,12 +5,41 @@
 import { cookies } from "next/headers";
 import { randomInt } from "node:crypto";
 import { getPrisma } from "./db";
-import type { Customer } from "@/generated/prisma/client";
+import type { Customer, PrismaClient } from "@/generated/prisma/client";
 
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 минут
 const CODE_MAX_ATTEMPTS = 3;
-const SESSION_TTL_DAYS = 30;
+export const SESSION_TTL_DAYS = 30;
 const SESSION_COOKIE = "resto_session";
+
+/** Гостя регистрируем при первом входе и сразу открываем сессию. */
+export async function issueGuestSession(prisma: PrismaClient, email: string): Promise<string> {
+  const customer = await prisma.customer.upsert({
+    where: { email },
+    create: { email },
+    update: {},
+  });
+  const session = await prisma.session.create({
+    data: {
+      customerId: customer.id,
+      expiresAt: new Date(Date.now() + SESSION_TTL_DAYS * 24 * 3600 * 1000),
+    },
+  });
+  return session.id;
+}
+
+/** httpOnly-cookie сессии. Вызывать только в route handler / server action. */
+export async function attachGuestSession(sessionId: string): Promise<void> {
+  const jar = await cookies();
+  jar.set(SESSION_COOKIE, sessionId, {
+    httpOnly: true,
+    sameSite: "lax",
+    // В проде HTTPS (Caddy). Флаг INSECURE_HTTP=1 — только для тестов по http.
+    secure: process.env.NODE_ENV === "production" && process.env.INSECURE_HTTP !== "1",
+    maxAge: SESSION_TTL_DAYS * 24 * 3600,
+    path: "/",
+  });
+}
 
 export async function requestAuthCode(email: string): Promise<{ devCode?: string; deliveryFailed?: boolean }> {
   const prisma = getPrisma();
@@ -53,28 +82,8 @@ export async function verifyAuthCode(
 
   await prisma.authCode.update({ where: { id: record.id }, data: { usedAt: new Date() } });
 
-  const customer = await prisma.customer.upsert({
-    where: { email },
-    create: { email },
-    update: {},
-  });
-
-  const session = await prisma.session.create({
-    data: {
-      customerId: customer.id,
-      expiresAt: new Date(Date.now() + SESSION_TTL_DAYS * 24 * 3600 * 1000),
-    },
-  });
-
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE, session.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    // В проде HTTPS (Caddy). Флаг INSECURE_HTTP=1 — только для тестов по http.
-    secure: process.env.NODE_ENV === "production" && process.env.INSECURE_HTTP !== "1",
-    maxAge: SESSION_TTL_DAYS * 24 * 3600,
-    path: "/",
-  });
+  const sessionId = await issueGuestSession(prisma, email);
+  await attachGuestSession(sessionId);
 
   return { ok: true };
 }

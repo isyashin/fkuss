@@ -8,10 +8,26 @@ export function hasRecentAdminEvent(events: { createdAt: string }[], now = Date.
   return events.some((event) => now - new Date(event.createdAt).getTime() < 5 * 60 * 1000);
 }
 
+/**
+ * Беззвучная разблокировка аудио по первому жесту пользователя:
+ * создаём/пробуждаем AudioContext, не издавая звука. Возвращает true,
+ * если контекст в состоянии running (программные воспроизведения разрешены).
+ */
+export async function primeAdminAudio(): Promise<boolean> {
+  try {
+    audioContext ??= new AudioContext();
+    await audioContext.resume();
+    return audioContext.state === "running";
+  } catch {
+    return false;
+  }
+}
 export async function playAdminSound(sound: PublicAdminSound): Promise<void> {
   if (sound.selected === "custom") {
     if (!sound.customUrl) throw new Error("Свой звук не загружен");
-    await new Audio(sound.customUrl).play();
+    const audio = new Audio(sound.customUrl);
+    audio.volume = 1;
+    await audio.play();
     return;
   }
 
@@ -25,8 +41,9 @@ export async function playAdminSound(sound: PublicAdminSound): Promise<void> {
     const at = start + index * 0.19;
     oscillator.type = sound.selected === "standard1" ? "sine" : "triangle";
     oscillator.frequency.value = frequency;
+    // Громкий сигнал: 0.5 от полной шкалы
     volume.gain.setValueAtTime(0.0001, at);
-    volume.gain.exponentialRampToValueAtTime(0.16, at + 0.018);
+    volume.gain.exponentialRampToValueAtTime(0.5, at + 0.018);
     volume.gain.exponentialRampToValueAtTime(0.0001, at + 0.17);
     oscillator.connect(volume).connect(audioContext!.destination);
     oscillator.start(at);

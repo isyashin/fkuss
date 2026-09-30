@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { isPlatformAdmin } from "@/lib/platform-admin-auth";
+import { PfLoginShell } from "@/components/pf-shell";
 import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
@@ -7,11 +8,8 @@ export const dynamic = "force-dynamic";
 export default async function PlatformLoginPage() {
   if (await isPlatformAdmin()) redirect("/admin");
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl mb-6 text-center">Платформа</h1>
-        <LoginForm />
-      </div>
-    </main>
+    <PfLoginShell eyebrow="FKUSS ПЛАТФОРМА" title="Вход в админку" lead="Панель владельца платформы: все сайты, биллинг и метрики.">
+      <LoginForm />
+    </PfLoginShell>
   );
 }

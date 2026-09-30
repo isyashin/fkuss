@@ -19,6 +19,9 @@ export default defineConfig({
       PLATFORM_BASE_URL: "http://localhost:3100",
       PLATFORM_PAYMENT_PROVIDER: "mock",
       ALLOW_MOCK_PAYMENT: "1",
+      PLATFORM_ADMIN_PASSWORD: process.env.PLATFORM_ADMIN_PASSWORD ?? "platform-e2e-admin",
+      PLATFORM_TELEGRAM_BOT_TOKEN: "",
+      SMTP_URL: "",
     },
   },
   projects: [

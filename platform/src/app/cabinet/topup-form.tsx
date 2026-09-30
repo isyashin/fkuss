@@ -9,33 +9,21 @@ export function TopupForm({ slug }: { slug: string }) {
   const [error, setError] = useState("");
 
   return (
-    <div className="flex gap-2 items-center">
-      <input
-        type="number"
-        min={100}
-        step={100}
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        className="w-32 min-h-11 px-3 rounded-lg border border-zinc-300"
-      />
-      <button
-        disabled={pending}
+    <div className="pf-actionsRow">
+      <input type="number" min={100} step={100} value={amount} onChange={(e) => setAmount(e.target.value)}
+        aria-label="Сумма пополнения" className="pf-input" style={{ width: 130 }} />
+      <button type="button" className="pf-btn pf-btnPrimary" disabled={pending}
         onClick={() =>
           startTransition(async () => {
             setError("");
             const result = await topupAction(slug, Number(amount));
-            if (result.confirmationUrl) {
-              window.location.href = result.confirmationUrl;
-            } else {
-              setError(result.error ?? "Ошибка оплаты");
-            }
+            if (result.confirmationUrl) window.location.href = result.confirmationUrl;
+            else setError(result.error ?? "Ошибка оплаты");
           })
-        }
-        className="min-h-11 px-5 rounded-full bg-zinc-900 text-white text-sm font-medium disabled:opacity-50"
-      >
+        }>
         {pending ? "…" : "Пополнить"}
       </button>
-      {error && <span className="text-red-600 text-sm">{error}</span>}
+      {error && <span role="alert" style={{ color: "var(--pf-red)", fontSize: 12 }}>{error}</span>}
     </div>
   );
 }

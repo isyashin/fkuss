@@ -8,14 +8,14 @@ export const adminNameSchema = z.string().trim().min(1).max(100);
 export const adminPasswordSchema = z.string().min(12, "Пароль должен содержать не меньше 12 символов").max(200);
 export const adminRoleSchema = z.enum(["owner", "staff"]);
 export type AdminRole = z.infer<typeof adminRoleSchema>;
-export type AdminPermission = "orders" | "bookings" | "manage";
+export type AdminPermission = "orders" | "bookings" | "menu" | "manage";
 export type AdminActor = { id: string; login: string; name: string; role: AdminRole };
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
 
 export function hasAdminPermission(actor: AdminActor, permission: AdminPermission): boolean {
-  return actor.role === "owner" || permission === "orders" || permission === "bookings";
+  return actor.role === "owner" || permission === "orders" || permission === "bookings" || permission === "menu";
 }
 
 export async function createAdminUser(prisma: PrismaClient, input: { login: string; name: string; role: AdminRole; password: string }) {

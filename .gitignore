@@ -46,3 +46,7 @@ playwright-report/
 
 # Сгенерированный Prisma Client
 **/src/generated/
+
+# Локальные QA-артефакты и прототип (хранятся только локально)
+/test-front/
+/qa-artifacts/

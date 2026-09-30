@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { dishImageUrl } from "@/lib/assets";
 import type { Menu, Dish } from "@/lib/content";
 import type { ContentSettings } from "@/lib/content-schema";
@@ -40,6 +40,67 @@ export function MenuClient({
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const add = useCart((s) => s.add);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ startX: number; startScroll: number; moved: boolean } | null>(null);
+  // Гасим только клик, завершающий жест драга (400 мс), а не все следующие клики
+  const suppressClickUntil = useRef(0);
+
+  // Вертикальное колесо над табами прокручивает ряд по горизонтали
+  // (нативный слушатель: React вешает wheel пассивно и preventDefault не сработал бы).
+  // На краю ряда страница крутится как обычно.
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+      const max = el.scrollWidth - el.clientWidth;
+      if (max <= 0) return;
+      const forward = event.deltaY > 0;
+      if ((forward && el.scrollLeft >= max - 1) || (!forward && el.scrollLeft <= 0)) return;
+      event.preventDefault();
+      el.scrollLeft += event.deltaY;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Драг мышью: слушатели на window БЕЗ pointer capture — иначе click после
+  // capture уходит на контейнер (общий предок pointerdown/up) и кнопка его не получает.
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      const el = tabsRef.current;
+      if (!drag || !el || event.pointerType !== "mouse") return;
+      const dx = event.clientX - drag.startX;
+      if (!drag.moved && Math.abs(dx) > 6) drag.moved = true;
+      if (drag.moved) el.scrollLeft = drag.startScroll - dx;
+    };
+    const onUp = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      dragRef.current = null;
+      if (drag?.moved && event.pointerType === "mouse") suppressClickUntil.current = Date.now() + 400;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, []);
+
+  // Активная категория доводится в видимую область ряда (только по горизонтали,
+  // без вертикального скролла страницы).
+  useEffect(() => {
+    const container = tabsRef.current;
+    const chip = container?.querySelector<HTMLElement>('[data-active="true"]');
+    if (!container || !chip) return;
+    const chipLeft = chip.offsetLeft;
+    const chipRight = chipLeft + chip.offsetWidth;
+    if (chipLeft < container.scrollLeft) container.scrollLeft = chipLeft - 8;
+    else if (chipRight > container.scrollLeft + container.clientWidth) container.scrollLeft = chipRight - container.clientWidth + 8;
+  }, [activeCategory]);
 
   return (
     <div className="pb-24">
@@ -48,12 +109,34 @@ export function MenuClient({
           Сейчас ресторан закрыт — принимаем предзаказы на время открытия
         </div>
       )}
-      {/* Табы категорий — прилипают к верху */}
+      {/* Табы категорий — прилипают к верху; драг мышью / колесо / свайп */}
       <div className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b border-foreground/10">
-        <div className="mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-3 scrollbar-none md:justify-[safe_center]">
+        <div
+          ref={tabsRef}
+          data-testid="menu-tabs"
+          role="tablist"
+          aria-label="Категории меню"
+          style={{ touchAction: "pan-x" }}
+          className="mx-auto flex max-w-5xl cursor-grab gap-2 overflow-x-auto px-4 py-3 scrollbar-none select-none active:cursor-grabbing md:justify-[safe_center]"
+          onPointerDown={(event) => {
+            if (event.pointerType !== "mouse") return;
+            suppressClickUntil.current = 0; // новый жест отменяет подавление прошлого драга
+            dragRef.current = { startX: event.clientX, startScroll: tabsRef.current?.scrollLeft ?? 0, moved: false };
+          }}
+          onClickCapture={(event) => {
+            if (suppressClickUntil.current && Date.now() < suppressClickUntil.current) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            suppressClickUntil.current = 0;
+          }}
+        >
           {menu.categories.map((c) => (
             <button
               key={c.id}
+              role="tab"
+              data-active={activeCategory === c.id ? "true" : undefined}
+              aria-selected={activeCategory === c.id}
               onClick={() => {
                 setActiveCategory(c.id);
                 document.getElementById(`cat-${c.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -81,14 +164,16 @@ export function MenuClient({
                     onClick={() => setSelectedDish(dish)}
                     className="text-left bg-card rounded-[var(--radius)] overflow-hidden shadow-sm active:scale-[0.98] transition-transform"
                   >
-                    <div className="relative aspect-square bg-foreground/5">
+                    <div className="relative aspect-square bg-foreground/5 overflow-hidden">
                       {/* Карточка: 400px WebP напрямую, без runtime-оптимизатора */}
+                      {/* scale-[1.15]: у исходников разная композиция (крупный план/общий),
+                          лёгкий зум от центра визуально унифицирует кадры */}
                       <img
                         src={dishImageUrl(dish.image, "sm")}
                         alt={dish.name}
                         loading="lazy"
                         decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover scale-[1.15]"
                       />
                       {dish.tags.includes("hit") && (
                         <span className="absolute top-2 left-2 bg-accent text-white text-xs px-2 py-1 rounded-full">

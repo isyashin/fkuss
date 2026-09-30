@@ -48,6 +48,7 @@ describe("restaurant staff authentication", () => {
     expect(actor).toMatchObject({ id: staffId, name: "Сотрудник теста", role: "staff" });
     expect(hasAdminPermission(actor!, "orders")).toBe(true);
     expect(hasAdminPermission(actor!, "bookings")).toBe(true);
+    expect(hasAdminPermission(actor!, "menu")).toBe(true);
     expect(hasAdminPermission(actor!, "manage")).toBe(false);
     await revokeAdminSession(prisma, token);
     expect(await resolveAdminSession(prisma, token)).toBeNull();

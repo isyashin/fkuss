@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { requestExportAction } from "./export-action";
 
 export function ExportButton({
@@ -13,17 +14,15 @@ export function ExportButton({
   label?: string;
 }) {
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   if (requested) {
-    return <p className="text-sm text-zinc-500">Экспорт запрошен — архив скоро появится в кабинете.</p>;
+    return <p className="pf-note" role="status">Экспорт запрошен — архив скоро появится в кабинете.</p>;
   }
 
   return (
-    <button
-      disabled={pending}
-      onClick={() => startTransition(() => requestExportAction(slug))}
-      className="min-h-11 px-5 rounded-full border border-zinc-300 text-sm font-medium disabled:opacity-50"
-    >
+    <button type="button" className="pf-btn pf-btnOutline" disabled={pending}
+      onClick={() => startTransition(async () => { await requestExportAction(slug); router.refresh(); })}>
       {pending ? "Запрашиваю…" : label}
     </button>
   );

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Reservation } from "@/generated/prisma/client";
 import { adminListHref, bookingListCounts, BOOKING_STATUSES, type BookingListQuery } from "@/lib/admin-list-query";
 import type { GuestChannels } from "@/lib/guest-contact";
@@ -24,15 +25,23 @@ export function BookingsDashboard({ bookings, upcomingBookings, counts, query, p
   guestContact: GuestChannels; timeZone: string; today: string; initialSelectedId?: string | null; selectedBooking?: Reservation | null;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
+  const router = useRouter();
   const selected = selectedId
     ? upcomingBookings.find((booking) => booking.id === selectedId) ?? bookings.find((booking) => booking.id === selectedId) ?? (selectedBooking?.id === selectedId ? selectedBooking : null)
     : upcomingBookings[0] ?? null;
   const href = (next: BookingListQuery) => adminListHref("/admin/bookings", next);
+  // Выбор держим в URL (?selected=), чтобы он переживал router.refresh()
+  // после подтверждения/отклонения и был доступен по прямой ссылке.
+  const select = (id: string) => {
+    setSelectedId(id);
+    const base = href(query);
+    router.replace(`${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`, { scroll: false });
+  };
   const showArchive = query.status !== "all" || query.sort !== "desc" || query.page > 1;
   const bookingItem = (booking: Reservation) => <button key={booking.id} type="button"
     className={`${styles.bookingItem} ${booking.status === "new" ? styles.bookingItemFresh : ""} ${selected?.id === booking.id ? styles.bookingItemSelected : ""}`}
     aria-label={`Открыть бронь ${booking.date} ${booking.time}, ${booking.customerName}`} aria-pressed={selected?.id === booking.id}
-    onClick={() => setSelectedId(booking.id)}>
+    onClick={() => select(booking.id)}>
     <span className={styles.bookingItemCopy}><strong>{bookingWhen(booking, today)}</strong><small>{booking.customerName} · {booking.guests} {booking.guests === 1 ? "гость" : booking.guests >= 2 && booking.guests <= 4 ? "гостя" : "гостей"}</small></span>
     <span className={`${styles.badge} ${styles.bookingStatus} ${booking.status === "new" ? styles.new : booking.status === "cancelled" || booking.status === "rejected" ? styles.cancelled : ""}`}>{statusNames[booking.status] ?? booking.status}</span>
     <AdminIcon name="chevron" size={18}/>

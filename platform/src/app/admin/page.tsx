@@ -12,55 +12,84 @@ const STATE_NAMES: Record<string, string> = {
   suspended: "приостановлен",
 };
 
+const rub = (kopecks: number) => `${(kopecks / 100).toFixed(2)} ₽`;
+
 export default async function PlatformAdminPage() {
   if (!(await isPlatformAdmin())) redirect("/admin/login");
 
   const prisma = getPrisma();
-  const sites = await prisma.site.findMany({
-    include: {
-      tariff: true,
-      ledger: { select: { amount: true } },
-      metrics: { orderBy: { date: "desc" }, take: 1 },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const [sites, balanceAgg] = await Promise.all([
+    prisma.site.findMany({
+      include: {
+        tariff: true,
+        ledger: { select: { amount: true } },
+        metrics: { orderBy: { date: "desc" }, take: 1 },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.balanceTransaction.aggregate({ _sum: { amount: true } }),
+  ]);
+
+  const active = sites.filter((s) => s.state === "active" || s.state === "grace");
+  const suspended = sites.length - active.length;
+  const mrr = active.reduce((sum, s) => sum + (s.tariff?.monthlyPrice ?? 0), 0);
+  const totalBalance = balanceAgg._sum.amount ?? 0;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="text-2xl mb-6">Сайты ({sites.length})</h1>
-      <div className="space-y-3">
+    <>
+      <div className="pf-intro">
+        <span>Платформа сайтов</span>
+        <h1>Сайты</h1>
+        <p>Все ресторанные сайты: состояние, балансы, тарифы и метрики. Клик по карточке — детали сайта.</p>
+      </div>
+
+      <div className="pf-grid pf-grid3" style={{ marginBottom: 18 }}>
+        <div className="pf-panel pf-stat">
+          <p className="pf-statLabel">MRR · тарифы активных</p>
+          <p className="pf-statValue">{mrr.toFixed(2)} ₽</p>
+          <p className="pf-statNote">в месяц по {active.length} сайтам</p>
+        </div>
+        <div className="pf-panel pf-stat">
+          <p className="pf-statLabel">Суммарный баланс</p>
+          <p className="pf-statValue">{rub(totalBalance)}</p>
+          <p className="pf-statNote">по всем сайтам</p>
+        </div>
+        <div className="pf-panel pf-stat">
+          <p className="pf-statLabel">Состояние парка</p>
+          <p className="pf-statValue">{active.length} / {sites.length}</p>
+          <p className="pf-statNote">активных · {suspended > 0 ? `${suspended} приостановлено` : "без приостановок"}</p>
+        </div>
+      </div>
+
+      <div className="pf-rows">
         {sites.map((site) => {
           const balance = site.ledger.reduce((s, t) => s + t.amount, 0);
           const daily = site.tariff ? dailyChargeKopecks(site.tariff.monthlyPrice) : 0;
           const days = daysLeft(balance, daily);
           const last = site.metrics[0];
           return (
-            <Link
-              key={site.slug}
-              href={`/admin/sites/${site.slug}`}
-              className="block bg-white rounded-xl border border-zinc-200 p-4 hover:border-zinc-400"
-            >
-              <div className="flex flex-wrap justify-between gap-2 items-baseline">
-                <p className="font-medium text-lg">{site.name}</p>
-                <p className={site.state === "active" ? "text-green-600" : "text-red-600"}>
+            <Link key={site.slug} href={`/admin/sites/${site.slug}`} className="pf-siteCard">
+              <div className="pf-siteCardHead">
+                <strong>{site.name}</strong>
+                <span className={`pf-badge ${site.state === "active" ? "pf-badgeGreen" : site.state === "grace" ? "pf-badgeBlue" : "pf-badgeRed"}`}>
                   {STATE_NAMES[site.state]}
-                </p>
+                </span>
               </div>
-              <div className="text-sm text-zinc-500 mt-1 flex flex-wrap gap-x-4">
+              <div className="pf-siteCardMeta">
                 <span>{site.domains[0] ?? `порт ${site.port}`}</span>
-                <span>баланс: {(balance / 100).toFixed(2)} ₽</span>
-                <span>хватит на: {days === Infinity ? "∞" : `${days} дн.`}</span>
+                <span>баланс {rub(balance)}</span>
+                <span>хватит на {days === Infinity ? "∞" : `${days} дн.`}</span>
+                {site.tariff && <span>тариф «{site.tariff.name}»</span>}
+                {site.imageVersion && <span>образ {site.imageVersion}</span>}
                 {last && (
-                  <span>
-                    за {last.date}: заказов {last.ordersCount} на {(last.ordersSum / 100).toFixed(0)} ₽, визитов {last.pageViews}
-                  </span>
+                  <span>за {last.date}: заказов {last.ordersCount} на {(last.ordersSum / 100).toFixed(0)} ₽, визитов {last.pageViews}</span>
                 )}
               </div>
             </Link>
           );
         })}
-        {sites.length === 0 && <p className="text-zinc-500">Сайтов пока нет.</p>}
+        {sites.length === 0 && <p className="pf-note">Сайтов пока нет.</p>}
       </div>
-    </main>
+    </>
   );
 }

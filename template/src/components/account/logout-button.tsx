@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import styles from "./account.module.css";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export function LogoutButton() {
         await fetch("/api/auth/logout", { method: "POST" });
         router.refresh();
       }}
-      className="min-h-11 px-5 rounded-full border border-foreground/20 text-sm"
+      className={styles.btn + " " + styles.btnOutline}
     >
       Выйти
     </button>

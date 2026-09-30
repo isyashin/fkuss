@@ -1,0 +1,36 @@
+.pinPage { max-width: 420px; margin: 40px auto; padding: 28px; text-align: center;
+  background: var(--admin-surface); border: 1px solid var(--admin-line); border-radius: var(--admin-radius, 15px);
+  box-shadow: var(--admin-shadow); }
+.pinEyebrow { color: var(--admin-accent); font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.pinPage h1 { margin: 8px 0 6px; font: 26px Georgia, serif; }
+.pinLead { margin: 0 0 20px; color: var(--admin-muted); font-size: 13px; line-height: 1.5; }
+
+.pinDots { display: flex; justify-content: center; gap: 12px; margin-bottom: 22px; min-height: 16px; }
+.pinDots span { width: 14px; height: 14px; border-radius: 999px; border: 2px solid var(--admin-line); transition: background .12s, border-color .12s; }
+.pinDots span.filled { background: var(--admin-accent); border-color: var(--admin-accent); }
+.pinDots.error span { border-color: var(--admin-red, #b3402f); }
+
+.pinPad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 280px; margin: 0 auto; }
+.pinKey { min-height: 60px; border-radius: 14px; border: 1px solid var(--admin-line); background: var(--admin-surface-2);
+  color: var(--admin-text); font-size: 22px; font-weight: 700; cursor: pointer; }
+.pinKey:hover { border-color: var(--admin-accent); color: var(--admin-accent); }
+.pinKey:active { transform: scale(.96); }
+.pinKey:disabled { opacity: .5; cursor: not-allowed; }
+
+.pinActions { display: flex; justify-content: center; gap: 10px; margin-top: 18px; }
+.pinUnlock { min-height: 48px; padding: 0 28px; border-radius: 999px; border: 0; background: var(--admin-accent);
+  color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+.pinUnlock:disabled { opacity: .5; cursor: not-allowed; }
+.pinGhost { min-height: 48px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--admin-line);
+  background: transparent; color: var(--admin-muted); font-size: 13px; cursor: pointer; }
+
+.pinError { margin: 14px 0 0; color: var(--admin-red, #b3402f); font-size: 13px; min-height: 18px; }
+.pinHint { margin: 10px 0 0; color: var(--admin-muted); font-size: 12px; }
+
+.shake { animation: pinShake .35s; }
+@keyframes pinShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  50% { transform: translateX(8px); }
+  75% { transform: translateX(-5px); }
+}

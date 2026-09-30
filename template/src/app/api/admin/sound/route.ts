@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getAdminActor, isAdmin } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/db";
 import { resolveContentFile } from "@/lib/content-dir";
-import { publicAdminSound, readAdminSound, removeAdminSound, selectAdminSound, uploadAdminSound, type AdminSoundChoice } from "@/lib/admin-sound";
+import { publicAdminSound, readAdminSound, removeAdminSound, saveAdminSoundRepeats, selectAdminSound, uploadAdminSound, type AdminSoundChoice } from "@/lib/admin-sound";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +24,14 @@ export async function PATCH(request: Request) {
   if (!(await isAdmin("manage"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await request.json().catch(() => null);
   try {
-    return NextResponse.json(await selectAdminSound(getPrisma(), body?.selected as AdminSoundChoice));
+    const prisma = getPrisma();
+    // Повторы можно сохранять отдельно от выбора сигнала
+    if (body && typeof body.repeats === "number" && body.selected === undefined) {
+      return NextResponse.json(await saveAdminSoundRepeats(prisma, body.repeats));
+    }
+    return NextResponse.json(await selectAdminSound(prisma, body?.selected as AdminSoundChoice));
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Не удалось выбрать звук" }, { status: 400 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Не удалось сохранить звук" }, { status: 400 });
   }
 }
 

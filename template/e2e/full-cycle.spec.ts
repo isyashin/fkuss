@@ -52,7 +52,6 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)
   await page.goto("/account");
-  await expect(page.getByText("Бонусы")).toBeVisible();
-  const balanceText = await page.locator("p.text-3xl").textContent();
-  expect(Number(balanceText?.replace(/\D/g, ""))).toBe(24);
+  await expect(page.getByText(/бонусы/i).first()).toBeVisible();
+  await expect(page.getByTestId("bonus-balance")).toHaveText("24");
 });

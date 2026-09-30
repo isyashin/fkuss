@@ -35,6 +35,11 @@ export async function generateMetadata(): Promise<Metadata> {
     title: restaurant.seo.title || restaurant.name,
     description: restaurant.seo.description,
     icons: {
+      // Фавикон генерируется из лого ресторана (или буквы названия) — /api/site-icon.
+      icon: [
+        { url: `/api/site-icon?size=32&v=${version}`, type: "image/png", sizes: "32x32" },
+        { url: `/api/site-icon?size=48&v=${version}`, type: "image/png", sizes: "48x48" },
+      ],
       apple: `/content-asset/icons/apple-touch-icon.png?v=${version}`,
     },
   };

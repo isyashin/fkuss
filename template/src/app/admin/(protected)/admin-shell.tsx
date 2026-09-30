@@ -31,9 +31,9 @@ function subscribeTheme(callback: () => void) {
 }
 const readTheme = () => localStorage.getItem("restaurant-admin-theme") === "dark";
 
-export function AdminShell({ children, restaurantName, logo, actor, newOrdersCount, newBookingsCount }: {
+export function AdminShell({ children, restaurantName, logo, actor, newOrdersCount, newBookingsCount, unlocked }: {
   children: ReactNode; restaurantName: string; logo: string; actor: AdminActor;
-  newOrdersCount: number; newBookingsCount: number;
+  newOrdersCount: number; newBookingsCount: number; unlocked: boolean;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -51,8 +51,12 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
   }, [collapsed]);
   const section = [...primary, ...secondary].find((item) => item.href === pathname)?.label ?? "Управление";
   const active = (href: string) => href === "/admin" ? pathname === href : pathname.startsWith(href);
-  const visiblePrimary = actor.role === "owner" ? primary : primary.filter((item) => item.href === "/admin" || item.href === "/admin/bookings");
-  const visibleSecondary = actor.role === "owner" ? secondary : [];
+  const fullAccess = actor.role === "owner" || unlocked;
+  // Сотрудник: заказы, брони, меню + настройки (владельческие разделы — через PIN).
+  const visiblePrimary = fullAccess
+    ? primary
+    : primary.filter((item) => ["/admin", "/admin/bookings", "/admin/menu", "/admin/settings"].includes(item.href));
+  const visibleSecondary = fullAccess ? secondary : [];
   const initials = actor.name.trim().split(/\s+/).slice(0, 2).map((part) => part.slice(0, 1).toLocaleUpperCase("ru-RU")).join("") || "А";
 
   return <div className={`${styles.shell} ${dark ? styles.dark : ""} ${collapsed ? styles.collapsed : ""}`}>

@@ -23,8 +23,10 @@ test("гость входит по коду и видит кабинет", async
   await page.context().addCookies(cookies.cookies);
 
   await page.goto("/account");
-  await expect(page.getByRole("heading", { name: "Личный кабинет" })).toBeVisible();
-  await expect(page.getByText("Бонусы")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Здравствуйте/ })).toBeVisible();
+  await expect(page.getByText(/бонусы/i).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "История заказов" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Профиль" })).toBeVisible();
 });
 
 test("неверный код отклоняется", async ({ request }, testInfo) => {

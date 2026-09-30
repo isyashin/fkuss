@@ -46,3 +46,12 @@ export async function setSiteState(slug: string, state: "active" | "suspended", 
   revalidatePath(`/admin/sites/${slug}`);
   revalidatePath("/admin");
 }
+
+/** Владелец платформы тоже может заказать экспорт сайта (обрабатывает cron на хосте). */
+export async function requestSiteExport(slug: string): Promise<void> {
+  await guard();
+  const prisma = getPrisma();
+  const { exportRequestData } = await import("@/lib/export-access");
+  await prisma.site.update({ where: { slug }, data: exportRequestData(new Date()) });
+  revalidatePath(`/admin/sites/${slug}`);
+}

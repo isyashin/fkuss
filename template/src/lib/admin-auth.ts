@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPrisma } from "./db";
 import { authenticateAdmin, hasAdminPermission, resolveAdminSession, revokeAdminSession, type AdminActor, type AdminPermission } from "./admin-users";
+import { isPinUnlocked } from "./admin-pin";
 
 const ADMIN_COOKIE = "resto_admin_v2";
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -26,13 +27,22 @@ export async function getAdminActor(): Promise<AdminActor | null> {
 
 export async function isAdmin(permission: AdminPermission = "manage"): Promise<boolean> {
   const actor = await getAdminActor();
-  return actor !== null && hasAdminPermission(actor, permission);
+  return actor !== null && (await hasPermissionWithUnlock(actor, permission));
+}
+
+/** Сотрудник с валидным PIN-unlock получает уровень владельца на сессию. */
+async function hasPermissionWithUnlock(actor: AdminActor, permission: AdminPermission): Promise<boolean> {
+  if (hasAdminPermission(actor, permission)) return true;
+  return permission === "manage" && actor.role === "staff" && (await isPinUnlocked(actor.id));
 }
 
 export async function requireAdminPermission(permission: AdminPermission): Promise<AdminActor> {
   const actor = await getAdminActor();
   if (!actor) redirect("/admin/login");
-  if (!hasAdminPermission(actor, permission)) redirect("/admin");
+  if (!(await hasPermissionWithUnlock(actor, permission))) {
+    // Сотрудник без PIN при попытке открыть владельческий раздел — на экран ввода PIN.
+    redirect(actor.role === "staff" && permission === "manage" ? "/admin/settings?pin=1" : "/admin");
+  }
   return actor;
 }
 

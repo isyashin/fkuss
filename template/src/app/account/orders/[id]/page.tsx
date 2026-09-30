@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSessionCustomer } from "@/lib/auth";
+import { getSiteSettings } from "@/lib/site";
+import { isGuestCabinetEnabled } from "@/lib/guest-cabinet";
 import { getPrisma } from "@/lib/db";
 import { orderStatusLabel } from "@/lib/order-status";
 import { RepeatOrderButton } from "@/components/account/repeat-order-button";
@@ -17,6 +19,8 @@ function badgeClass(status: string): string {
 }
 
 export default async function AccountOrderPage({ params }: { params: Promise<{ id: string }> }) {
+  const settings = await getSiteSettings();
+  if (!isGuestCabinetEnabled(settings)) redirect("/account");
   const customer = await getSessionCustomer();
   if (!customer) redirect("/account");
   const { id } = await params;

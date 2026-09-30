@@ -56,7 +56,14 @@ export async function requestAuthCode(email: string): Promise<{ devCode?: string
   } catch {
     // Действующий код и адрес гостя не выводим в логи.
     console.warn("[auth] SMTP недоступен, код не доставлен");
-    const exposeCode = process.env.AUTH_DEV_CODE === "1" || process.env.NODE_ENV !== "production";
+    // Показ кода на экране: dev-override (AUTH_DEV_CODE), не-prod окружение
+    // или явный выбор ресторана в настройках кабинета (authMode: "screen").
+    const { getSiteSettings } = await import("./site");
+    const { normalizeGuestCabinet } = await import("./guest-cabinet");
+    const exposeCode =
+      process.env.AUTH_DEV_CODE === "1" ||
+      process.env.NODE_ENV !== "production" ||
+      normalizeGuestCabinet(await getSiteSettings()).authMode === "screen";
     return exposeCode ? { devCode: code } : { deliveryFailed: true };
   }
 }

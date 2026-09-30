@@ -224,6 +224,16 @@ export const settingsSchema = z.object({
   captcha: z.object({
     provider: z.enum(["none", "smartcaptcha"]).default("none"),
   }),
+  guestCabinet: z
+    .object({
+      enabled: z.boolean().default(false),
+      // email — код отправляется по SMTP (безопасный дефолт); screen — показывается
+      // на экране (только явный выбор ресторана, код нельзя светить по умолчанию).
+      authMode: z.enum(["screen", "email"]).default("email"),
+      smtpUrl: z.string().default(""),
+      smtpFrom: z.string().default(""),
+    })
+    .default({ enabled: false, authMode: "email", smtpUrl: "", smtpFrom: "" }),
   timezone: z.string().default("Europe/Moscow"),
 });
 

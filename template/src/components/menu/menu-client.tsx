@@ -24,6 +24,7 @@ export function MenuClient({
   isOpen,
   paymentProvider = "none",
   bonusBalance = 0,
+  cabinetEnabled = false,
   initialAddress = "",
 }: {
   menu: Menu;
@@ -34,6 +35,7 @@ export function MenuClient({
   isOpen?: boolean;
   paymentProvider?: string;
   bonusBalance?: number;
+  cabinetEnabled?: boolean;
   initialAddress?: string;
 }) {
   const [activeCategory, setActiveCategory] = useState(menu.categories[0]?.id ?? "");
@@ -161,6 +163,8 @@ export function MenuClient({
                 .map((dish) => (
                   <button
                     key={dish.id}
+                    data-dish-id={dish.id}
+                    data-testid="dish-card"
                     onClick={() => setSelectedDish(dish)}
                     className="text-left bg-card rounded-[var(--radius)] overflow-hidden shadow-sm active:scale-[0.98] transition-transform"
                   >
@@ -228,6 +232,7 @@ export function MenuClient({
           guestContact={guestContact}
           paymentProvider={paymentProvider}
           bonusBalance={bonusBalance}
+          cabinetEnabled={cabinetEnabled}
           initialAddress={initialAddress}
           onClose={() => setCartOpen(false)}
         />

@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rate-limit";
 import { requestAuthCode } from "@/lib/auth";
+import { getSiteSettings } from "@/lib/site";
+import { isGuestCabinetEnabled } from "@/lib/guest-cabinet";
 
 const schema = z.object({ email: z.email() });
 
 export async function POST(request: Request) {
+  if (!isGuestCabinetEnabled(await getSiteSettings())) {
+    return NextResponse.json({ error: "Личный кабинет отключён" }, { status: 403 });
+  }
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
   let body: unknown;

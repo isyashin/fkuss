@@ -47,6 +47,10 @@ async function main() {
   const promos = await readAndValidate("promos.json", promosSchema);
   const pages = await readAndValidate("pages.json", pagesSchema);
   const settings = await readAndValidate("settings.json", settingsSchema);
+  // E2E гоняет сценарии кабинета: включаем его флагом, не трогая дефолт «выключен».
+  if (process.env.SEED_GUEST_CABINET === "1") {
+    settings.guestCabinet = { ...settings.guestCabinet, enabled: true };
+  }
   const theme = await readAndValidate("theme.json", themeSchema);
   await assertContentReadiness(CONTENT_DIR, { restaurant, menu, promos, theme, settings });
 

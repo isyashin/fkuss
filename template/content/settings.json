@@ -4,7 +4,20 @@
     "enabled": true,
     "pickupEnabled": true,
     "minOrder": 800,
-    "zones": [{ "name": "Центр", "price": 200, "freeFrom": 2000 }]
+    "geo": { "enabled": false, "outside": "block", "outsidePrice": 0 },
+    "zones": [
+      {
+        "name": "Центр",
+        "price": 200,
+        "freeFrom": 2000,
+        "polygon": [
+          [55.74, 37.55],
+          [55.74, 37.7],
+          [55.82, 37.7],
+          [55.82, 37.55]
+        ]
+      }
+    ]
   },
   "channels": {
     "telegram": { "enabled": false, "botTokenRef": "TELEGRAM_BOT_TOKEN", "chatId": "" },

@@ -21,7 +21,11 @@ export { contentAssetUrl } from "./assets";
 
 function withSettingsDefaults(settings: ContentSettings): ContentSettings {
   return { ...settings, pricing: settings.pricing ?? { globalMode: "yandex", globalPercent: 0 },
-    timezone: settings.timezone ?? "Europe/Moscow" };
+    timezone: settings.timezone ?? "Europe/Moscow",
+    delivery: {
+      ...settings.delivery,
+      geo: settings.delivery.geo ?? { enabled: false, outside: "block" as const, outsidePrice: 0 },
+    } };
 }
 
 export async function getSiteRestaurant(): Promise<Restaurant> {

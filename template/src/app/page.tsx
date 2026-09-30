@@ -105,6 +105,7 @@ export default async function HomePage() {
             paymentProvider={settings.payment.provider}
             bonusBalance={bonusBalance}
             initialAddress={lastAddress}
+            ymapsKey={process.env.YANDEX_MAPS_API_KEY ?? ""}
           />
         </div>
 

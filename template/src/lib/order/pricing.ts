@@ -15,6 +15,7 @@ export interface DeliveryZone {
   name: string;
   price: number;
   freeFrom: number | null;
+  polygon?: [number, number][]; // геометрия зоны (зоны на карте); в расчёте не участвует
 }
 
 export function calculateItemsTotal(items: OrderItemInput[]): number {

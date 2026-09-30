@@ -43,6 +43,7 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
     <div><span>Связь</span><GuestContactActions phone={order.customerPhone} preferredChannel={order.preferredChannel} channels={guestContact}/></div>
     <div><span>Тип заказа</span><strong>{order.type === "delivery" ? "Доставка" : "Самовывоз"}</strong></div>
     {order.type === "delivery" && <div><span>Адрес</span><strong>{order.addressText || "Не указан"}</strong></div>}
+    {order.type === "delivery" && order.deliveryZoneName && <div><span>Зона</span><strong>{order.deliveryZoneName}</strong></div>}
     {order.desiredTime && <div><span>Время</span><strong>{order.desiredTime}</strong></div>}
     <div><span>Оплата</span><strong>{order.paymentMethod === "online" ? "Онлайн" : "При получении"}{order.paymentStatus === "paid" ? " · оплачено" : ""}</strong></div>
     <div><span>Комментарий</span><strong>{order.comment || "Нет комментария"}</strong></div>

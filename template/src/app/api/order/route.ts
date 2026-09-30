@@ -5,6 +5,8 @@ import { recordAdminEvent } from "@/lib/admin-events";
 import { rateLimit } from "@/lib/rate-limit";
 import { calculateOrder, type OrderItemInput } from "@/lib/order/pricing";
 import { lockAndCheckBonusBalance } from "@/lib/order/bonus-lock";
+import { geocodeAddress } from "@/lib/delivery/geocoder";
+import { resolveGeoDelivery, OUTSIDE_ZONE_NAME } from "@/lib/delivery/zone-resolve";
 import { getSiteSettings } from "@/lib/site";
 import { getPaymentProvider } from "@/lib/payments";
 import type { PaymentProvider } from "@/lib/payments/types";
@@ -249,12 +251,57 @@ export async function POST(request: Request) {
     }
   }
 
+  // Зоны на карте (geo-режим): сервер сам геокодирует адрес и определяет зону.
+  // Клиентскому zoneName в geo-режиме не доверяем. Варианты доставки (выше),
+  // если включены, вытесняют зоны — geo-режим не применяется.
+  let orderZoneName: string | null = null;
+  let snapshotZoneName: string | null = null;
+  let orderZones = settings.delivery.zones;
+  if (input.type === "delivery" && !option) {
+    const geo = settings.delivery.geo ?? { enabled: false, outside: "block" as const, outsidePrice: 0 };
+    const geoActive =
+      geo.enabled && settings.delivery.zones.some((z) => (z.polygon?.length ?? 0) >= 3);
+    if (geoActive) {
+      const resolved = await resolveGeoDelivery({
+        address: input.address,
+        zones: settings.delivery.zones,
+        outside: geo.outside,
+        outsidePrice: geo.outsidePrice,
+        geocode: geocodeAddress,
+      });
+      if (resolved.kind === "outside-blocked") {
+        return NextResponse.json({ error: "Адрес вне зоны доставки" }, { status: 400 });
+      }
+      if (resolved.kind === "address-not-found") {
+        return NextResponse.json({ error: "Адрес не найден — проверьте написание" }, { status: 400 });
+      }
+      if (resolved.kind === "geocoder-error") {
+        return NextResponse.json(
+          { error: "Не удалось проверить адрес. Попробуйте ещё раз." },
+          { status: 503 },
+        );
+      }
+      if (resolved.kind === "zone") {
+        orderZoneName = resolved.zoneName;
+        snapshotZoneName = resolved.zoneName;
+      } else {
+        // outside-allowed: служебная зона с ценой настройки, деньги считает calculateOrder
+        orderZoneName = OUTSIDE_ZONE_NAME;
+        snapshotZoneName = "Вне зон";
+        orderZones = [
+          ...settings.delivery.zones,
+          { name: OUTSIDE_ZONE_NAME, price: geo.outsidePrice, freeFrom: null },
+        ];
+      }
+    }
+  }
+
   const calc = calculateOrder({
     items: pricedItems,
     // При наличии варианта зоны не участвуют: считаем позиции как pickup
     type: option ? "pickup" : input.type,
-    zoneName: input.zoneName,
-    zones: settings.delivery.zones,
+    zoneName: orderZoneName ?? input.zoneName,
+    zones: orderZones,
     minOrder: input.type === "delivery" ? settings.delivery.minOrder : 0,
     requestedBonusSpend: customerId ? input.bonusSpend : 0,
     bonusBalance,
@@ -323,6 +370,7 @@ export async function POST(request: Request) {
             input.type === "delivery" && option?.mode === "scheduled" ? input.deliverySlotEnd : null,
           deliveryTz: input.type === "delivery" ? ((settings as { timezone?: string }).timezone ?? "Europe/Moscow") : null,
           deliveryOptionName,
+          deliveryZoneName: input.type === "delivery" ? snapshotZoneName : null,
           items: {
             create: orderLines.map((l) => ({
               dishId: l.dishId,

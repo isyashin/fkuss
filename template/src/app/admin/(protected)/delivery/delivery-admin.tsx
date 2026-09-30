@@ -28,7 +28,7 @@ export function DeliveryAdmin({ options }: { options: DeliveryOption[] }) {
   return (
     <div className="space-y-4 max-w-2xl">
       {options.map((option) => (
-        <div key={option.id} className="bg-card rounded-[var(--radius)] p-4 flex justify-between gap-3 items-start">
+        <div key={option.id} data-option-name={option.name} className="bg-card rounded-[var(--radius)] p-4 flex justify-between gap-3 items-start">
           <div>
             <p className="font-medium">
               {option.name} {option.enabled ? "" : "· выкл"}

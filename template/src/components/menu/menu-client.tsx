@@ -25,6 +25,7 @@ export function MenuClient({
   paymentProvider = "none",
   bonusBalance = 0,
   initialAddress = "",
+  ymapsKey = "",
 }: {
   menu: Menu;
   delivery: ContentSettings["delivery"];
@@ -35,6 +36,7 @@ export function MenuClient({
   paymentProvider?: string;
   bonusBalance?: number;
   initialAddress?: string;
+  ymapsKey?: string;
 }) {
   const [activeCategory, setActiveCategory] = useState(menu.categories[0]?.id ?? "");
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
@@ -229,6 +231,7 @@ export function MenuClient({
           paymentProvider={paymentProvider}
           bonusBalance={bonusBalance}
           initialAddress={initialAddress}
+          ymapsKey={ymapsKey}
           onClose={() => setCartOpen(false)}
         />
       )}

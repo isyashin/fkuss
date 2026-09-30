@@ -25,7 +25,7 @@ function fakeDatabase() {
 }
 
 const input = () => ({
-  settings: { ...structuredClone(source), guestContact: { whatsapp: false, telegram: true } } as ContentSettings,
+  settings: { ...structuredClone(source), guestContact: { whatsapp: false, telegram: true } } as unknown as ContentSettings,
   theme: { preset: "minimal", accent: "#b56544" },
   background: { enabled: false, image: "", position: "center" as const, dimPercent: 40, disableOnMobile: true },
   pricing: { globalMode: "coefficient" as const, globalPercent: 10 },

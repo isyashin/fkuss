@@ -69,7 +69,9 @@ src/
 │   │                      # (upsert по externalId, атомарный lock, retry)
 │   ├── order/             # pricing.ts (расчёт заказа), price-resolver.ts
 │   │                      # (режимы цен), recompute.ts, modifier-validation.ts
-│   ├── delivery/          # slots.ts (окна с tz, валидация)
+│   ├── delivery/          # slots.ts (окна с tz), geo.ts (point-in-polygon),
+│   │                      # geocoder.ts (Яндекс /v1, LRU-кэш), zone-resolve.ts
+│   │                      # (адрес → зона → block/allow вне зон)
 │   ├── payments/          # PaymentProvider + yookassa + mock
 │   ├── notify/            # telegram, max, email
 │   ├── loyalty/           # бонусы (ledger)
@@ -91,6 +93,13 @@ src/
   единственная цена для заказа и витрины.
 - **Доставка**: DeliveryOption → /api/delivery/slots → окна с tz → выбор в
   корзине → серверная валидация + снимок в Order; зоны заменяются вариантами.
+  Режим «зоны на карте» (`delivery.geo.enabled` + полигоны в зонах + ключи
+  Яндекс): адрес гостя геокодируется на сервере (geocoder.ts, кэш LRU 24 ч),
+  зона матчится point-in-polygon (geo.ts, первое попадание), цену считает всё
+  та же pricing.ts; адрес вне зон — по настройке `outside` (block/allow +
+  `outsidePrice` через служебную зону). Превью для корзины — /api/delivery/zone,
+  карта-подтверждение — JS API (ключ публичный). В Order хранится только
+  `deliveryZoneName`; координаты и ответы геокодера не сохраняются.
 - **Меню на главной**: hero → MenuClient (тот же компонент) → о нас/контакты;
   /menu → redirect /#menu.
 - **Печатные материалы**: данные ресторана + Settings(printMaterials) →

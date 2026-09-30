@@ -195,6 +195,7 @@ model Order {
   deliverySlotEnd   String? // HH:MM
   deliveryTz        String? // часовой пояс ресторана
   deliveryOptionName String? // название выбранного варианта
+  deliveryZoneName String? // снимок зоны доставки (зоны на карте); геоданные API не храним
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

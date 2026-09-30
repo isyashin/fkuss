@@ -51,6 +51,8 @@ jobs:
         working-directory: template
       - run: npm run seed
         working-directory: template
+        env:
+          SEED_GUEST_CABINET: "1"
       - name: Bootstrap disposable E2E owner
         working-directory: template
         shell: bash

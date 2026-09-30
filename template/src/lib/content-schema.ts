@@ -224,6 +224,15 @@ export const settingsSchema = z.object({
   captcha: z.object({
     provider: z.enum(["none", "smartcaptcha"]).default("none"),
   }),
+  guestCabinet: z
+    .object({
+      enabled: z.boolean().default(false),
+      // screen — код показывается на экране; email — отправляется по SMTP.
+      authMode: z.enum(["screen", "email"]).default("screen"),
+      smtpUrl: z.string().default(""),
+      smtpFrom: z.string().default(""),
+    })
+    .default({ enabled: false, authMode: "screen", smtpUrl: "", smtpFrom: "" }),
   timezone: z.string().default("Europe/Moscow"),
 });
 

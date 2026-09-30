@@ -20,6 +20,7 @@ export function CartSheet({
   guestContact,
   paymentProvider = "none",
   bonusBalance = 0,
+  cabinetEnabled = false,
   initialAddress = "",
   onClose,
 }: {
@@ -29,6 +30,7 @@ export function CartSheet({
   guestContact: GuestChannels;
   paymentProvider?: string;
   bonusBalance?: number;
+  cabinetEnabled?: boolean;
   initialAddress?: string;
   onClose: () => void;
 }) {
@@ -361,17 +363,19 @@ export function CartSheet({
               {guestContact.whatsapp && <label className="flex items-center gap-2 min-h-11 text-sm"><input type="radio" name="preferred-channel" checked={preferredChannel === "whatsapp"} onChange={() => setPreferredChannel("whatsapp")}/> WhatsApp</label>}
               {guestContact.telegram && <label className="flex items-center gap-2 min-h-11 text-sm"><input type="radio" name="preferred-channel" checked={preferredChannel === "telegram"} onChange={() => setPreferredChannel("telegram")}/> Telegram</label>}
             </fieldset>
-            <label className="block">
-              <span className="text-sm text-muted">Email (для бонусов и истории заказов)</span>
-              <input
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-              />
-            </label>
+            {cabinetEnabled && (
+              <label className="block">
+                <span className="text-sm text-muted">Email (для бонусов и истории заказов)</span>
+                <input
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+                />
+              </label>
+            )}
             <label className="block">
               <span className="text-sm text-muted">Комментарий</span>
               <textarea
@@ -414,7 +418,7 @@ export function CartSheet({
                 <span>{formatPrice(finalTotal)}</span>
               </div>
 
-              {bonusBalance > 0 && (
+              {cabinetEnabled && bonusBalance > 0 && (
                 <label className="flex items-center justify-between gap-3 pt-1 text-sm">
                   <span className="text-muted">Списать бонусы (доступно {bonusBalance} ₽)</span>
                   <input

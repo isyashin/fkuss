@@ -4,6 +4,7 @@ import { isOpenAt, resolveSchedule, nowInTimeZone } from "@/lib/hours";
 import { MenuClient } from "@/components/menu/menu-client";
 import { getPrisma } from "@/lib/db";
 import { visibleGuestChannels } from "@/lib/guest-contact";
+import { normalizeGuestCabinet } from "@/lib/guest-cabinet";
 
 export const dynamic = "force-dynamic";
 
@@ -23,13 +24,14 @@ export default async function HomePage() {
   const open = isOpenAt(schedule, nowLocal.date, nowLocal.time);
 
   // Баланс бонусов и адрес авторизованного гостя (для корзины)
+  const cabinet = normalizeGuestCabinet(settings);
   let bonusBalance = 0;
   let lastAddress = "";
   try {
     const { getSessionCustomer } = await import("@/lib/auth");
     const { getBonusBalance } = await import("@/lib/loyalty");
     const customer = await getSessionCustomer();
-    if (customer) {
+    if (customer && cabinet.enabled) {
       const prisma = getPrisma();
       bonusBalance = await getBonusBalance(prisma, customer.id);
       const [address, lastOrder] = await Promise.all([
@@ -104,6 +106,7 @@ export default async function HomePage() {
             isOpen={open}
             paymentProvider={settings.payment.provider}
             bonusBalance={bonusBalance}
+            cabinetEnabled={cabinet.enabled}
             initialAddress={lastAddress}
           />
         </div>

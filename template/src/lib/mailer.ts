@@ -1,13 +1,10 @@
 import nodemailer from "nodemailer";
+import { getSiteSettings } from "./site";
+import { getSmtpConfig, normalizeGuestCabinet } from "./guest-cabinet";
 
-/** SMTP общего проекта: SMTP_URL= smtps://user:pass@host:465 или host/port/user/pass */
-function getTransport() {
-  const url = process.env.SMTP_URL;
-  if (!url) throw new Error("SMTP_URL не настроен");
-  return nodemailer.createTransport(url);
-}
-
+/** SMTP берём из настроек «Личный кабинет гостя»; при пустых полях — env сайта. */
 export async function sendMail(to: string, subject: string, text: string): Promise<void> {
-  const from = process.env.SMTP_FROM ?? "noreply@example.ru";
-  await getTransport().sendMail({ from, to, subject, text });
+  const { url, from } = getSmtpConfig(normalizeGuestCabinet(await getSiteSettings()));
+  if (!url) throw new Error("SMTP не настроен");
+  await nodemailer.createTransport(url).sendMail({ from, to, subject, text });
 }

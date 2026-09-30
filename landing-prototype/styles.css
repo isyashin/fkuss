@@ -141,7 +141,6 @@ h1 .accent{color:var(--forest)}
 .repeat-order b{font-size:12px;font-weight:600}
 .repeat-button{margin-top:16px;padding:10px 12px;display:flex;justify-content:center;align-items:center;gap:8px;border-radius:8px;background:#eef2e6;font-size:11px;font-weight:600}
 .repeat-button>span:first-child{font-size:18px;line-height:1}
-.sample-caption{font-size:9px;text-align:center;color:#62685b;margin-top:15px}
 .admin-preview{display:block;max-width:380px;margin:auto;border:1px solid #d6d3cb;border-radius:17px;overflow:hidden;background:#fff;box-shadow:0 16px 32px #253b2d0a}
 .admin-preview img{display:block;width:100%;height:auto}
 .admin-preview-action{display:flex;gap:12px;align-items:center;justify-content:center;min-height:44px;padding:8px 12px;border-top:1px solid #e9eae3;color:var(--forest);font-size:11px;font-weight:600}

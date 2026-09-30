@@ -17,7 +17,7 @@ describe("guest cabinet settings", () => {
 
   it("partial block keeps remaining defaults", () => {
     const cab = normalizeGuestCabinet({ guestCabinet: { enabled: true } as never });
-    expect(cab).toEqual({ enabled: true, authMode: "screen", smtpUrl: "", smtpFrom: "" });
+    expect(cab).toEqual({ enabled: true, authMode: "email", smtpUrl: "", smtpFrom: "" });
   });
 
   it("smtp config falls back to env when fields are empty", () => {

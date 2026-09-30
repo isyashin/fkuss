@@ -7,7 +7,7 @@ export type GuestCabinetSettings = ContentSettings["guestCabinet"];
 
 export const GUEST_CABINET_DEFAULTS: GuestCabinetSettings = {
   enabled: false,
-  authMode: "screen",
+  authMode: "email",
   smtpUrl: "",
   smtpFrom: "",
 };

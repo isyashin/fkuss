@@ -21,7 +21,7 @@ export { contentAssetUrl } from "./assets";
 
 function withSettingsDefaults(settings: ContentSettings): ContentSettings {
   return { ...settings, pricing: settings.pricing ?? { globalMode: "yandex", globalPercent: 0 },
-    guestCabinet: settings.guestCabinet ?? { enabled: false, authMode: "screen", smtpUrl: "", smtpFrom: "" },
+    guestCabinet: settings.guestCabinet ?? { enabled: false, authMode: "email", smtpUrl: "", smtpFrom: "" },
     timezone: settings.timezone ?? "Europe/Moscow" };
 }
 

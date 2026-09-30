@@ -227,12 +227,13 @@ export const settingsSchema = z.object({
   guestCabinet: z
     .object({
       enabled: z.boolean().default(false),
-      // screen — код показывается на экране; email — отправляется по SMTP.
-      authMode: z.enum(["screen", "email"]).default("screen"),
+      // email — код отправляется по SMTP (безопасный дефолт); screen — показывается
+      // на экране (только явный выбор ресторана, код нельзя светить по умолчанию).
+      authMode: z.enum(["screen", "email"]).default("email"),
       smtpUrl: z.string().default(""),
       smtpFrom: z.string().default(""),
     })
-    .default({ enabled: false, authMode: "screen", smtpUrl: "", smtpFrom: "" }),
+    .default({ enabled: false, authMode: "email", smtpUrl: "", smtpFrom: "" }),
   timezone: z.string().default("Europe/Moscow"),
 });
 

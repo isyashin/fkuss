@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Прототип fkuss.ru</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="assets/favicon.svg?v=1">
+  <link rel="stylesheet" href="preview.css">
+  <script src="preview.js" defer></script>
+</head>
+<body>
+  <header class="preview-toolbar">
+    <div class="preview-name"><strong data-preview="title"></strong><span class="preview-badge" data-preview="badge"></span></div>
+    <div class="device-controls" role="group" aria-label="Размер экрана">
+      <button id="desktop-view" class="device-button" data-preview="desktop" aria-pressed="true"></button>
+      <button id="mobile-view" class="device-button" data-preview="mobile" aria-pressed="false"></button>
+    </div>
+    <button id="why-button" class="why-button" data-preview="why" aria-expanded="false" aria-controls="principles-panel"></button>
+  </header>
+  <div class="workspace" id="workspace">
+    <iframe id="site-frame" title="Лендинг fkuss.ru" src="/index.html"></iframe>
+  </div>
+  <aside class="principles-panel" id="principles-panel" hidden>
+    <div class="panel-title"><h1 data-preview="whyTitle"></h1><button id="close-principles" aria-label="Закрыть объяснение">×</button></div>
+    <ol id="principles-list"></ol>
+    <a id="principle-source" target="_blank" rel="noopener noreferrer"></a>
+    <p class="interpretation" data-preview="interpretation"></p>
+  </aside>
+  <p class="preview-status" data-preview="note"></p>
+</body>
+</html>

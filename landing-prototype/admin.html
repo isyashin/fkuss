@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Заявки — fkuss.ru</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="/assets/favicon.svg?v=2">
+  <link rel="stylesheet" href="/admin.css">
+  <script src="/admin.js" defer></script>
+</head>
+<body class="admin-shell">
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="Открыть лендинг fkuss.ru"><img src="/assets/fkuss-logo.png" width="2172" height="724" alt="fkuss.ru"><span>Админка лендинга</span></a>
+    <nav aria-label="Разделы админки">
+      <a class="nav-link current" href="/admin" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Заявки</span><span class="nav-count" id="nav-count">0</span></a>
+    </nav>
+    <a class="site-link" href="/" target="_blank" rel="noopener noreferrer">Открыть лендинг <span aria-hidden="true">↗</span></a>
+    <div class="sidebar-note">Сайт вашего ресторана.<br>Заказы напрямую у вас.</div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <a class="mobile-brand" href="/" aria-label="Открыть лендинг fkuss.ru"><img src="/assets/fkuss-logo.png" width="2172" height="724" alt="fkuss.ru"></a>
+      <p class="breadcrumb">Лендинг <span aria-hidden="true">/</span> <strong>Заявки</strong></p>
+      <button class="button logout-button" id="logout" type="button">Выйти</button>
+    </header>
+    <main class="main">
+      <div class="page-heading"><div><p class="eyebrow">Входящие обращения</p><h1>Заявки</h1><p class="page-description">От самой последней к самой ранней.</p></div><button class="button refresh-button" id="refresh" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M20 12a8 8 0 0 0-14-5M4 12a8 8 0 0 0 14 5"/></svg><span>Обновить</span></button></div>
+      <section class="panel" aria-labelledby="list-heading">
+        <div class="panel-heading"><h2 id="list-heading">Все заявки <span class="count" id="lead-count">0</span></h2><p class="list-status" id="list-status" role="status">Загружаем заявки…</p></div>
+        <p class="error list-error" id="list-error" role="alert" hidden></p>
+        <div class="empty-state" id="empty-state" hidden><div class="empty-icon" aria-hidden="true">↗</div><h3>Пока нет заявок</h3><p>Когда посетитель заполнит форму на лендинге, его заявка появится здесь.</p><a class="button" href="/" target="_blank" rel="noopener noreferrer">Открыть лендинг</a></div>
+        <ul class="lead-list" id="lead-list" aria-label="Заявки с лендинга"></ul>
+      </section>
+      <noscript><p class="error">Включите JavaScript, чтобы работать с заявками.</p></noscript>
+    </main>
+  </div>
+</body>
+</html>

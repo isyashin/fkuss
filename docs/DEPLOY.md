@@ -64,6 +64,9 @@ bash ~/resto/src/scripts/update.sh --no-restart  # только сборка
 - `buxara-app-1` — :3001, БД `buxara`, content volume, образ пинается в
   `sites/buxara/admin-pr10.override.yml` (тег `resto-template:work-*`)
 - `ochag-grill-app-1` — :3003, БД `ochag-grill`, content volume, override как у buxara
+- `template-app-1` (u-mamy) — :3000, БД `resto`, прежний образ
+- `buxara-app-1` — :3001, БД `buxara`, content volume, `resto-template:admin-pr10-130355a`
+- `ochag-grill-app-1` — :3003, БД `ochag-grill`, content volume, `resto-template:admin-pr10-130355a`
 - `platform-platform-1` — :3100, БД `platform`
 - `template-db-1` — общий PostgreSQL (базы разделены по сайтам)
 - Caddy :80 — маршрутизация по Host (LAN-режим, без реального TLS)
@@ -80,6 +83,11 @@ bash ~/resto/src/scripts/update.sh --no-restart  # только сборка
 
 Код сайтов живёт в `admin-pr10-checkout` (ветка `codex/ui-fix-recovery`);
 образы собираются оттуда, теги `resto-template:work-*` / `platform-platform`.
+Образ `130355a` собран из отдельного `/home/ilya/resto/admin-pr10-checkout`
+после зелёного CI PR № 10. Переопределения двух сайтов находятся в
+`sites/{ochag-grill,buxara}/admin-pr10.override.yml`; копии предыдущего
+варианта сохранены рядом с суффиксом `.rollback-761de83`. Основной checkout
+`src` и работающие сервисы «У мамы» и платформы не переключались.
 
 Cron на хосте:
 - `0 */6 * * *` — POST /api/jobs/report-metrics на сайтах (метрики → платформа)

@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily backup of fkuss landing leads
+
+[Timer]
+OnCalendar=*-*-* 04:50:00
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAdminActor } from "@/lib/admin-auth";
 import { isPinUnlocked } from "@/lib/admin-pin";
 import { getSiteSettings, getSiteTheme } from "@/lib/site";
+import { requireAdminPermission } from "@/lib/admin-auth";
 import { SettingsAdmin } from "./settings-admin";
 import { readAdminSound, publicAdminSound } from "@/lib/admin-sound";
 import { getPrisma } from "@/lib/db";

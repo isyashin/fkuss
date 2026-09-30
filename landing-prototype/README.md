@@ -125,7 +125,7 @@ node landing-prototype/server.mjs
 
 ## Согласованный дизайн лендинга
 
-Согласованный дизайн опубликован на https://fkuss.ru/ (релиз ea43ba0).
+Согласованный дизайн опубликован на https://fkuss.ru/ (релиз 0a4d620).
 Предпросмотр на https://design.fkuss.ru/ работает отдельно и не переключает
 главный сайт. Порядок изоляции — [ops/PREVIEW.md](ops/PREVIEW.md).
 Разбор исходной страницы и решений — [дизайн-ревью](../docs/LANDING-DESIGN-REVIEW.md).

@@ -27,8 +27,11 @@ test("выключенный кабинет: гейты на витрине и �
     const dishId = await page.getByTestId("dish-card").first().getAttribute("data-dish-id");
     const orderResp = await page.request.post("/api/order", {
       data: {
-        items: [{ dishId, quantity: 1, price: 0 }],
-        type: "pickup", name: "Тест Гейта", phone: "+79990001144",
+        items: [{ dishId, quantity: 1 }],
+        type: "pickup",
+        customerName: "Тест Гейта",
+        customerPhone: "+79990001144",
+        preferredChannel: "phone",
         bonusSpend: 100,
       },
     });

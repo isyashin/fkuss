@@ -16,6 +16,7 @@ import {
   type PrintMaterialStyle,
 } from "@/lib/print-materials";
 import { savePrintMaterial } from "./actions";
+import styles from "./print-materials-admin.module.css";
 
 const MATERIALS: { kind: PrintMaterialKind; label: string; hint: string }[] = [
   { kind: "card", label: "Визитка", hint: "Вкладыш 90 × 50 мм" },
@@ -147,8 +148,8 @@ export function PrintMaterialsAdmin({
   const textareaClass = "mt-1 w-full px-3 py-2 rounded-[var(--radius)] bg-card border border-foreground/15";
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-2 max-w-xl" role="tablist" aria-label="Тип макета">
+    <div className={styles.editor}>
+      <div className={styles.tabs} role="tablist" aria-label="Тип макета">
         {MATERIALS.map((material) => (
           <button
             key={material.kind}
@@ -159,52 +160,27 @@ export function PrintMaterialsAdmin({
               setKind(material.kind);
               setMessage("");
             }}
-            className={`min-h-14 rounded-[var(--radius)] border px-4 text-left ${
-              kind === material.kind
-                ? "border-accent bg-accent text-white"
-                : "border-foreground/15 bg-card"
-            }`}
+            className={kind === material.kind ? styles.activeTab : styles.tab}
           >
-            <span className="block font-medium">{material.label}</span>
-            <span className={`block text-xs ${kind === material.kind ? "text-white/80" : "text-muted"}`}>
-              {material.hint}
-            </span>
+            {material.label} · {material.hint}
           </button>
         ))}
       </div>
 
-      <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)] gap-6 items-start">
+      <div className="grid gap-6 items-start">
         <div className="space-y-5 min-w-0">
-          <section className="bg-card rounded-[var(--radius)] p-5 space-y-4">
+          <section className={styles.section}>
             <div>
               <h2 className="text-xl">Дизайн</h2>
               <p className="text-sm text-muted mt-1">Все поля относятся только к выбранному макету.</p>
             </div>
 
-            <fieldset>
-              <legend className="text-sm text-muted mb-1">Стиль</legend>
-              <div className="grid sm:grid-cols-3 gap-2">
-                {STYLES.map((style) => (
-                  <button
-                    key={style.value}
-                    type="button"
-                    onClick={() => update({ style: style.value })}
-                    className={`min-h-11 px-3 rounded-full border text-sm ${
-                      design.style === style.value ? "border-accent text-accent font-medium" : "border-foreground/15"
-                    }`}
-                  >
-                    {style.label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-
-            <div className="grid sm:grid-cols-3 gap-3">
-              <ColorField label="Фон" value={design.backgroundColor} onChange={(backgroundColor) => update({ backgroundColor })} />
-              <ColorField label="Текст" value={design.textColor} onChange={(textColor) => update({ textColor })} />
-              <ColorField label="Акцент" value={design.accentColor} onChange={(accentColor) => update({ accentColor })} />
-            </div>
-
+            <div className={styles.fields}>
+            <label className="block"><span className="text-sm text-muted">Стиль</span>
+              <select value={design.style} onChange={(event) => update({ style: event.target.value as PrintMaterialStyle })} className={inputClass}>
+                {STYLES.map((style) => <option key={style.value} value={style.value}>{style.label}</option>)}
+              </select>
+            </label>
             <label className="block">
               <span className="text-sm text-muted">Заголовок</span>
               <input
@@ -224,6 +200,13 @@ export function PrintMaterialsAdmin({
                 className={textareaClass}
               />
             </label>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-3">
+              <ColorField label="Фон" value={design.backgroundColor} onChange={(backgroundColor) => update({ backgroundColor })} />
+              <ColorField label="Текст" value={design.textColor} onChange={(textColor) => update({ textColor })} />
+              <ColorField label="Акцент" value={design.accentColor} onChange={(accentColor) => update({ accentColor })} />
+            </div>
             <label className="block">
               <span className="text-sm text-muted">Фраза рядом с QR-кодом</span>
               <input
@@ -243,11 +226,12 @@ export function PrintMaterialsAdmin({
             </div>
           </section>
 
-          <section className="bg-card rounded-[var(--radius)] p-5 space-y-4">
+          <section className={styles.section}>
             <div>
               <h2 className="text-xl">QR-ссылка</h2>
               <p className="text-sm text-muted mt-1">Метки помогают отличить заказы с визитки от заказов с магнита.</p>
             </div>
+            <div className={styles.fields}>
             <label className="block">
               <span className="text-sm text-muted">Адрес сайта (из настроек домена)</span>
               <input
@@ -268,6 +252,7 @@ export function PrintMaterialsAdmin({
                 placeholder="repeat-order"
               />
             </label>
+            </div>
             {trackedUrl && (
               <div className="rounded-[var(--radius)] bg-foreground/5 p-3 text-xs break-all">
                 <p className="text-muted mb-1">В QR-коде:</p>
@@ -278,7 +263,7 @@ export function PrintMaterialsAdmin({
             )}
           </section>
 
-          <section className="bg-card rounded-[var(--radius)] p-5 space-y-4">
+          <section className={styles.section}>
             <div>
               <h2 className="text-xl">Сохранение и экспорт</h2>
               <p className="text-sm text-muted mt-1">
@@ -290,7 +275,7 @@ export function PrintMaterialsAdmin({
                 type="button"
                 disabled={pending || !validation.success}
                 onClick={save}
-                className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
+                className={styles.save}
               >
                 {pending ? "Сохраняем…" : "Сохранить макет"}
               </button>
@@ -300,7 +285,7 @@ export function PrintMaterialsAdmin({
                   type="button"
                   disabled={exporting !== null || !validation.success}
                   onClick={() => void download(item.format)}
-                  className="min-h-11 px-4 rounded-full border border-foreground/20 text-sm disabled:opacity-50"
+                  className={styles.outline}
                 >
                   {exporting === item.format ? "Готовим…" : item.label}
                   <span className="sr-only">, {item.hint}</span>
@@ -314,7 +299,7 @@ export function PrintMaterialsAdmin({
           </section>
         </div>
 
-        <aside className="xl:sticky xl:top-20 space-y-3 min-w-0">
+        <aside className="space-y-3 min-w-0">
           <div className="bg-card rounded-[var(--radius)] p-4">
             <div className="flex flex-wrap justify-between gap-2 mb-3 text-sm">
               <p className="font-medium">Предпросмотр</p>

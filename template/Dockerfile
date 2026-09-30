@@ -13,6 +13,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
+COPY tsconfig.json ./
+COPY src/lib/db.ts src/lib/admin-users.ts src/lib/admin-password.ts ./src/lib/
+COPY scripts/bootstrap-admin.ts ./scripts/
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+RUN npx prisma generate
 CMD ["npx", "prisma", "migrate", "deploy"]
 
 FROM node:22-alpine AS builder

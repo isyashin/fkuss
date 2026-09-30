@@ -12,7 +12,7 @@ const CODE_MAX_ATTEMPTS = 3;
 const SESSION_TTL_DAYS = 30;
 const SESSION_COOKIE = "resto_session";
 
-export async function requestAuthCode(email: string): Promise<{ devCode?: string }> {
+export async function requestAuthCode(email: string): Promise<{ devCode?: string; deliveryFailed?: boolean }> {
   const prisma = getPrisma();
   const code = String(randomInt(100000, 1000000));
 
@@ -25,11 +25,10 @@ export async function requestAuthCode(email: string): Promise<{ devCode?: string
     await sendMail(email, "Код входа", `Ваш код входа: ${code}\n\nДействует 10 минут.`);
     return {};
   } catch {
-    // BUG-021: в production действующий код НЕ логируем — только факт сбоя
-    console.warn(`[auth] SMTP недоступен, код для ${email} не доставлен`);
+    // Действующий код и адрес гостя не выводим в логи.
+    console.warn("[auth] SMTP недоступен, код не доставлен");
     const exposeCode = process.env.AUTH_DEV_CODE === "1" || process.env.NODE_ENV !== "production";
-    if (exposeCode) console.log(`[auth] DEV код для ${email}: ${code}`);
-    return { devCode: exposeCode ? code : undefined };
+    return exposeCode ? { devCode: code } : { deliveryFailed: true };
   }
 }
 

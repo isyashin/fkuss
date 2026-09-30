@@ -34,9 +34,14 @@ jobs:
         working-directory: template
       - run: npx prisma generate
         working-directory: template
-      - run: npx prisma migrate deploy
+      - name: Apply all template migrations
+        run: npx prisma migrate deploy
         working-directory: template
-      - run: npm test
+      - name: Verify template migrations
+        run: npx prisma migrate status
+        working-directory: template
+      - name: Test template, including admin events and guest contact on PostgreSQL
+        run: npm test
         working-directory: template
       - run: npm run lint
         working-directory: template
@@ -46,6 +51,17 @@ jobs:
         working-directory: template
       - run: npm run seed
         working-directory: template
+      - name: Bootstrap disposable E2E owner
+        working-directory: template
+        shell: bash
+        run: |
+          password="$(node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64url'))")"
+          echo "::add-mask::$password"
+          ADMIN_BOOTSTRAP_LOGIN=ci-owner ADMIN_BOOTSTRAP_NAME="CI Owner" ADMIN_BOOTSTRAP_PASSWORD="$password" npx tsx scripts/bootstrap-admin.ts
+          {
+            echo "E2E_ADMIN_LOGIN=ci-owner"
+            echo "E2E_ADMIN_PASSWORD=$password"
+          } >> "$GITHUB_ENV"
       - run: npx playwright install --with-deps chromium webkit
         working-directory: template
       - run: npx playwright test

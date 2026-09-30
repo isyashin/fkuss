@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPrisma } from "@/lib/db";
+import { recordAdminEvent } from "@/lib/admin-events";
 import { rateLimit } from "@/lib/rate-limit";
 import { createReservationWithCapacity } from "@/lib/booking/capacity";
 
@@ -83,8 +84,8 @@ export async function POST(request: Request) {
 
   // BUG-013: lock, aggregate and create must share one transaction.
   const prisma = getPrisma();
-  const reservation = await prisma.$transaction(async (tx) =>
-    createReservationWithCapacity(
+  const reservation = await prisma.$transaction(async (tx) => {
+    const created = await createReservationWithCapacity(
       tx,
       { date: parsed.data.date, time: parsed.data.time, guests: parsed.data.guests },
       settings.booking.maxGuestsPerSlot,
@@ -98,8 +99,12 @@ export async function POST(request: Request) {
         comment: parsed.data.comment,
         status: "new",
       },
-    ),
-  );
+    );
+    if (created) {
+      await recordAdminEvent(tx, "booking", created.id, `Бронь ${created.date} в ${created.time}`);
+    }
+    return created;
+  });
 
   if (!reservation) {
     return NextResponse.json(

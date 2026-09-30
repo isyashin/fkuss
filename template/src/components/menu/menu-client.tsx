@@ -4,6 +4,7 @@ import { useState } from "react";
 import { dishImageUrl } from "@/lib/assets";
 import type { Menu, Dish } from "@/lib/content";
 import type { ContentSettings } from "@/lib/content-schema";
+import type { GuestChannels } from "@/lib/guest-contact";
 
 import { useCart, type CartModifier } from "@/lib/cart/store";
 import { validateModifierSelection } from "@/lib/order/modifier-validation";
@@ -19,6 +20,7 @@ export function MenuClient({
   delivery,
   loyalty,
   whatsapp,
+  guestContact,
   isOpen,
   paymentProvider = "none",
   bonusBalance = 0,
@@ -28,6 +30,7 @@ export function MenuClient({
   delivery: ContentSettings["delivery"];
   loyalty: ContentSettings["loyalty"];
   whatsapp: ContentSettings["channels"]["whatsapp"];
+  guestContact: GuestChannels;
   isOpen?: boolean;
   paymentProvider?: string;
   bonusBalance?: number;
@@ -137,6 +140,7 @@ export function MenuClient({
           delivery={delivery}
           loyalty={loyalty}
           whatsapp={whatsapp}
+          guestContact={guestContact}
           paymentProvider={paymentProvider}
           bonusBalance={bonusBalance}
           initialAddress={initialAddress}

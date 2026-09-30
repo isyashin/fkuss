@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { loginAdminUi } from "./login-admin";
 
 test("ПМ-01: админ настраивает визитку и скачивает PNG", async ({ page }) => {
   await page.goto("/admin/login");
-  await page.getByPlaceholder("Пароль").fill("admin");
-  await page.getByRole("button", { name: "Войти" }).click();
+  await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
   await page.goto("/admin/print-materials");

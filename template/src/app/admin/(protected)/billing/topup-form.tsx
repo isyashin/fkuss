@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { topupAction } from "./actions";
+import styles from "./topup-form.module.css";
 
 export function TopupForm() {
   const [amount, setAmount] = useState("1000");
@@ -9,14 +10,16 @@ export function TopupForm() {
   const [error, setError] = useState("");
 
   return (
-    <div className="flex flex-wrap gap-2 items-center">
+    <div className={styles.form}>
+      <label htmlFor="billing-topup-amount">Сумма пополнения, ₽</label>
       <input
+        id="billing-topup-amount"
         type="number"
         min={100}
         step={100}
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
-        className="w-36 min-h-11 px-3 rounded-[var(--radius)] bg-background border border-foreground/15"
+        className={styles.input}
       />
       <button
         disabled={pending}
@@ -31,11 +34,11 @@ export function TopupForm() {
             }
           })
         }
-        className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
+        className={styles.button}
       >
-        {pending ? "…" : "Пополнить"}
+        {pending ? "…" : "Пополнить баланс"}
       </button>
-      {error && <span className="text-red-600 text-sm">{error}</span>}
+      {error && <span className={styles.error} role="alert">{error}</span>}
     </div>
   );
 }

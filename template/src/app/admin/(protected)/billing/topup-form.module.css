@@ -1,0 +1,7 @@
+.form { display:flex; align-items:end; flex-wrap:wrap; gap:9px; }
+.form label { flex:0 0 100%; color:var(--admin-muted); font-size:11px; }
+.input { width:160px; min-height:44px; padding:0 11px; border:1px solid var(--admin-line); border-radius:9px; background:var(--admin-surface); color:var(--admin-text); font-size:13px; }
+.button { min-height:44px; padding:0 14px; border:1px solid var(--admin-line); border-radius:9px; background:var(--admin-surface); color:var(--admin-text); font-size:12px; font-weight:700; cursor:pointer; }
+.button:disabled { opacity:.55; cursor:not-allowed; }
+.error { flex:0 0 100%; color:#b53434; font-size:12px; }
+@media(max-width:600px) { .input { flex:1; min-width:120px; } }

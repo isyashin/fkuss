@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPrisma } from "@/lib/db";
+import { recordAdminEvent } from "@/lib/admin-events";
 import { rateLimit } from "@/lib/rate-limit";
 import { calculateOrder, type OrderItemInput } from "@/lib/order/pricing";
 import { lockAndCheckBonusBalance } from "@/lib/order/bonus-lock";
 import { getSiteSettings } from "@/lib/site";
 import { getPaymentProvider } from "@/lib/payments";
 import type { PaymentProvider } from "@/lib/payments/types";
+import { preferredChannelInputSchema } from "@/lib/guest-contact";
 
 const orderSchema = z.object({
   items: z
@@ -24,6 +26,7 @@ const orderSchema = z.object({
   address: z.string().max(300).default(""),
   customerName: z.string().min(1).max(100),
   customerPhone: z.string().min(5).max(20),
+  preferredChannel: preferredChannelInputSchema,
   customerEmail: z.email().optional().or(z.literal("")),
   comment: z.string().max(500).default(""),
   desiredTime: z.string().max(50).default(""),
@@ -308,6 +311,7 @@ export async function POST(request: Request) {
           paymentStatus: input.paymentMethod === "online" ? "pending" : "none",
           customerName: input.customerName,
           customerPhone: input.customerPhone,
+          preferredChannel: input.preferredChannel,
           addressText: input.address,
           comment: input.comment,
           desiredTime: desiredTimeText,
@@ -343,6 +347,10 @@ export async function POST(request: Request) {
             comment: `Списание по заказу №${created.number}`,
           },
         });
+      }
+
+      if (input.paymentMethod !== "online") {
+        await recordAdminEvent(tx, "order", created.id, `Заказ №${created.number}`);
       }
 
       return created;

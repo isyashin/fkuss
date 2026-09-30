@@ -18,7 +18,6 @@ export default defineConfig({
       DATABASE_URL: process.env.DATABASE_URL ?? "",
       AUTH_DEV_CODE: "1",
       INSECURE_HTTP: "1",
-      ADMIN_PASSWORD: "admin",
     },
   },
   projects: [

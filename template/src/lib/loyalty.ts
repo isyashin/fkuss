@@ -4,6 +4,7 @@
  * refund (возврат потраченного при отмене).
  */
 import type { PrismaClient } from "@/generated/prisma/client";
+import { isFinalOrderStatus } from "./order-status";
 
 type Tx = PrismaClient | Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends" | "$use">;
 
@@ -15,10 +16,10 @@ export async function getBonusBalance(prisma: Tx, customerId: string): Promise<n
   return agg._sum.amount ?? 0;
 }
 
-/** Начислить кэшбэк за заказ (при статусе «выполнен»). Идемпотентно. */
+/** Начислить кэшбэк после выдачи/доставки заказа. Идемпотентно. */
 export async function accrueOrderBonus(prisma: Tx, orderId: string): Promise<void> {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order || !order.customerId || order.bonusAccrued <= 0) return;
+  if (!order || !order.customerId || order.bonusAccrued <= 0 || !isFinalOrderStatus(order.type, order.status)) return;
 
   const existing = await prisma.bonusTransaction.findFirst({
     where: { orderId: order.id, type: "accrual" },
@@ -61,23 +62,20 @@ export async function reverseOrderBonus(prisma: Tx, orderId: string): Promise<vo
     }
   }
 
-  const spend = await prisma.bonusTransaction.findFirst({
-    where: { orderId: order.id, type: "spend" },
+  const bonusSpendNet = await prisma.bonusTransaction.aggregate({
+    where: { orderId: order.id, type: { in: ["spend", "refund"] } },
+    _sum: { amount: true },
   });
-  if (spend) {
-    const refunded = await prisma.bonusTransaction.findFirst({
-      where: { orderId: order.id, type: "refund" },
+  const remainingSpent = -(bonusSpendNet._sum.amount ?? 0);
+  if (remainingSpent > 0) {
+    await prisma.bonusTransaction.create({
+      data: {
+        customerId: order.customerId,
+        orderId: order.id,
+        type: "refund",
+        amount: remainingSpent,
+        comment: `Возврат бонусов, отмена заказа №${order.number}`,
+      },
     });
-    if (!refunded) {
-      await prisma.bonusTransaction.create({
-        data: {
-          customerId: order.customerId,
-          orderId: order.id,
-          type: "refund",
-          amount: -spend.amount,
-          comment: `Возврат бонусов, отмена заказа №${order.number}`,
-        },
-      });
-    }
   }
 }

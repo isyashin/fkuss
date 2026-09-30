@@ -1,20 +1,12 @@
 import Link from "next/link";
 import { getPrisma } from "@/lib/db";
 import { getBonusBalance } from "@/lib/loyalty";
+import { orderStatusLabel } from "@/lib/order-status";
 import type { Customer } from "@/generated/prisma/client";
 import { LogoutButton } from "./logout-button";
 import { CancelBookingButton } from "./cancel-booking-button";
 import { AddressSection } from "./address-section";
 import { RepeatOrderButton } from "./repeat-order-button";
-
-const STATUS_NAMES: Record<string, string> = {
-  new: "новый",
-  accepted: "принят",
-  cooking: "готовится",
-  delivering: "в пути",
-  done: "выполнен",
-  cancelled: "отменён",
-};
 
 const BOOKING_STATUS: Record<string, string> = {
   new: "ожидает подтверждения",
@@ -60,7 +52,7 @@ export async function AccountDashboard({ customer }: { customer: Customer }) {
             {orders.map((order) => (
               <div key={order.id} className="bg-card rounded-[var(--radius)] p-4">
                 <div className="flex justify-between items-baseline gap-2">
-                  <p className="font-medium">№{order.number} · {STATUS_NAMES[order.status] ?? order.status}</p>
+                  <p className="font-medium">№{order.number} · {orderStatusLabel(order.status).toLocaleLowerCase("ru-RU")}</p>
                   <div className="flex items-center gap-2">
                     <RepeatOrderButton
                       items={order.items.map((i) => ({

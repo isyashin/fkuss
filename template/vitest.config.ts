@@ -9,5 +9,7 @@ export default defineConfig({
   },
   test: {
     include: ["tests/**/*.test.ts"],
+    // Интеграционные файлы используют одну одноразовую БД и bootstrap владельца.
+    fileParallelism: false,
   },
 });

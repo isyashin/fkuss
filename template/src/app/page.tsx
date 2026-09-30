@@ -3,6 +3,7 @@ import { getSiteRestaurant, getSiteMenu, getSitePromos, getSitePages, getSiteThe
 import { isOpenAt, resolveSchedule, nowInTimeZone } from "@/lib/hours";
 import { MenuClient } from "@/components/menu/menu-client";
 import { getPrisma } from "@/lib/db";
+import { visibleGuestChannels } from "@/lib/guest-contact";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,7 @@ export default async function HomePage() {
             delivery={settings.delivery}
             loyalty={settings.loyalty}
             whatsapp={settings.channels.whatsapp}
+            guestContact={visibleGuestChannels(settings)}
             isOpen={open}
             paymentProvider={settings.payment.provider}
             bonusBalance={bonusBalance}

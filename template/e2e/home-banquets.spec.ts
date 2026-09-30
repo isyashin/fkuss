@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginAdminUi } from "./login-admin";
 
 test("UI-01/02: главная — hero, полное меню сразу после, контакты ниже меню", async ({ page }) => {
   await page.goto("/");
@@ -32,8 +33,7 @@ test("UI-04: админ включает банкеты → страница и 
 
   // Включаем раздел и создаём зал через админку
   await page.goto("/admin/login");
-  await page.getByPlaceholder("Пароль").fill("admin");
-  await page.getByRole("button", { name: "Войти" }).click();
+  await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
   await page.goto("/admin/banquets");

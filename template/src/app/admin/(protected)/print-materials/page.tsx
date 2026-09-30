@@ -1,4 +1,5 @@
 import { contentAssetUrl, getSiteRestaurant, getSiteSettings, getSiteTheme } from "@/lib/site";
+import { requireAdminPermission } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/db";
 import {
   createDefaultPrintMaterial,
@@ -8,10 +9,12 @@ import {
   type PrintMaterialsSettings,
 } from "@/lib/print-materials";
 import { PrintMaterialsAdmin } from "./print-materials-admin";
+import { AdminSettingsSubpage } from "../admin-settings-subpage";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPrintMaterialsPage() {
+  await requireAdminPermission("manage");
   const prisma = getPrisma();
   const [restaurant, siteSettings, theme, stored] = await Promise.all([
     getSiteRestaurant(),
@@ -43,13 +46,8 @@ export default async function AdminPrintMaterialsPage() {
   };
 
   return (
-    <div>
-      <h1 className="text-2xl mb-2">Печатные материалы</h1>
-      <p className="text-muted mb-6 max-w-3xl">
-        Подготовьте визитку для пакета с заказом или магнит на холодильник. QR-код ведёт на сайт
-        ресторана и содержит метки для аналитики.
-      </p>
+    <AdminSettingsSubpage title="Печатные материалы" description="Визитки и магниты с QR-кодом гостевого сайта.">
       <PrintMaterialsAdmin initialSettings={initialSettings} brand={brand} restaurantSlug={restaurant.slug} />
-    </div>
+    </AdminSettingsSubpage>
   );
 }

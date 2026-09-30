@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { saveSettings, saveTheme, savePricing, saveBackground } from "./actions";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
+import { saveAllAdminSettings, saveBackground, saveGuestContactChannels, saveSettings, saveTheme } from "./actions";
 import { contentAssetUrl } from "@/lib/assets";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { ThemeConfig } from "@/lib/content";
+import styles from "./settings-admin.module.css";
+import type { PublicAdminSound } from "@/lib/admin-sound";
+import { SoundSettings } from "./sound-settings";
+import { visibleGuestChannels, type GuestChannels } from "@/lib/guest-contact";
+import { AdminIcon } from "../admin-icon";
 
 const PRESETS = [
   { id: "warm", name: "Тёплый (трактир)" },
@@ -12,8 +17,23 @@ const PRESETS = [
   { id: "elegant", name: "Тёмный (fine dining)" },
 ];
 
-export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; theme: ThemeConfig }) {
-  const [s, setS] = useState(settings);
+function subscribeTheme(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener("restaurant-admin-theme-change", callback);
+  return () => { window.removeEventListener("storage", callback); window.removeEventListener("restaurant-admin-theme-change", callback); };
+}
+
+type SaveFeedback = { section: string; text: string; error: boolean };
+
+function SaveButton({ section, onSave, pending, feedback }: { section: string; onSave: () => void; pending: boolean; feedback: SaveFeedback }) {
+  return <div className={styles.sectionActions}><button type="button" className={styles.saveButton} disabled={pending} onClick={onSave}>{pending && feedback.section === section ? "Сохраняю…" : "Сохранить"}</button>{feedback.section === section && feedback.text && <span role={feedback.error ? "alert" : "status"} className={feedback.error ? styles.error : styles.saved}>{feedback.text}</span>}</div>;
+}
+
+export function SettingsAdmin({ settings, theme, sound, actor, restaurantSection, otherSections }: { settings: ContentSettings; theme: ThemeConfig; sound: PublicAdminSound; actor: { name: string; role: string }; restaurantSection: ReactNode; otherSections: ReactNode }) {
+  const [s, setS] = useState({ ...settings, guestContact: visibleGuestChannels(settings) });
+  const savedSettings = useRef(settings);
+  const [contactSaving, setContactSaving] = useState(false);
+  const [contactError, setContactError] = useState("");
   const [preset, setPreset] = useState(theme.preset);
   const [accent, setAccent] = useState(theme.accent);
   const [pricingMode, setPricingMode] = useState<"yandex" | "manual" | "coefficient">(settings.pricing.globalMode);
@@ -25,27 +45,89 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
     dimPercent: theme.background?.dimPercent ?? 40,
     disableOnMobile: theme.background?.disableOnMobile ?? true,
   });
+  const savedTheme = useRef({ preset: theme.preset, accent: theme.accent });
+  const savedBackground = useRef(bg);
   const [pending, startTransition] = useTransition();
-  const [saved, setSaved] = useState("");
+  const [feedback, setFeedback] = useState({ section: "", text: "", error: false });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const dark = useSyncExternalStore(subscribeTheme, () => localStorage.getItem("restaurant-admin-theme") === "dark", () => false);
+  useEffect(() => {
+    const update = (event: Event) => setSidebarCollapsed((event as CustomEvent<boolean>).detail);
+    window.addEventListener("restaurant-admin-sidebar-state", update);
+    return () => window.removeEventListener("restaurant-admin-sidebar-state", update);
+  }, []);
 
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
 
-  function saveAll() {
+  function setDark(next: boolean) {
+    localStorage.setItem("restaurant-admin-theme", next ? "dark" : "light");
+    window.dispatchEvent(new Event("restaurant-admin-theme-change"));
+  }
+
+  function saveSection(section: string, action: () => Promise<void>) {
     startTransition(async () => {
-      await saveSettings(s);
-      await saveTheme({ preset, accent });
-      await savePricing({ globalMode: pricingMode, globalPercent: pricingPercent });
-      await saveBackground(bg);
-      setSaved("Сохранено ✓");
-      setTimeout(() => setSaved(""), 3000);
+      setFeedback({ section, text: "", error: false });
+      try {
+        await action();
+        setFeedback({ section, text: "Сохранено", error: false });
+      } catch (cause) {
+        setFeedback({ section, text: cause instanceof Error ? cause.message : "Не удалось сохранить настройки", error: true });
+      }
     });
   }
 
+  function saveContent(section: "delivery" | "channels" | "booking") {
+    saveSection(section, async () => {
+      const next: ContentSettings = { ...savedSettings.current, [section]: s[section], ...(section === "delivery" ? { timezone: s.timezone } : {}) };
+      await saveSettings(next);
+      savedSettings.current = next;
+    });
+  }
+
+  function savePricePaymentLoyalty() {
+    saveSection("pricing", async () => {
+      const pricing = { globalMode: pricingMode, globalPercent: pricingPercent };
+      const next: ContentSettings = { ...savedSettings.current, pricing, payment: s.payment, loyalty: s.loyalty };
+      await saveAllAdminSettings({ settings: next, pricing, theme: savedTheme.current, background: savedBackground.current });
+      savedSettings.current = next;
+    });
+  }
+
+  async function changeGuestContact(channel: keyof GuestChannels, enabled: boolean) {
+    const previous = s.guestContact;
+    const next = { ...previous, [channel]: enabled };
+    setContactSaving(true);
+    setContactError("");
+    setS((current) => ({ ...current, guestContact: next }));
+    try { await saveGuestContactChannels(next); savedSettings.current = { ...savedSettings.current, guestContact: next }; }
+    catch (cause) {
+      setS((current) => ({ ...current, guestContact: previous }));
+      setContactError(cause instanceof Error ? cause.message : "Не удалось сохранить каналы связи");
+    } finally { setContactSaving(false); }
+  }
+
   return (
-    <div className="space-y-8 max-w-xl">
-      <section>
-        <h2 className="text-xl mb-3">Тема</h2>
-        <div className="space-y-3">
+    <div className={styles.page}>
+      <section className={styles.card} aria-label="Внешний вид панели">
+        <h2>Внешний вид</h2>
+        <p className={styles.cardHint}>Только для панели: тема сайта ресторана не меняется</p>
+        <div className={styles.themeChoices} role="group" aria-label="Тема панели">
+          <button type="button" aria-pressed={!dark} className={!dark ? styles.activeTheme : ""} onClick={() => setDark(false)}><AdminIcon name="sun"/> Светлая {!dark && <span aria-hidden="true">✓</span>}</button>
+          <button type="button" aria-pressed={dark} className={dark ? styles.activeTheme : ""} onClick={() => setDark(true)}><AdminIcon name="moon"/> Тёмная {dark && <span aria-hidden="true">✓</span>}</button>
+        </div>
+        <button type="button" className={styles.outlineButton} onClick={() => window.dispatchEvent(new Event("restaurant-admin-sidebar-toggle"))}>{sidebarCollapsed ? "Развернуть" : "Свернуть"} боковую панель</button>
+      </section>
+      <SoundSettings initial={sound}/>
+      <section className={styles.card} aria-label="Профиль администратора">
+        <h2>Администратор</h2>
+        <p className={styles.cardHint}>Профиль администратора ресторана.</p>
+        <div className={styles.adminCard}><span>{actor.name.trim().slice(0, 1).toLocaleUpperCase("ru-RU") || "А"}</span><div><strong>{actor.name}</strong><small>{actor.role === "owner" ? "Владелец ресторана" : "Сотрудник ресторана"}</small></div></div>
+      </section>
+      {restaurantSection}
+      <section className={styles.card} id="site-theme">
+        <h2>Оформление сайта</h2>
+        <p className={styles.cardHint}>Эти параметры относятся к сайту ресторана. Переключатель темы панели работает отдельно.</p>
+        <div className={styles.formGrid}>
           <label className="block">
             <span className="text-sm text-muted">Пресет</span>
             <select value={preset} onChange={(e) => setPreset(e.target.value as typeof preset)} className={inputCls}>
@@ -60,12 +142,20 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
             <span className="text-sm text-muted">Фирменный цвет</span>
             <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} className="mt-1 w-16 h-11 rounded" />
           </label>
+          <label className="block">
+            <span className="text-sm text-muted">Положение фона</span>
+            <select value={bg.position} onChange={(e) => setBg({ ...bg, position: e.target.value as typeof bg.position })} className={inputCls}>
+              <option value="center">По центру</option>
+              <option value="top">Сверху</option>
+              <option value="bottom">Снизу</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-sm text-muted">Затемнение: {bg.dimPercent}%</span>
+            <input type="range" min={0} max={100} value={bg.dimPercent} onChange={(e) => setBg({ ...bg, dimPercent: Number(e.target.value) })} className="mt-3 w-full accent-[var(--accent)]" />
+          </label>
         </div>
-      </section>
-
-      <section>
-        <h2 className="text-xl mb-3">Фоновое изображение</h2>
-        <div className="space-y-3">
+        <div className={styles.toggleList}>
           <label className="flex items-center gap-3 min-h-11">
             <input
               type="checkbox"
@@ -76,8 +166,13 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
             Фон включён
           </label>
 
-          <div className="flex items-center gap-3">
-            <label className="min-h-11 px-4 inline-flex items-center rounded-full bg-accent text-white text-sm cursor-pointer">
+          <label className="flex items-center gap-3 min-h-11">
+            <input type="checkbox" checked={bg.disableOnMobile} onChange={(e) => setBg({ ...bg, disableOnMobile: e.target.checked })} className="w-5 h-5 accent-[var(--accent)]" />
+            Отключить фон на мобильных
+          </label>
+        </div>
+          <div className={styles.wrapActions}>
+            <label className={styles.fullOutlineUpload}>
               {bg.image ? "Заменить изображение" : "Загрузить изображение"}
               <input
                 type="file"
@@ -113,43 +208,13 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-sm text-muted">Позиция</span>
-              <select value={bg.position} onChange={(e) => setBg({ ...bg, position: e.target.value as typeof bg.position })} className={inputCls}>
-                <option value="center">По центру</option>
-                <option value="top">Сверху</option>
-                <option value="bottom">Снизу</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-sm text-muted">Затемнение: {bg.dimPercent}%</span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={bg.dimPercent}
-                onChange={(e) => setBg({ ...bg, dimPercent: Number(e.target.value) })}
-                className="mt-3 w-full accent-[var(--accent)]"
-              />
-            </label>
-          </div>
-
-          <label className="flex items-center gap-3 min-h-11">
-            <input
-              type="checkbox"
-              checked={bg.disableOnMobile}
-              onChange={(e) => setBg({ ...bg, disableOnMobile: e.target.checked })}
-              className="w-5 h-5 accent-[var(--accent)]"
-            />
-            Отключить фон на мобильных
-          </label>
-        </div>
+        <SaveButton section="site-theme" pending={pending} feedback={feedback} onSave={() => saveSection("site-theme", async () => { await saveTheme({ preset, accent }); savedTheme.current = { preset, accent }; await saveBackground(bg); savedBackground.current = bg; })}/>
       </section>
 
-      <section>
-        <h2 className="text-xl mb-3">Доставка</h2>
-        <div className="space-y-3">
+      <section className={styles.card} id="delivery">
+        <h2>Доставка</h2>
+        <p className={styles.cardHint}>Общие условия и зоны доставки</p>
+        <div className={styles.toggleList}>
           <label className="flex items-center gap-3 min-h-11">
             <input
               type="checkbox"
@@ -168,11 +233,14 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
             />
             Самовывоз включён
           </label>
+        </div>
+        <div className={styles.formGrid}>
           <label className="block">
             <span className="text-sm text-muted">Минимальная сумма заказа, ₽</span>
             <input
               type="number"
               min={0}
+              step={1}
               value={s.delivery.minOrder}
               onChange={(e) => setS({ ...s, delivery: { ...s.delivery, minOrder: Number(e.target.value) } })}
               className={inputCls}
@@ -197,11 +265,14 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
               <option value="Asia/Kamchatka">Камчатка (UTC+12)</option>
             </select>
           </label>
-
+        </div>
+        <h3 className={styles.subhead}>Зоны доставки</h3>
+        <div className={styles.zoneList}>
           {s.delivery.zones.map((zone, i) => (
-            <div key={i} className="flex gap-2 items-center">
+            <div key={i} className={styles.zoneRow}>
               <input
                 value={zone.name}
+                aria-label={`Название зоны ${i + 1}`}
                 onChange={(e) => {
                   const zones = [...s.delivery.zones];
                   zones[i] = { ...zone, name: e.target.value };
@@ -212,8 +283,10 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
               <input
                 type="number"
                 min={0}
+                step={1}
                 value={zone.price}
                 title="Цена доставки"
+                aria-label={`Цена доставки зоны ${i + 1}, ₽`}
                 onChange={(e) => {
                   const zones = [...s.delivery.zones];
                   zones[i] = { ...zone, price: Number(e.target.value) };
@@ -224,9 +297,11 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
               <input
                 type="number"
                 min={0}
+                step={1}
                 value={zone.freeFrom ?? ""}
                 placeholder="Беспл. от"
                 title="Бесплатно от"
+                aria-label={`Бесплатно от для зоны ${i + 1}, ₽`}
                 onChange={(e) => {
                   const zones = [...s.delivery.zones];
                   zones[i] = { ...zone, freeFrom: e.target.value === "" ? null : Number(e.target.value) };
@@ -234,20 +309,23 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
                 }}
                 className="w-28 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
               />
+              <button type="button" onClick={() => setS({ ...s, delivery: { ...s.delivery, zones: s.delivery.zones.filter((_, index) => index !== i) } })}>Удалить зону</button>
             </div>
           ))}
+        </div>
           <button
             onClick={() => setS({ ...s, delivery: { ...s.delivery, zones: [...s.delivery.zones, { name: "Новая зона", price: 300, freeFrom: null }] } })}
-            className="min-h-11 px-4 rounded-full border border-dashed border-foreground/30 text-sm text-muted"
+            className={styles.fullOutlineButton}
           >
-            + Зона
+            + Добавить зону
           </button>
-        </div>
+        <SaveButton section="delivery" pending={pending} feedback={feedback} onSave={() => saveContent("delivery")}/>
       </section>
 
-      <section>
-        <h2 className="text-xl mb-3">Ценообразование (общее)</h2>
-        <div className="grid grid-cols-2 gap-3">
+      <section className={styles.card} id="pricing">
+        <h2>Цены, оплата и лояльность</h2>
+        <p className={styles.cardHint}>Общие параметры оплаты и программы лояльности</p>
+        <div className={styles.formGrid}>
           <label className="block">
             <span className="text-sm text-muted">Режим цен меню</span>
             <select value={pricingMode} onChange={(e) => setPricingMode(e.target.value as "yandex" | "manual" | "coefficient")} className={inputCls}>
@@ -256,7 +334,6 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
               <option value="coefficient">Яндекс ± %</option>
             </select>
           </label>
-          {pricingMode === "coefficient" && (
             <label className="block">
               <span className="text-sm text-muted">Коэффициент, %</span>
               <input
@@ -264,17 +341,9 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
                 value={pricingPercent}
                 onChange={(e) => setPricingPercent(Number(e.target.value))}
                 className={inputCls}
+                disabled={pricingMode !== "coefficient"}
               />
             </label>
-          )}
-        </div>
-        <p className="text-muted text-xs mt-2">
-          Индивидуальный режим блюда приоритетнее общего. Коэффициент действует и на платные добавки без ручной цены.
-        </p>
-      </section>
-
-      <section>
-        <h2 className="text-xl mb-3">Оплата</h2>
         <label className="block">
           <span className="text-sm text-muted">Онлайн-оплата заказов</span>
           <select
@@ -287,14 +356,6 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
             <option value="yookassa">ЮKassa</option>
           </select>
         </label>
-        <p className="text-muted text-xs mt-2">
-          Ключи провайдера — в env сайта ({s.payment.shopIdRef}, {s.payment.secretRef}), не в админке.
-        </p>
-      </section>
-
-      <section>
-        <h2 className="text-xl mb-3">Лояльность</h2>
-        <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-sm text-muted">Кэшбэк, %</span>
             <input
@@ -318,11 +379,29 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
             />
           </label>
         </div>
+        <p className={styles.note}>Индивидуальный режим блюда приоритетнее общего. Коэффициент действует и на платные добавки без ручной цены.</p>
+        <p className={styles.note}>Ключи провайдера хранятся в настройках среды сайта.</p>
+        <SaveButton section="pricing" pending={pending} feedback={feedback} onSave={savePricePaymentLoyalty}/>
       </section>
 
-      <section>
-        <h2 className="text-xl mb-3">Каналы уведомлений</h2>
-        <div className="space-y-3">
+      <section className={styles.card} id="guest-contact">
+        <h2>Связь с гостями</h2>
+        <p className={styles.soundHint}>Ручные ссылки в заказах и бронях. Если выбранный гостем канал скрыт, сотрудник видит только номер телефона.</p>
+        <label className="flex items-center gap-3 min-h-11">
+          <input type="checkbox" checked={s.guestContact.whatsapp} disabled={contactSaving} onChange={(event) => void changeGuestContact("whatsapp", event.target.checked)} className="w-5 h-5 accent-[var(--accent)]"/>
+          WhatsApp
+        </label>
+        <label className="flex items-center gap-3 min-h-11">
+          <input type="checkbox" checked={s.guestContact.telegram} disabled={contactSaving} onChange={(event) => void changeGuestContact("telegram", event.target.checked)} className="w-5 h-5 accent-[var(--accent)]"/>
+          Telegram
+        </label>
+        {contactError && <p role="alert" className={styles.error}>{contactError}</p>}
+      </section>
+
+      <section className={styles.card} id="channels">
+        <h2>Каналы уведомлений</h2>
+        <p className={styles.cardHint}>Куда отправлять сообщения о заказах и бронированиях</p>
+        <div className={styles.toggleList}>
           <label className="flex items-center gap-3 min-h-11">
             <input
               type="checkbox"
@@ -330,16 +409,8 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
               onChange={(e) => setS({ ...s, channels: { ...s.channels, telegram: { ...s.channels.telegram, enabled: e.target.checked } } })}
               className="w-5 h-5 accent-[var(--accent)]"
             />
-            Telegram (токен в secrets, chat_id ниже)
+            Telegram
           </label>
-          {s.channels.telegram.enabled && (
-            <input
-              value={s.channels.telegram.chatId}
-              onChange={(e) => setS({ ...s, channels: { ...s.channels, telegram: { ...s.channels.telegram, chatId: e.target.value } } })}
-              placeholder="chat_id группы"
-              className={inputCls}
-            />
-          )}
           <label className="flex items-center gap-3 min-h-11">
             <input
               type="checkbox"
@@ -347,16 +418,8 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
               onChange={(e) => setS({ ...s, channels: { ...s.channels, max: { ...s.channels.max, enabled: e.target.checked } } })}
               className="w-5 h-5 accent-[var(--accent)]"
             />
-            MAX (токен в secrets, chat_id ниже)
+            MAX
           </label>
-          {s.channels.max.enabled && (
-            <input
-              value={s.channels.max.chatId}
-              onChange={(e) => setS({ ...s, channels: { ...s.channels, max: { ...s.channels.max, chatId: e.target.value } } })}
-              placeholder="chat_id чата MAX"
-              className={inputCls}
-            />
-          )}
           <label className="flex items-center gap-3 min-h-11">
             <input
               type="checkbox"
@@ -364,16 +427,8 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
               onChange={(e) => setS({ ...s, channels: { ...s.channels, email: { ...s.channels.email, enabled: e.target.checked } } })}
               className="w-5 h-5 accent-[var(--accent)]"
             />
-            Email для заказов
+            Email
           </label>
-          {s.channels.email.enabled && (
-            <input
-              value={s.channels.email.address}
-              onChange={(e) => setS({ ...s, channels: { ...s.channels, email: { ...s.channels.email, address: e.target.value } } })}
-              placeholder="orders@example.ru"
-              className={inputCls}
-            />
-          )}
           <label className="flex items-center gap-3 min-h-11">
             <input
               type="checkbox"
@@ -381,21 +436,34 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
               onChange={(e) => setS({ ...s, channels: { ...s.channels, whatsapp: { ...s.channels.whatsapp, enabled: e.target.checked } } })}
               className="w-5 h-5 accent-[var(--accent)]"
             />
-            Кнопка «Дублировать в WhatsApp»
+            WhatsApp
           </label>
-          {s.channels.whatsapp.enabled && (
+        </div>
+        <div className={styles.formGrid}>
+          <label className="block"><span>Chat ID Telegram</span>
+            <input value={s.channels.telegram.chatId} onChange={(e) => setS({ ...s, channels: { ...s.channels, telegram: { ...s.channels.telegram, chatId: e.target.value } } })} placeholder="chat_id группы" className={inputCls}/>
+          </label>
+          <label className="block"><span>Chat ID MAX</span>
+            <input value={s.channels.max.chatId} onChange={(e) => setS({ ...s, channels: { ...s.channels, max: { ...s.channels.max, chatId: e.target.value } } })} placeholder="chat_id чата MAX" className={inputCls}/>
+          </label>
+          <label className="block"><span>Email для заказов</span>
+            <input value={s.channels.email.address} onChange={(e) => setS({ ...s, channels: { ...s.channels, email: { ...s.channels.email, address: e.target.value } } })} placeholder="orders@example.ru" className={inputCls}/>
+          </label>
+          <label className="block"><span>WhatsApp для сайта</span>
             <input
               value={s.channels.whatsapp.phone}
               onChange={(e) => setS({ ...s, channels: { ...s.channels, whatsapp: { ...s.channels.whatsapp, phone: e.target.value } } })}
               placeholder="+79991234567"
               className={inputCls}
             />
-          )}
+          </label>
         </div>
+        <SaveButton section="channels" pending={pending} feedback={feedback} onSave={() => saveContent("channels")}/>
       </section>
 
-      <section>
-        <h2 className="text-xl mb-3">Бронирование</h2>
+      <section className={styles.card} id="booking">
+        <h2>Параметры бронирования</h2>
+        <p className={styles.cardHint}>Условия создания брони на сайте</p>
         <label className="flex items-center gap-3 min-h-11">
           <input
             type="checkbox"
@@ -440,18 +508,10 @@ export function SettingsAdmin({ settings, theme }: { settings: ContentSettings; 
             </label>
           </div>
         )}
+        <SaveButton section="booking" pending={pending} feedback={feedback} onSave={() => saveContent("booking")}/>
       </section>
 
-      <div className="flex items-center gap-3 bg-background/95 border-t border-foreground/10 py-3 mt-6">
-        <button
-          onClick={saveAll}
-          disabled={pending}
-          className="min-h-12 px-8 rounded-full bg-accent text-white font-medium disabled:opacity-50 shadow-lg"
-        >
-          {pending ? "Сохраняю…" : "Сохранить всё"}
-        </button>
-        {saved && <span className="text-green-600">{saved}</span>}
-      </div>
+      {otherSections}
     </div>
   );
 }

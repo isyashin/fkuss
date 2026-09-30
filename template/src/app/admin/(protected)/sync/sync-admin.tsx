@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { saveSyncSettings, runSyncNow } from "./actions";
 import type { ContentSettings } from "@/lib/content-schema";
+import styles from "./sync-admin.module.css";
 
 export function SyncAdmin({
   settings,
@@ -23,8 +24,7 @@ export function SyncAdmin({
   const running = syncState.running === true;
 
   return (
-    <div className="space-y-6 max-w-xl">
-      <section className="bg-card rounded-[var(--radius)] p-5 space-y-4">
+    <div className={styles.form}>
         <label className="flex items-center gap-3 min-h-11">
           <input
             type="checkbox"
@@ -35,6 +35,7 @@ export function SyncAdmin({
           Автоматическая синхронизация по расписанию
         </label>
 
+        <div className={styles.fields}>
         <label className="block">
           <span className="text-sm text-muted">placeSlug ресторана в Яндекс.Еде</span>
           <input
@@ -56,7 +57,9 @@ export function SyncAdmin({
             className={inputCls}
           />
         </label>
+        </div>
 
+        <div className={styles.actions}>
         <button
           disabled={pending}
           onClick={() =>
@@ -66,24 +69,10 @@ export function SyncAdmin({
               setTimeout(() => setSaved(false), 3000);
             })
           }
-          className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
+          className={styles.save}
         >
           Сохранить
         </button>
-        {saved && <span className="ml-3 text-green-600 text-sm">Сохранено ✓</span>}
-      </section>
-
-      <section className="bg-card rounded-[var(--radius)] p-5 space-y-3">
-        <h2 className="text-lg">Состояние</h2>
-        <div className="text-sm text-muted space-y-1">
-          <p>Последняя попытка: {lastAttempt ? new Date(lastAttempt).toLocaleString("ru-RU") : "—"}</p>
-          <p>Последний успех: {lastSuccess ? new Date(lastSuccess).toLocaleString("ru-RU") : "—"}</p>
-          {running && <p className="text-amber-600">⏳ Синхронизация выполняется…</p>}
-          {lastError && !running && (
-            <p className="text-red-600 bg-red-50 rounded-lg p-2">Ошибка: {lastError}</p>
-          )}
-        </div>
-
         <button
           disabled={pending || running}
           onClick={() =>
@@ -97,12 +86,18 @@ export function SyncAdmin({
               );
             })
           }
-          className="min-h-12 px-6 rounded-full bg-accent text-white font-medium disabled:opacity-50"
+          className={styles.outline}
         >
           {running ? "Выполняется…" : "Синхронизировать сейчас"}
         </button>
-        {result && <p className="text-sm">{result}</p>}
-      </section>
+        {saved && <span className="text-green-600 text-sm">Сохранено ✓</span>}
+        </div>
+        <div className={styles.status}>
+          <p>Последняя попытка: {lastAttempt ? new Date(lastAttempt).toLocaleString("ru-RU") : "—"} · Последний успех: {lastSuccess ? new Date(lastSuccess).toLocaleString("ru-RU") : "—"}</p>
+          {running && <p>Синхронизация выполняется…</p>}
+          {lastError && !running && <p role="alert">Ошибка: {lastError}</p>}
+          {result && <p role="status">{result}</p>}
+        </div>
     </div>
   );
 }

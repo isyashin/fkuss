@@ -170,14 +170,16 @@ export function MenuClient({
                   >
                     <div className="relative aspect-square bg-foreground/5 overflow-hidden">
                       {/* Карточка: 400px WebP напрямую, без runtime-оптимизатора */}
-                      {/* scale-[1.15]: у исходников разная композиция (крупный план/общий),
-                          лёгкий зум от центра визуально унифицирует кадры */}
+                      {/* scale: у исходников разная композиция (крупный план/общий),
+                          лёгкий зум от центра визуально унифицирует кадры. Значение
+                          входит в хэш CSS-чанка: при «протухшем» кэше у гостей
+                          меняем его, чтобы браузер запросил свежий файл. */}
                       <img
                         src={dishImageUrl(dish.image, "sm")}
                         alt={dish.name}
                         loading="lazy"
                         decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover scale-[1.15]"
+                        className="absolute inset-0 w-full h-full object-cover scale-[1.2]"
                       />
                       {dish.tags.includes("hit") && (
                         <span className="absolute top-2 left-2 bg-accent text-white text-xs px-2 py-1 rounded-full">

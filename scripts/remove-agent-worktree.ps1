@@ -22,8 +22,14 @@ if (-not $Force -and $merged -eq 0) {
   throw "Для ветки '$Branch' нет смёрженного PR. Если работа не нужна — повтори с -Force."
 }
 
+# Ворктри удаляем ПЕРВЫМ: если каталог заблокирован процессом — abort,
+# ветку (локальную и на GitHub) не трогаем.
 git -C $repo worktree remove --force $dir
+if ($LASTEXITCODE -ne 0) {
+  throw "Не удалось удалить ворктри $dir (закрой процессы/терминалы в нем). Ветка $Branch не тронута."
+}
 git -C $repo push origin --delete $Branch | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Ворктри удалён, но ветка $Branch не удалилась на GitHub." }
 git -C $repo branch -D $Branch | Out-Null
 
 Write-Host "Удалено: ворктри $dir, ветка $Branch (локально и на GitHub)."

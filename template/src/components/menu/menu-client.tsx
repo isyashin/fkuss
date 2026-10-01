@@ -166,7 +166,7 @@ export function MenuClient({
                     data-dish-id={dish.id}
                     data-testid="dish-card"
                     onClick={() => setSelectedDish(dish)}
-                    className="text-left bg-card rounded-[var(--radius)] overflow-hidden shadow-sm active:scale-[0.98] transition-transform"
+                    className="text-left bg-card rounded-[var(--radius)] overflow-hidden shadow-sm active:scale-[0.98] transition-transform select-none"
                   >
                     <div className="relative aspect-square bg-foreground/5 overflow-hidden">
                       {/* Карточка: 400px WebP напрямую, без runtime-оптимизатора */}

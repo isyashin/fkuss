@@ -247,7 +247,22 @@ vulnerability reporting для одиночного закрытого прое�
 
 ### Шаг 8. Защитить `main`
 
-Настраивать после завершения текущей прямой работы Кими и первого зелёного CI.
+**ВЫПОЛНЕНО 2026-09-30** (branch protection rule через GitHub API, до этого
+main был открыт для прямых пушей — ими пользовались все параллельные
+сессии). Фактическая конфигурация:
+
+- `required_pull_request_reviews`: 0 апрувов (агенты мержат свои PR
+  самостоятельно; при появлении второго разработчика — минимум 1 апрув);
+- `required_status_checks`: `validate`, `template`, `platform`;
+  `strict: false` (не требовать «up to date» перед мержем);
+- `enforce_admins: true` — прямые пуши запрещены всем, включая владельца;
+- `required_linear_history: true` (squash-merge), force-push и удаление
+  ветки запрещены;
+- проверка `validate` (landing) намеренно запускается на каждый PR без
+  path-фильтра — иначе обязательный check не появлялся бы в PR вне
+  `landing-prototype/` и блокировал бы мерж.
+
+Историческая инструкция (как повторить вручную через интерфейс):
 
 1. Открыть **Settings → Rules → Rulesets**.
 2. Создать **New branch ruleset**.

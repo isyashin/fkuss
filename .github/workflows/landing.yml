@@ -2,8 +2,9 @@ name: landing
 on:
   push:
     paths: ["landing-prototype/**", ".github/workflows/landing.yml"]
+  # На PR — без path-фильтра: проверка validate обязательна для мержа
+  # в защищённый main и должна присутствовать в каждом PR.
   pull_request:
-    paths: ["landing-prototype/**", ".github/workflows/landing.yml"]
 permissions:
   contents: read
 concurrency:

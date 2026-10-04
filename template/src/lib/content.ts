@@ -103,9 +103,9 @@ export interface Promo {
 
 export const getRestaurant = cache(() => readJson<Restaurant>("restaurant.json"));
 export const getMenu = cache(async (): Promise<Menu> => {
-  const menu = await readJson<Menu>("menu.json");
+  const menu = await readJson<Partial<Menu> & { categories: Menu["categories"] }>("menu.json");
   // Старый menu.json без блока menus — приводим к текущей форме.
-  return { menus: [], categories: [], ...menu };
+  return { menus: menu.menus ?? [], categories: menu.categories };
 });
 export const getTheme = cache(() => readJson<ThemeConfig>("theme.json"));
 export const getPromos = cache(() => readJson<{ promos: Promo[] }>("promos.json"));

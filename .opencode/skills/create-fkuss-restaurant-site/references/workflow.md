@@ -28,6 +28,21 @@ Slug состоит из строчных латинских букв, цифр 
 npx tsx scripts/ingest-yandex-eda.ts "<url>" --out "../sites/<slug>/content"
 ```
 
+Мультименю (несколько заведений Еды на одном сайте, см. docs/CASE-MULTI-MENU.md):
+запусти инжест по разу на каждое заведение с флагами группы — скрипт сольёт
+категории в один menu.json, restaurant.json и логотип возьмутся от первого:
+
+```bash
+npx tsx scripts/ingest-yandex-eda.ts "<url #1>" --out "../sites/<slug>/content" \
+  --menu-id khinkali --menu-name "Хинкальная"
+npx tsx scripts/ingest-yandex-eda.ts "<url #2>" --out "../sites/<slug>/content" \
+  --menu-id pirogi --menu-name "Пироги и пицца"
+```
+
+После деплоя в админке (Настройки → Синхронизация) добавь источники:
+`sync.sources = [{placeSlug: <slug#1>, menuId: khinkali}, {placeSlug: <slug#2>, menuId: pirogi}]`
+```
+
 Инжест создаёт черновик. Он не считается готовым, пока не подтверждены телефон,
 email, адрес, часы, домен и права на изображения. Сверь количество категорий,
 блюд, модификаторов и фото с карточкой ресторана. Зафиксируй недоступные блюда

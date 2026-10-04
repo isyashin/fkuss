@@ -10,6 +10,7 @@ import { useCart, type CartModifier } from "@/lib/cart/store";
 import { validateModifierSelection } from "@/lib/order/modifier-validation";
 import { CartBar } from "@/components/cart/cart-bar";
 import { CartSheet } from "@/components/cart/cart-sheet";
+import { menuSwitchItems } from "@/lib/multi-menu";
 
 function formatPrice(price: number): string {
   return `${price.toLocaleString("ru-RU")} ₽`;
@@ -40,9 +41,9 @@ export function MenuClient({
 }) {
   const [activeCategory, setActiveCategory] = useState(menu.categories[0]?.id ?? "");
   const menus = menu.menus ?? [];
-  // Переключатель: группы меню + незагруппированные категории («Меню»)
-  const ungroupedCount = menu.categories.filter((c) => !(c.menuId ?? "")).length;
-  const switchItems = [...menus, ...(ungroupedCount > 0 ? [{ id: "", name: "Меню" }] : [])];
+  // Переключатель показываем только в мультименю-режиме (есть группы);
+  // без групп — прежний вид: один ряд табов, без второй sticky-плашки.
+  const switchItems = menuSwitchItems(menus, menu.categories);
   // Дефолт — группа первой категории: стартовый экран совпадает с прежним
   // поведением (одно меню), даже когда группы настроены.
   const [activeMenuId, setActiveMenuId] = useState(

@@ -54,9 +54,9 @@ async function main() {
     const donor = menu.categories[0].dishes[0];
     menu.categories.push({
       id: "cat-e2e-second",
-      name: "Категория второго меню",
+      name: "Допкатегория E2E",
       menuId: "menu-2",
-      dishes: [{ ...donor, id: "dish-e2e-second", name: "Блюдо второго меню" }],
+      dishes: [{ ...donor, id: "dish-e2e-second", name: "Блюдо второй группы" }],
     });
   }
   // E2E гоняет сценарии кабинета: включаем его флагом, не трогая дефолт «выключен».

@@ -8,19 +8,23 @@ test("несколько меню: переключатель на витрин�
   const switcher = page.getByTestId("menu-switch");
   await expect(switcher).toBeVisible();
   await expect(switcher.getByRole("tab", { name: "Тестовое меню 2" })).toBeVisible();
-  await expect(switcher.getByRole("tab", { name: "Меню" })).toBeVisible(); // незагруппированные
+  await expect(switcher.getByRole("tab", { name: "Меню", exact: true })).toBeVisible(); // незагруппированные
 
-  // По умолчанию активна первая группа → её категории в табах
+  // По умолчанию активна группа первой категории (основное меню) → табы категорий на месте
   const tabs = page.getByTestId("menu-tabs");
-  await expect(tabs.getByRole("tab", { name: /Категория второго меню/ })).toBeVisible();
+  await expect(tabs.getByRole("tab", { name: /Салаты|Холодные|Первые/ }).first()).toBeVisible();
+
+  // Переключаемся на вторую группу → её категории
+  await switcher.getByRole("tab", { name: "Тестовое меню 2" }).click();
+  await expect(tabs.getByRole("tab", { name: "Допкатегория E2E" })).toBeVisible();
 
   // Блюдо из второго меню
-  await page.getByTestId("dish-card").filter({ hasText: "Блюдо второго меню" }).first().click();
+  await page.getByTestId("dish-card").filter({ hasText: "Блюдо второй группы" }).first().click();
   await page.getByRole("button", { name: /Добавить ·/ }).click();
   await page.waitForTimeout(300);
 
   // Переключаемся на основное меню — добавляем обычное блюдо (смешанная корзина)
-  await switcher.getByRole("tab", { name: "Меню" }).click();
+  await switcher.getByRole("tab", { name: "Меню", exact: true }).click();
   await page.waitForTimeout(300);
   await page.getByTestId("dish-card").first().click();
   await page.getByRole("button", { name: /Добавить ·/ }).click();
@@ -43,7 +47,7 @@ test("несколько меню: переключатель на витрин�
   await expect(page).toHaveURL(/\/admin$/);
   await page.getByRole("button", { name: `Открыть заказ № ${orderNumber}` }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
-  await expect(detail.getByText("Блюдо второго меню")).toBeVisible();
+  await expect(detail.getByText("Блюдо второй группы")).toBeVisible();
   await expect(detail.locator("span", { hasText: "Тестовое меню 2" }).first()).toBeVisible();
   await expect(detail.getByText(/Меню заказа: Тестовое меню 2 ×1/)).toBeVisible();
 });

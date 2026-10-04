@@ -43,7 +43,11 @@ export function MenuClient({
   // Переключатель: группы меню + незагруппированные категории («Меню»)
   const ungroupedCount = menu.categories.filter((c) => !(c.menuId ?? "")).length;
   const switchItems = [...menus, ...(ungroupedCount > 0 ? [{ id: "", name: "Меню" }] : [])];
-  const [activeMenuId, setActiveMenuId] = useState(switchItems[0]?.id ?? "all");
+  // Дефолт — группа первой категории: стартовый экран совпадает с прежним
+  // поведением (одно меню), даже когда группы настроены.
+  const [activeMenuId, setActiveMenuId] = useState(
+    menu.categories[0] ? (menu.categories[0].menuId ?? "") : (switchItems[0]?.id ?? "all"),
+  );
   // Категории активной группы (без переключателя — все, как раньше)
   const visibleCategories = switchItems.length === 0 ? menu.categories : menu.categories.filter((c) => (c.menuId ?? "") === activeMenuId);
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);

@@ -129,7 +129,9 @@ bash ~/resto/src/scripts/update.sh --no-restart  # только сборка
 Cron на хосте:
 - `0 */6 * * *` — POST /api/jobs/report-metrics на сайтах (метрики → платформа)
 - `*/15 * * * *` — POST /api/jobs/sync-menu на сайтах; фактический запуск дополнительно
-  ограничен `intervalMinutes` ресторана
+  ограничен `intervalMinutes` ресторана. Источники меню — `settings.sync.sources`
+  (`[{placeSlug, menuId}]`, по источнику на группу меню; легаси `sync.placeSlug` —
+  fallback). Мультименю: см. `docs/CASE-MULTI-MENU.md`.
 - `*/5 * * * *` — `scripts/process-exports.sh` (запросы экспорта и TTL 24 часа)
 - `04:30` — POST /api/jobs/billing-daily на платформе (списания, уведомления)
 - `05:00` — `scripts/backup.sh`

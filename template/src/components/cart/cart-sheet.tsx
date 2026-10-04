@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCart } from "@/lib/cart/store";
 import { dishImageUrl } from "@/lib/assets";
+import { tariffPrice, tariffLines, zoneTariffs, type ZoneTariff } from "@/lib/order/pricing";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { GuestChannels, PreferredChannel } from "@/lib/guest-contact";
 import { DeliveryMap } from "@/components/cart/delivery-map";
@@ -45,7 +46,9 @@ export function CartSheet({
   const [submitting, setSubmitting] = useState(false);
 
   const [type, setType] = useState<"delivery" | "pickup">(delivery.enabled ? "delivery" : "pickup");
-  const [zoneName, setZoneName] = useState(delivery.zones[0]?.name ?? "");
+  const [zoneName, setZoneName] = useState(
+    delivery.zones.find((z) => z.enabled !== false)?.name ?? "",
+  );
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "online">("cash");
   const [preferredChannel, setPreferredChannel] = useState<PreferredChannel>("phone");
   const [bonusSpend, setBonusSpend] = useState(0);
@@ -86,7 +89,7 @@ export function CartSheet({
 
   type GeoState =
     | { status: "idle" | "loading" | "address-not-found" | "error" }
-    | { status: "zone"; zoneName: string; lat: number; lng: number }
+    | { status: "zone"; zoneName: string; tariffs: ZoneTariff[]; deliveryMinutes: number | null; lat: number; lng: number }
     | { status: "outside-allowed"; lat: number; lng: number }
     | { status: "outside-blocked"; lat: number; lng: number };
 
@@ -99,11 +102,25 @@ export function CartSheet({
     setGeo({ status: "loading" });
     try {
       const r = await fetch(`/api/delivery/zone?address=${encodeURIComponent(address)}`);
-      const data = (await r.json()) as { kind?: string; zoneName?: string; lat?: number; lng?: number };
+      const data = (await r.json()) as {
+        kind?: string;
+        zoneName?: string;
+        tariffs?: ZoneTariff[];
+        deliveryMinutes?: number | null;
+        lat?: number;
+        lng?: number;
+      };
       if (seq !== geoSeq.current) return; // ответ устарел, адрес уже другой
       switch (data.kind) {
         case "zone":
-          setGeo({ status: "zone", zoneName: data.zoneName ?? "", lat: data.lat ?? 0, lng: data.lng ?? 0 });
+          setGeo({
+            status: "zone",
+            zoneName: data.zoneName ?? "",
+            tariffs: data.tariffs ?? [{ from: 0, price: 0 }],
+            deliveryMinutes: data.deliveryMinutes ?? null,
+            lat: data.lat ?? 0,
+            lng: data.lng ?? 0,
+          });
           break;
         case "outside-allowed":
           setGeo({ status: "outside-allowed", lat: data.lat ?? 0, lng: data.lng ?? 0 });
@@ -155,13 +172,13 @@ export function CartSheet({
     };
   }, [geoActive, ymapsKey, type, step]);
 
-  // Цена доставки в geo-режиме из текущей корзины и найденной зоны
-  const geoZone = geo.status === "zone" ? delivery.zones.find((z) => z.name === geo.zoneName) : undefined;
+  // Цена доставки в geo-режиме из текущей корзины и найденной зоны.
+  // Тарифы берём из ответа API (сырые условия), цену считаем локально —
+  // корзина может меняться без нового запроса.
+  const geoTariffs = geo.status === "zone" ? (geo.tariffs ?? null) : null;
   const geoPrice =
-    geo.status === "zone" && geoZone
-      ? geoZone.freeFrom !== null && itemsTotal >= geoZone.freeFrom
-        ? 0
-        : geoZone.price
+    geo.status === "zone" && geoTariffs
+      ? tariffPrice(geoTariffs, itemsTotal)
       : geo.status === "outside-allowed"
         ? (delivery.geo?.outsidePrice ?? 0)
         : 0;
@@ -177,9 +194,7 @@ export function CartSheet({
         : geoActive
           ? geoPrice
           : zone
-            ? zone.freeFrom !== null && itemsTotal >= zone.freeFrom
-              ? 0
-              : zone.price
+            ? tariffPrice(zoneTariffs(zone), itemsTotal)
             : 0;
   const orderTotal = itemsTotal + deliveryPrice;
   const maxBonusSpend = Math.min(
@@ -196,6 +211,10 @@ export function CartSheet({
   async function submit() {
     setError("");
     setSubmitting(true);
+    // Слоты доставки отправляем только для доставки с выбранным окном:
+    // иначе самовывоз с scheduled-вариантом в настройках шлёт пустую дату
+    // и серверная схема отклоняет заказ.
+    const scheduledDelivery = type === "delivery" && selectedOption?.mode === "scheduled";
     try {
       const response = await fetch("/api/order", {
         method: "POST",
@@ -217,10 +236,10 @@ export function CartSheet({
           website: form.website, // honeypot
           bonusSpend,
           paymentMethod,
-          deliveryMode: selectedOption?.mode ?? "asap",
-          deliveryDate: selectedOption?.mode === "scheduled" ? deliveryDate : null,
-          deliverySlotStart: selectedOption?.mode === "scheduled" ? slotStart : null,
-          deliverySlotEnd: selectedOption?.mode === "scheduled"
+          deliveryMode: scheduledDelivery ? "scheduled" : "asap",
+          deliveryDate: scheduledDelivery ? deliveryDate : null,
+          deliverySlotStart: scheduledDelivery ? slotStart : null,
+          deliverySlotEnd: scheduledDelivery
             ? optionSlots.find((s) => s.start === slotStart)?.end ?? null
             : null,
           deliveryOptionId: selectedOption?.id ?? null,
@@ -402,7 +421,7 @@ export function CartSheet({
                   </div>
                 )}
 
-                {!geoActive && options.length === 0 && delivery.zones.length > 1 && (
+                {!geoActive && options.length === 0 && delivery.zones.filter((z) => z.enabled !== false).length > 1 && (
                   <label className="block">
                     <span className="text-sm text-muted">Зона доставки</span>
                     <select
@@ -410,11 +429,13 @@ export function CartSheet({
                       onChange={(e) => setZoneName(e.target.value)}
                       className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
                     >
-                      {delivery.zones.map((z) => (
-                        <option key={z.name} value={z.name}>
-                          {z.name} — {z.freeFrom !== null ? `бесплатно от ${z.freeFrom} ₽` : `${z.price} ₽`}
-                        </option>
-                      ))}
+                      {delivery.zones
+                        .filter((z) => z.enabled !== false)
+                        .map((z) => (
+                          <option key={z.name} value={z.name}>
+                            {z.name} — {tariffLines(z).join(" · ")}
+                          </option>
+                        ))}
                     </select>
                   </label>
                 )}
@@ -439,12 +460,19 @@ export function CartSheet({
                     {geo.status === "loading" && (
                       <p className="text-sm text-muted">Определяем зону доставки…</p>
                     )}
-                    {geo.status === "zone" && geoZone && (
+                    {geo.status === "zone" && (
                       <p className="text-sm text-green-700">
                         Зона «{geo.zoneName}» — доставка{" "}
                         {geoPrice === 0 ? "бесплатно" : formatPrice(geoPrice)}
-                        {geoZone.freeFrom !== null && itemsTotal < geoZone.freeFrom && (
-                          <span className="text-muted"> · бесплатно от {geoZone.freeFrom.toLocaleString("ru-RU")} ₽</span>
+                        {geo.deliveryMinutes != null && <span> · ~{geo.deliveryMinutes} мин</span>}
+                        {geo.tariffs.length > 1 && (
+                          <span className="text-muted">
+                            {" "}
+                            · {geo.tariffs
+                              .filter((t) => t.from > itemsTotal && t.price === 0)
+                              .map((t) => `бесплатно от ${t.from.toLocaleString("ru-RU")} ₽`)
+                              .join(", ")}
+                          </span>
                         )}
                       </p>
                     )}

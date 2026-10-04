@@ -46,6 +46,7 @@ export interface YPolygon {
   editor: YPolygonEditor;
   properties: { set: (key: string, value: unknown) => void };
   options: { set: (key: string, value: unknown) => void };
+  events: YEventBus;
 }
 
 export interface YMap {
@@ -54,6 +55,11 @@ export interface YMap {
     remove: (o: unknown) => void;
     getBounds: () => number[][] | null;
   };
+  behaviors: {
+    disable: (name: string) => void;
+    enable: (name: string) => void;
+  };
+  getCenter: () => [number, number];
   setBounds: (bounds: number[][], opts?: { zoomMargin?: number; checkZoomRange?: boolean }) => void;
   setCenter: (center: [number, number], zoom?: number) => void;
   destroy: () => void;

@@ -10,7 +10,6 @@ import type { PublicAdminSound } from "@/lib/admin-sound";
 import { SoundSettings } from "./sound-settings";
 import { visibleGuestChannels, type GuestChannels } from "@/lib/guest-contact";
 import { AdminIcon } from "../admin-icon";
-import { GeoZonesEditor } from "./geo-zones-editor";
 
 const PRESETS = [
   { id: "warm", name: "Тёплый (трактир)" },
@@ -272,146 +271,10 @@ export function SettingsAdmin({ settings, theme, sound, actor, restaurantSection
             </select>
           </label>
         </div>
-        <h3 className={styles.subhead}>Зоны доставки</h3>
-        <div className={styles.toggleList}>
-          <label className="flex items-center gap-3 min-h-11">
-            <input
-              type="checkbox"
-              checked={s.delivery.geo?.enabled ?? false}
-              onChange={(e) =>
-                setS({
-                  ...s,
-                  delivery: {
-                    ...s.delivery,
-                    geo: {
-                      enabled: e.target.checked,
-                      outside: s.delivery.geo?.outside ?? "block",
-                      outsidePrice: s.delivery.geo?.outsidePrice ?? 0,
-                    },
-                  },
-                })
-              }
-              className="w-5 h-5 accent-[var(--accent)]"
-            />
-            Зоны на карте (автоопределение по адресу гостя)
-          </label>
-        </div>
-        {(s.delivery.geo?.enabled ?? false) && (
-          <div className={styles.formGrid}>
-            <label className="block">
-              <span className="text-sm text-muted">Если адрес вне всех зон</span>
-              <select
-                value={s.delivery.geo?.outside ?? "block"}
-                onChange={(e) =>
-                  setS({
-                    ...s,
-                    delivery: {
-                      ...s.delivery,
-                      geo: {
-                        enabled: true,
-                        outside: e.target.value as "block" | "allow",
-                        outsidePrice: s.delivery.geo?.outsidePrice ?? 0,
-                      },
-                    },
-                  })
-                }
-                className={inputCls}
-              >
-                <option value="block">Запретить доставку</option>
-                <option value="allow">Разрешить с ценой вне зон</option>
-              </select>
-            </label>
-            {(s.delivery.geo?.outside ?? "block") === "allow" && (
-              <label className="block">
-                <span className="text-sm text-muted">Цена доставки вне зон, ₽</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={s.delivery.geo?.outsidePrice ?? 0}
-                  onChange={(e) =>
-                    setS({
-                      ...s,
-                      delivery: {
-                        ...s.delivery,
-                        geo: {
-                          enabled: true,
-                          outside: "allow",
-                          outsidePrice: Number(e.target.value),
-                        },
-                      },
-                    })
-                  }
-                  className={inputCls}
-                />
-              </label>
-            )}
-          </div>
-        )}
-        {(s.delivery.geo?.enabled ?? false) && (
-          <p className={styles.note}>
-            Гостю достаточно ввести адрес: сервер сам определит зону и покажет стоимость на карте.
-            Требуются ключи <code>YANDEX_MAPS_API_KEY</code> (карта) и <code>YANDEX_GEOCODER_API_KEY</code> (геокодер)
-            в настройках сайта. Зоны без полигона в этом режиме не используются.
-          </p>
-        )}
-        <div className={styles.zoneList}>
-          {s.delivery.zones.map((zone, i) => (
-            <div key={i} className={styles.zoneRow}>
-              <input
-                value={zone.name}
-                aria-label={`Название зоны ${i + 1}`}
-                onChange={(e) => {
-                  const zones = [...s.delivery.zones];
-                  zones[i] = { ...zone, name: e.target.value };
-                  setS({ ...s, delivery: { ...s.delivery, zones } });
-                }}
-                className="flex-1 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-              />
-              <input
-                type="number"
-                min={0}
-                step={1}
-                value={zone.price}
-                title="Цена доставки"
-                aria-label={`Цена доставки зоны ${i + 1}, ₽`}
-                onChange={(e) => {
-                  const zones = [...s.delivery.zones];
-                  zones[i] = { ...zone, price: Number(e.target.value) };
-                  setS({ ...s, delivery: { ...s.delivery, zones } });
-                }}
-                className="w-24 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-              />
-              <input
-                type="number"
-                min={0}
-                step={1}
-                value={zone.freeFrom ?? ""}
-                placeholder="Беспл. от"
-                title="Бесплатно от"
-                aria-label={`Бесплатно от для зоны ${i + 1}, ₽`}
-                onChange={(e) => {
-                  const zones = [...s.delivery.zones];
-                  zones[i] = { ...zone, freeFrom: e.target.value === "" ? null : Number(e.target.value) };
-                  setS({ ...s, delivery: { ...s.delivery, zones } });
-                }}
-                className="w-28 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-              />
-              <button type="button" onClick={() => setS({ ...s, delivery: { ...s.delivery, zones: s.delivery.zones.filter((_, index) => index !== i) } })}>Удалить зону</button>
-            </div>
-          ))}
-        </div>
-          <button
-            onClick={() => setS({ ...s, delivery: { ...s.delivery, zones: [...s.delivery.zones, { name: "Новая зона", price: 300, freeFrom: null }] } })}
-            className={styles.fullOutlineButton}
-          >
-            + Добавить зону
-          </button>
-        <GeoZonesEditor
-          ymapsKey={ymapsKey}
-          zones={s.delivery.zones}
-          onZonesChange={(zones) => setS({ ...s, delivery: { ...s.delivery, zones } })}
-        />
+        <p className={styles.note}>
+          Зоны доставки с картой и условиями редактируются в разделе
+          <a href="/admin/delivery" className="underline">Доставка</a>.
+        </p>
         <SaveButton section="delivery" pending={pending} feedback={feedback} onSave={() => saveContent("delivery")}/>
       </section>
 

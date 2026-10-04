@@ -290,7 +290,12 @@ export async function POST(request: Request) {
         snapshotZoneName = "Вне зон";
         orderZones = [
           ...settings.delivery.zones,
-          { name: OUTSIDE_ZONE_NAME, price: geo.outsidePrice, freeFrom: null },
+          {
+            name: OUTSIDE_ZONE_NAME,
+            enabled: true,
+            deliveryMinutes: null,
+            tariffs: [{ from: 0, price: geo.outsidePrice }],
+          },
         ];
       }
     }

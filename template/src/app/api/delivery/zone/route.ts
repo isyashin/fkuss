@@ -3,7 +3,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getSiteSettings } from "@/lib/site";
 import { geocodeAddress } from "@/lib/delivery/geocoder";
 import { resolveGeoDelivery } from "@/lib/delivery/zone-resolve";
-import { calculateDeliveryPrice } from "@/lib/order/pricing";
+import { calculateDeliveryPrice, zoneTariffs } from "@/lib/order/pricing";
 
 function getClientIp(request: Request): string {
   return (
@@ -64,7 +64,8 @@ export async function GET(request: Request) {
         kind: "zone",
         zoneName: resolved.zoneName,
         deliveryPrice,
-        freeFrom: zone?.freeFrom ?? null,
+        tariffs: zoneTariffs(zone ?? { name: resolved.zoneName }),
+        deliveryMinutes: zone?.deliveryMinutes ?? null,
         lat: resolved.lat,
         lng: resolved.lng,
       });

@@ -11,11 +11,10 @@ function ip(project: string, n: number) {
 }
 
 async function setGeoZones(page: import("@playwright/test").Page, enabled: boolean) {
-  await page.goto("/admin/settings");
-  const section = page.locator("#delivery");
-  await section.getByRole("checkbox", { name: /Зоны на карте/ }).setChecked(enabled);
-  await section.getByRole("button", { name: "Сохранить" }).click();
-  await expect(section.getByText("Сохранено")).toBeVisible({ timeout: 15000 });
+  await page.goto("/admin/delivery");
+  await page.getByRole("checkbox", { name: /Зоны на карте/ }).setChecked(enabled);
+  await page.getByRole("button", { name: "Сохранить" }).first().click();
+  await expect(page.getByText("Сохранено")).toBeVisible({ timeout: 15000 });
 }
 
 test("geo-режим: default выключен; без ключа геокодера UI и заказ отказывают честно", async ({ page, request }, testInfo) => {
@@ -25,16 +24,21 @@ test("geo-режим: default выключен; без ключа геокоде
   const disabled = await (await request.get("/api/delivery/zone?address=Тверская 1", { headers: ip(p, 1) })).json();
   expect(disabled.kind).toBe("disabled");
 
-  // 2. Админ: удаляем дефолтный вариант «Курьер» (иначе он вытесняет зоны)
+  // 2. Админ: удаляем ВСЕ варианты доставки (иначе они вытесняют зоны;
+  //    соседние спеки оставляют свои варианты в общей БД)
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
   await page.goto("/admin/delivery");
-  page.once("dialog", (dialog) => void dialog.accept());
-  await page.locator('[data-option-name="Курьер"]').getByRole("button", { name: "Удалить" }).click();
-  await expect(page.locator('[data-option-name="Курьер"]')).toHaveCount(0, { timeout: 15000 });
+  await page.getByRole("tab", { name: "Варианты доставки" }).click();
+  const optionCards = page.locator("[data-option-name]");
+  for (let remaining = await optionCards.count(); remaining > 0; remaining--) {
+    page.once("dialog", (dialog) => void dialog.accept());
+    await optionCards.first().getByRole("button", { name: "Удалить" }).click();
+    await expect(optionCards).toHaveCount(remaining - 1, { timeout: 15000 });
+  }
 
-  // 3. Включаем зоны на карте
+  // 3. Включаем зоны на карте (вкладка «Зоны на карте» открыта по умолчанию)
   await setGeoZones(page, true);
 
   try {
@@ -71,6 +75,7 @@ test("geo-режим: default выключен; без ключа геокоде
     // 7. Возвращаем настройки и вариант «Курьер»
     await setGeoZones(page, false);
     await page.goto("/admin/delivery");
+    await page.getByRole("tab", { name: "Варианты доставки" }).click();
     await page.getByRole("button", { name: "+ Вариант доставки" }).click();
     await page.getByLabel("Название").fill("Курьер");
     await page.getByLabel("Режим").selectOption("asap");

@@ -177,8 +177,16 @@ export const settingsSchema = z.object({
       .array(
         z.object({
           name: z.string().min(1),
-          price: priceSchema,
-          freeFrom: priceSchema.nullable().default(null),
+          enabled: z.boolean().default(true),
+          // Тарифы «заказ от X ₽ → доставка Y ₽»; минимум одна строка.
+          // Если нет — условия мигрируют из legacy-полей price/freeFrom.
+          tariffs: z
+            .array(z.object({ from: priceSchema, price: priceSchema }))
+            .min(1)
+            .optional(),
+          price: priceSchema.optional(), // legacy
+          freeFrom: priceSchema.nullable().optional(), // legacy
+          deliveryMinutes: z.number().int().min(0).max(480).nullable().default(null),
           // Полигон зоны: [[lat, lng], ...], минимум 3 точки; нет — зона без геометрии
           polygon: z
             .array(

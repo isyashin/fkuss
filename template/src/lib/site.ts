@@ -77,10 +77,13 @@ export async function getSiteMenu(): Promise<Menu> {
       },
     });
     if (categories.length > 0) {
+      const menuGroups = await prisma.menuGroup.findMany({ orderBy: { position: "asc" } });
       return {
+        menus: menuGroups.map((g) => ({ id: g.id, name: g.name })),
         categories: categories.map((c) => ({
           id: c.id,
           name: c.name,
+          menuId: c.menuId ?? "",
           dishes: c.dishes.map((d) => ({
             id: d.id,
             name: d.name,

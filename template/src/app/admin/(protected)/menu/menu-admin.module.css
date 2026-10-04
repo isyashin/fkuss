@@ -64,3 +64,6 @@
 @media (max-width:700px) { .addCategory { grid-template-columns:1fr; } }
 @media (max-width:600px) { .intro h1 { font-size:30px; }.toolbar { align-items:center; flex-wrap:wrap; gap:8px; }.toolbar label { flex:1 1 100%; }.toolbar>span { margin-left:auto; }.categories { gap:5px; }.categories button { padding:0 9px; font-size:11px; }.grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }.dishPhoto { height:110px; }.dishBody { padding:10px; }.page .dishTitle { min-height:34px; font-size:13px; }.dishDescription { min-height:30px; -webkit-line-clamp:2; }.dishBottom { flex-wrap:wrap; }.dishActions .outlineButton,.dishActions .availability { width:100%; }.dishCard.isEditing { grid-column:1/-1; } }
 @media (max-width:380px) { .formRow { grid-template-columns:1fr; } }
+
+.categoryMenuSelect { display:inline-flex; align-items:center; gap:6px; margin-left:auto; margin-right:10px; color:var(--admin-muted); font-size:12px; }
+.categoryMenuSelect select { min-height:32px; padding:0 8px; border:1px solid var(--admin-line); border-radius:8px; background:var(--admin-surface); color:var(--admin-text); font-size:12px; }

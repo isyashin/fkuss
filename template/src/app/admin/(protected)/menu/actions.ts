@@ -108,15 +108,32 @@ export async function deleteDish(id: string): Promise<void> {
   revalidatePath("/menu");
 }
 
-export async function addCategory(name: string): Promise<void> {
+export async function addCategory(name: string, menuId?: string): Promise<void> {
   await guard();
   parseAdminInput(adminShortTextSchema, name);
   const prisma = getPrisma();
   const id = `cat-${Date.now().toString(36)}`;
   const max = await prisma.category.aggregate({ _max: { position: true } });
+  if (menuId) {
+    const menu = await prisma.menuGroup.findUnique({ where: { id: menuId } });
+    if (!menu) throw new Error("Меню не найдено");
+  }
   await prisma.category.create({
-    data: { id, name, position: (max._max.position ?? -1) + 1 },
+    data: { id, name, position: (max._max.position ?? -1) + 1, menuId: menuId || null },
   });
+  revalidatePath("/admin/menu");
+  revalidatePath("/menu");
+}
+
+/** Перенос категории между группами меню ("" = без группы). */
+export async function updateCategoryMenu(id: string, menuId: string): Promise<void> {
+  await guard();
+  const prisma = getPrisma();
+  if (menuId) {
+    const menu = await prisma.menuGroup.findUnique({ where: { id: menuId } });
+    if (!menu) throw new Error("Меню не найдено");
+  }
+  await prisma.category.update({ where: { id }, data: { menuId: menuId || null } });
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
 }

@@ -10,11 +10,20 @@ datasource db {
   provider = "postgresql"
 }
 
-model Category {
-  id         String  @id
+model MenuGroup {
+  id         String     @id
   name       String
-  position   Int     @default(0)
-  externalId String? @unique // внешний ID Яндекс.Еды (сопоставление при синхронизации)
+  position   Int        @default(0)
+  categories Category[]
+}
+
+model Category {
+  id         String     @id
+  name       String
+  position   Int        @default(0)
+  externalId String?    @unique // внешний ID Яндекс.Еды (сопоставление при синхронизации)
+  menuId     String? // группа меню («Хинкальная», «Пироги и пицца»); null = вне групп
+  menu       MenuGroup? @relation(fields: [menuId], references: [id])
   dishes     Dish[]
 }
 
@@ -223,6 +232,7 @@ model OrderItem {
   dishId      String  // без FK: блюдо может быть удалено из меню, заказ — история
   name        String  // снимок на момент заказа
   price       Int     // снимок цены
+  menuName    String  @default("") // снимок группы меню («Хинкальная» и т.п.)
   quantity    Int
   modifiers   Json    @default("[]")
   total       Int

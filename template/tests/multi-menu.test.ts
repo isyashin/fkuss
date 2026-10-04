@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupCategoriesByMenu, resolveMenuName, syncSources } from "@/lib/multi-menu";
+import { groupCategoriesByMenu, menuSwitchItems, resolveMenuName, syncSources } from "@/lib/multi-menu";
 
 const menus = [
   { id: "khinkali", name: "Хинкальная" },
@@ -52,6 +52,31 @@ describe("multi-menu helpers", () => {
     ).toEqual([
       { placeSlug: "a", menuId: "khinkali" },
       { placeSlug: "picceriya__1", menuId: null },
+    ]);
+  });
+
+  it("menuSwitchItems: без групп — пусто (переключатель скрыт на одноменю-сайтах)", () => {
+    const cats = [{ id: "c1", menuId: "" }, { id: "c2", menuId: "" }];
+    expect(menuSwitchItems([], cats)).toEqual([]);
+  });
+
+  it("menuSwitchItems: группы с категориями + «Меню» для незагруппированных; пустые группы скрыты", () => {
+    const menus = [
+      { id: "khinkali", name: "Хинкальная" },
+      { id: "pirogi", name: "Пироги и пицца" },
+      { id: "empty", name: "Пустая группа" },
+    ];
+    const cats = [
+      { id: "c1", menuId: "khinkali" },
+      { id: "c2", menuId: "" },
+    ];
+    expect(menuSwitchItems(menus, cats)).toEqual([
+      { id: "khinkali", name: "Хинкальная" },
+      { id: "", name: "Меню" },
+    ]);
+    // все категории в группах — чипа «Меню» нет
+    expect(menuSwitchItems(menus, [{ id: "c1", menuId: "pirogi" }])).toEqual([
+      { id: "pirogi", name: "Пироги и пицца" },
     ]);
   });
 });

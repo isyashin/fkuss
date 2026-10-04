@@ -53,3 +53,19 @@ export function syncSources(sync: {
   if (sources.length > 0) return sources;
   return sync.placeSlug?.trim() ? [{ placeSlug: sync.placeSlug.trim(), menuId: null }] : [];
 }
+
+/**
+ * Пункты переключателя меню на витрине. Пустой результат = переключатель
+ * не показываем вовсе (сайты без групп меню — прежний вид, один ряд табов).
+ * Незагруппированные категории получают пункт «Меню» ТОЛЬКО в мультименю-режиме;
+ * группы без категорий скрываем.
+ */
+export function menuSwitchItems<T extends { menuId?: string }>(
+  menus: MenuGroupRef[],
+  categories: T[],
+): MenuGroupRef[] {
+  if (menus.length === 0) return [];
+  const items = menus.filter((m) => categories.some((c) => (c.menuId ?? "") === m.id));
+  if (categories.some((c) => !(c.menuId ?? ""))) items.push({ id: "", name: "Меню" });
+  return items;
+}

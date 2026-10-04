@@ -9,6 +9,7 @@ import { fetchEdaMenu } from "./client";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getContentDir } from "../content-dir";
+import { syncSources, type SyncSource } from "../multi-menu";
 import sharp from "sharp";
 
 type PrismaLike = Pick<PrismaClient, "dish" | "category" | "modifierGroup" | "modifier" | "settings" | "$transaction">;
@@ -100,7 +101,7 @@ async function downloadDishImage(dishId: string, imageUrl: string): Promise<stri
   }
 }
 
-async function upsertDish(prisma: PrismaLike, dish: EdaDish): Promise<void> {
+async function upsertDish(prisma: PrismaLike, dish: EdaDish, menuId: string | null): Promise<void> {
   const category = await prisma.category.upsert({
     where: { externalId: dish.categoryExternalId },
     create: {
@@ -108,8 +109,9 @@ async function upsertDish(prisma: PrismaLike, dish: EdaDish): Promise<void> {
       externalId: dish.categoryExternalId,
       name: dish.categoryName,
       position: dish.categoryPosition,
+      menuId,
     },
-    update: { name: dish.categoryName, position: dish.categoryPosition },
+    update: { name: dish.categoryName, position: dish.categoryPosition, menuId },
   });
 
   const existing = await prisma.dish.findUnique({ where: { externalId: dish.externalId } });
@@ -232,7 +234,8 @@ async function upsertDish(prisma: PrismaLike, dish: EdaDish): Promise<void> {
 export interface SyncOptions {
   fetchMenu?: MenuFetcher;
   retryDelays?: number[]; // мс между попытками
-  placeSlug?: string; // переопределяет настройки (тесты, ручной запуск)
+  placeSlug?: string; // переопределяет настройки (тесты, ручной запуск) — легаси, один источник
+  sources?: SyncSource[]; // явный список источников (тесты)
 }
 
 export async function syncMenu(prisma: PrismaLike, options: SyncOptions = {}): Promise<SyncResult> {
@@ -240,14 +243,15 @@ export async function syncMenu(prisma: PrismaLike, options: SyncOptions = {}): P
   const retryDelays = options.retryDelays ?? [2000, 5000];
 
   const settings = (await getSettingsValue(prisma, SETTINGS_KEY)) as {
-    sync?: { enabled?: boolean; placeSlug?: string };
+    sync?: { placeSlug?: string; sources?: { placeSlug: string; menuId?: string }[] };
   };
-  const placeSlug =
-    options.placeSlug ??
-    settings.sync?.placeSlug ??
-    ((await getSettingsValue(prisma, "restaurant")).syncPlaceSlug as string | undefined);
+  const sources: SyncSource[] =
+    options.sources ??
+    (options.placeSlug
+      ? [{ placeSlug: options.placeSlug, menuId: null }]
+      : syncSources(settings.sync ?? {}));
 
-  if (!placeSlug) {
+  if (sources.length === 0) {
     return { ok: false, error: "Не задан placeSlug Яндекс.Еды в настройках" };
   }
 
@@ -256,22 +260,28 @@ export async function syncMenu(prisma: PrismaLike, options: SyncOptions = {}): P
     return { ok: false, error: "Синхронизация уже выполняется" };
   }
 
-  let menu: EdaMenu | null = null;
+  // Загружаем все источники (с ретраями на источник)
+  const menus: { source: SyncSource; menu: EdaMenu }[] = [];
   let lastError: Error | null = null;
-  for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
-    try {
-      menu = await fetcher(placeSlug);
-      lastError = null;
-      break;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      if (attempt < retryDelays.length) {
-        await new Promise((r) => setTimeout(r, retryDelays[attempt]));
+  for (const source of sources) {
+    let menu: EdaMenu | null = null;
+    lastError = null;
+    for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
+      try {
+        menu = await fetcher(source.placeSlug);
+        break;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        if (attempt < retryDelays.length) {
+          await new Promise((r) => setTimeout(r, retryDelays[attempt]));
+        }
       }
     }
+    if (!menu) break;
+    menus.push({ source, menu });
   }
 
-  if (!menu) {
+  if (menus.length !== sources.length) {
     const message = lastError?.message ?? "неизвестная ошибка";
     await releaseLock(prisma, { lastStatus: "error" as const, lastError: message });
     return { ok: false, error: message };
@@ -279,17 +289,27 @@ export async function syncMenu(prisma: PrismaLike, options: SyncOptions = {}): P
 
   try {
     let upserted = 0;
-    for (const dish of menu.dishes) {
-      await upsertDish(prisma, dish);
-      upserted++;
-    }
+    let missingTotal = 0;
+    for (const { source, menu } of menus) {
+      for (const dish of menu.dishes) {
+        await upsertDish(prisma, dish, source.menuId);
+        upserted++;
+      }
 
-    // Пропавшие из ответа — не удаляем, помечаем недоступными
-    const presentIds = menu.dishes.map((d) => d.externalId);
-    const missing = await prisma.dish.updateMany({
-      where: { source: "yandex", externalId: { notIn: presentIds } },
-      data: { yandexAvailable: false, available: false },
-    });
+      // Пропавшие из ответа источника — помечаем недоступными ТОЛЬКО в категориях
+      // этого источника (menuId категории = принадлежность источнику), чтобы
+      // блюда соседнего меню не гасились чужой синхронизацией.
+      const presentIds = menu.dishes.map((d) => d.externalId);
+      const missing = await prisma.dish.updateMany({
+        where: {
+          source: "yandex",
+          externalId: { notIn: presentIds },
+          category: { menuId: source.menuId },
+        },
+        data: { yandexAvailable: false, available: false },
+      });
+      missingTotal += missing.count;
+    }
 
     await releaseLock(prisma, {
       lastStatus: "ok" as const,
@@ -311,7 +331,7 @@ export async function syncMenu(prisma: PrismaLike, options: SyncOptions = {}): P
       return { ok: false, error: `Пересчёт цен: ${message}` };
     }
 
-    return { ok: true, upserted, missing: missing.count };
+    return { ok: true, upserted, missing: missingTotal };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await releaseLock(prisma, { lastStatus: "error" as const, lastError: message });

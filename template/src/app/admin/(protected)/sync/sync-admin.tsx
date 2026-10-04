@@ -9,9 +9,11 @@ import styles from "./sync-admin.module.css";
 export function SyncAdmin({
   settings,
   syncState,
+  menus,
 }: {
   settings: ContentSettings;
   syncState: Record<string, unknown>;
+  menus: { id: string; name: string }[];
 }) {
   const [sync, setSync] = useState(settings.sync);
   const [pending, startTransition] = useTransition();
@@ -19,6 +21,8 @@ export function SyncAdmin({
   const [saved, setSaved] = useState(false);
 
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
+  const sources = sync.sources ?? [];
+  const setSources = (next: typeof sources) => setSync({ ...sync, sources: next });
   const lastError = typeof syncState.lastError === "string" ? syncState.lastError : null;
   const lastSuccess = typeof syncState.lastSuccess === "string" ? syncState.lastSuccess : null;
   const lastAttempt = typeof syncState.lastAttempt === "string" ? syncState.lastAttempt : null;
@@ -41,15 +45,52 @@ export function SyncAdmin({
         </label>
 
         <div className={styles.fields}>
-        <label className="block">
-          <span className="text-sm text-muted">placeSlug ресторана в Яндекс.Еде</span>
-          <input
-            value={sync.placeSlug}
-            onChange={(e) => setSync({ ...sync, placeSlug: e.target.value })}
-            placeholder="chajxana_buxara_xalyal"
-            className={inputCls}
-          />
-        </label>
+        <div className="block w-full">
+          <span className="text-sm text-muted">Источники меню (места Яндекс.Еды)</span>
+          {sources.length === 0 && (
+            <p className="text-sm text-muted mt-1">Источники не заданы — синхронизация не запустится.</p>
+          )}
+          {sources.map((source, index) => (
+            <div key={index} className="flex items-center gap-2 mt-2">
+              <input
+                value={source.placeSlug}
+                onChange={(e) => setSources(sources.map((s, i) => (i === index ? { ...s, placeSlug: e.target.value } : s)))}
+                placeholder="batono_w98td"
+                aria-label={`placeSlug источника ${index + 1}`}
+                className="flex-1 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+              />
+              <select
+                value={source.menuId ?? ""}
+                onChange={(e) => setSources(sources.map((s, i) => (i === index ? { ...s, menuId: e.target.value } : s)))}
+                aria-label={`Меню источника ${index + 1}`}
+                className="min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+              >
+                <option value="">Без меню</option>
+                {menus.map((menu) => <option key={menu.id} value={menu.id}>{menu.name}</option>)}
+              </select>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setSources(sources.filter((_, i) => i !== index))}
+                className="min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
+                aria-label={`Удалить источник ${index + 1}`}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setSources([...sources, { placeSlug: "", menuId: "" }])}
+            className="mt-2 min-h-11 px-4 rounded-[var(--radius)] border border-foreground/15 text-sm"
+          >
+            + Добавить источник
+          </button>
+          {sources.length === 0 && sync.placeSlug && (
+            <p className="text-sm text-muted mt-1">Легаси placeSlug: {sync.placeSlug} (будет использован, пока нет источников).</p>
+          )}
+        </div>
 
         <label className="block">
           <span className="text-sm text-muted">Периодичность (минут)</span>

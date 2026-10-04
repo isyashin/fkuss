@@ -47,6 +47,18 @@ async function main() {
   const promos = await readAndValidate("promos.json", promosSchema);
   const pages = await readAndValidate("pages.json", pagesSchema);
   const settings = await readAndValidate("settings.json", settingsSchema);
+  // E2E гоняет сценарии мультименю: добавляем вторую группу со своей категорией.
+  // Основное меню остаётся незагруппированным — проверяем и переключатель, и «Меню».
+  if (process.env.SEED_TWO_MENUS === "1") {
+    menu.menus = [...(menu.menus ?? []), { id: "menu-2", name: "Тестовое меню 2" }];
+    const donor = menu.categories[0].dishes[0];
+    menu.categories.push({
+      id: "cat-e2e-second",
+      name: "Категория второго меню",
+      menuId: "menu-2",
+      dishes: [{ ...donor, id: "dish-e2e-second", name: "Блюдо второго меню" }],
+    });
+  }
   // E2E гоняет сценарии кабинета: включаем его флагом, не трогая дефолт «выключен».
   if (process.env.SEED_GUEST_CABINET === "1") {
     settings.guestCabinet = { ...settings.guestCabinet, enabled: true };

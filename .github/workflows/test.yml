@@ -53,6 +53,7 @@ jobs:
         working-directory: template
         env:
           SEED_GUEST_CABINET: "1"
+          SEED_TWO_MENUS: "1"
       - name: Bootstrap disposable E2E owner
         working-directory: template
         shell: bash

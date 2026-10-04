@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/db";
 import { syncMenu } from "@/lib/yandex-eda/sync";
+import { syncSources } from "@/lib/multi-menu";
 
 const DEFAULT_SYNC_INTERVAL_MINUTES = 60;
 
@@ -32,13 +33,13 @@ export async function POST(request: Request) {
   const prisma = getPrisma();
   const settingsRow = await prisma.settings.findUnique({ where: { key: "settings" } });
   const settings = settingsRow?.value as
-    | { sync?: { enabled?: boolean; intervalMinutes?: number; placeSlug?: string } }
+    | { sync?: { enabled?: boolean; intervalMinutes?: number; placeSlug?: string; sources?: { placeSlug: string; menuId?: string }[] } }
     | undefined;
 
   if (settings?.sync?.enabled !== true) {
     return NextResponse.json({ ok: true, skipped: "sync disabled" });
   }
-  if (!settings.sync.placeSlug) {
+  if (syncSources(settings.sync).length === 0) {
     return NextResponse.json({ ok: false, error: "placeSlug не задан" }, { status: 400 });
   }
 

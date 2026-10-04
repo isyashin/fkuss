@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupCategoriesByMenu, resolveMenuName } from "@/lib/multi-menu";
+import { groupCategoriesByMenu, resolveMenuName, syncSources } from "@/lib/multi-menu";
 
 const menus = [
   { id: "khinkali", name: "Хинкальная" },
@@ -34,5 +34,24 @@ describe("multi-menu helpers", () => {
   it("groupCategoriesByMenu: без меню все категории — одна группа «вне групп»", () => {
     const groups = groupCategoriesByMenu([], [{ id: "c1", menuId: "" }]);
     expect(groups).toEqual([{ menu: null, categories: [{ id: "c1", menuId: "" }] }]);
+  });
+
+  it("syncSources: приоритет sources, легаси placeSlug как fallback", () => {
+    expect(syncSources({})).toEqual([]);
+    expect(syncSources({ placeSlug: "  " })).toEqual([]);
+    expect(syncSources({ placeSlug: "batono_w98td" })).toEqual([{ placeSlug: "batono_w98td", menuId: null }]);
+    expect(
+      syncSources({
+        placeSlug: "legacy",
+        sources: [
+          { placeSlug: " a ", menuId: "khinkali" },
+          { placeSlug: "", menuId: "pirogi" },
+          { placeSlug: "picceriya__1", menuId: "" },
+        ],
+      }),
+    ).toEqual([
+      { placeSlug: "a", menuId: "khinkali" },
+      { placeSlug: "picceriya__1", menuId: null },
+    ]);
   });
 });

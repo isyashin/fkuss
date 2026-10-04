@@ -149,25 +149,35 @@ export function CartSheet({
     return () => clearTimeout(timer);
   }, [geoActive, type, form.address, lookupZone]);
 
-  // Подсказки адресов (JS API). Без ключа — просто свободный ввод.
+  // Подсказки адресов (JS API). Без ключа или без suggest в пакете ключа —
+  // просто свободный ввод; асинхронную ошибку Suggest глушим, чтобы не сорить консолью.
   useEffect(() => {
     if (!geoActive || !ymapsKey || type !== "delivery" || step !== "form") return;
     let destroyed = false;
     let suggest: YSuggestView | null = null;
+    const swallowSuggestError = (event: ErrorEvent) => {
+      if (String(event.message).includes("Suggest")) event.preventDefault();
+    };
+    window.addEventListener("error", swallowSuggestError);
     loadYmaps(ymapsKey)
       .then((ymaps) => {
         if (destroyed || !addressRef.current) return;
-        suggest = new ymaps.SuggestView(addressRef.current, { results: 5 });
-        suggest.events.add("select", (e) => {
-          const item = e.get("item") as { value?: string } | undefined;
-          if (item?.value) {
-            setForm((f) => ({ ...f, address: item.value ?? f.address }));
-          }
-        });
+        try {
+          suggest = new ymaps.SuggestView(addressRef.current, { results: 5 });
+          suggest.events.add("select", (e) => {
+            const item = e.get("item") as { value?: string } | undefined;
+            if (item?.value) {
+              setForm((f) => ({ ...f, address: item.value ?? f.address }));
+            }
+          });
+        } catch {
+          // Suggest недоступен для ключа (пакет без подсказок) — свободный ввод
+        }
       })
       .catch(() => {});
     return () => {
       destroyed = true;
+      window.removeEventListener("error", swallowSuggestError);
       suggest?.destroy();
     };
   }, [geoActive, ymapsKey, type, step]);

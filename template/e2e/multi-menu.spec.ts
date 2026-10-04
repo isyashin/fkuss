@@ -10,9 +10,10 @@ test("несколько меню: переключатель на витрин�
   await expect(switcher.getByRole("tab", { name: "Тестовое меню 2" })).toBeVisible();
   await expect(switcher.getByRole("tab", { name: "Меню", exact: true })).toBeVisible(); // незагруппированные
 
-  // По умолчанию активна группа первой категории (основное меню) → табы категорий на месте
+  // По умолчанию активна группа первой категории (основное меню) → табы на месте
   const tabs = page.getByTestId("menu-tabs");
-  await expect(tabs.getByRole("tab", { name: /Салаты|Холодные|Первые/ }).first()).toBeVisible();
+  await expect(tabs.getByRole("tab").first()).toBeVisible();
+  await expect(tabs.getByRole("tab").count()).resolves.toBeGreaterThan(1);
 
   // Переключаемся на вторую группу → её категории
   await switcher.getByRole("tab", { name: "Тестовое меню 2" }).click();

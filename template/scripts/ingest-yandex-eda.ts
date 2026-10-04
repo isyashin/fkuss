@@ -220,9 +220,15 @@ const outIdx = process.argv.indexOf("--out");
   // Валидация zod до записи
   const menu = menuSchema.parse(menuJson);
 
-  const restaurant = restaurantSchema.parse({
+  // Инфо ресторана пишем один раз: при инжесте второго меню не затираем
+  // черновик первого заведения — и не валидируем чужой slug.
+  const restaurantExists = await fileExists(path.join(outDir, "restaurant.json"));
+
+  const restaurant = restaurantExists
+    ? null
+    : restaurantSchema.parse({
     name: place.name,
-    slug: place.slug.replace(/_/g, "-").slice(0, 64),
+    slug: place.slug.replace(/[_-]+/g, "-").replace(/^-|-$/g, "").slice(0, 64),
     cuisine: place.tags.map((t) => t.name.toLowerCase()).join(", "),
     phone: "DRAFT_PHONE_REPLACE_ME", // Яндекс.Еда не отдаёт телефон — заполнить вручную
     email: "DRAFT_EMAIL_REPLACE_ME@example.invalid", // заполнить при настройке
@@ -236,10 +242,7 @@ const outIdx = process.argv.indexOf("--out");
     logo: "images/logo.png",
   });
 
-  // Инфо ресторана и логотип пишем один раз: при инжесте второго меню
-  // не затираем черновик первого заведения.
-  const restaurantExists = await fileExists(path.join(outDir, "restaurant.json"));
-  if (!restaurantExists) {
+  if (restaurant) {
     const coverUrl = imageUrl(place.picture?.uri, "512x512");
     if (coverUrl) {
       try {

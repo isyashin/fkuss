@@ -35,3 +35,21 @@ export function groupCategoriesByMenu<T extends { menuId?: string }>(
   if (ungrouped.length > 0) result.push({ menu: null, categories: ungrouped });
   return result;
 }
+
+export interface SyncSource {
+  placeSlug: string;
+  /** Группа меню для категорий этого источника; null = вне групп. */
+  menuId: string | null;
+}
+
+/** Нормализация настроек синхронизации: легаси placeSlug → единственный источник. */
+export function syncSources(sync: {
+  sources?: { placeSlug: string; menuId?: string }[];
+  placeSlug?: string;
+}): SyncSource[] {
+  const sources = (sync.sources ?? [])
+    .filter((s) => s.placeSlug.trim())
+    .map((s) => ({ placeSlug: s.placeSlug.trim(), menuId: s.menuId || null }));
+  if (sources.length > 0) return sources;
+  return sync.placeSlug?.trim() ? [{ placeSlug: sync.placeSlug.trim(), menuId: null }] : [];
+}

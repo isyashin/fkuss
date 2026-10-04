@@ -39,7 +39,7 @@ export async function RestaurantSettingsSection() {
 
 export async function OtherSettingsSections() {
   const prisma = getPrisma();
-  const [restaurant, settings, theme, options, promos, images, halls, pages, syncState, printStored, billing] = await Promise.all([
+  const [restaurant, settings, theme, options, promos, images, halls, pages, syncState, menuGroups, printStored, billing] = await Promise.all([
     getSiteRestaurant(),
     getSiteSettings(),
     getSiteTheme(),
@@ -49,6 +49,7 @@ export async function OtherSettingsSections() {
     prisma.banquetHall.findMany({ orderBy: { position: "asc" } }),
     prisma.page.findMany(),
     prisma.settings.findUnique({ where: { key: "syncState" } }),
+   prisma.menuGroup.findMany({ orderBy: { position: "asc" } }),
     prisma.settings.findUnique({ where: { key: "printMaterials" } }),
     fetchMyBilling(),
   ]);
@@ -92,7 +93,7 @@ export async function OtherSettingsSections() {
     </section>
     <section className={`${styles.card} ${styles.extraCard}`} id="sync">
       <h2>Синхронизация</h2><p className={styles.cardHint}>Меню Яндекс.Еды и расписание обновлений</p>
-      <SyncAdmin settings={settings} syncState={(syncState?.value ?? {}) as Record<string, unknown>}/>
+      <SyncAdmin settings={settings} syncState={(syncState?.value ?? {}) as Record<string, unknown>} menus={menuGroups.map((m) => ({ id: m.id, name: m.name }))}/>
     </section>
     <section className={`${styles.card} ${styles.extraCard}`} id="print-materials">
       <h2>Печатные материалы</h2><p className={styles.cardHint}>Визитка и магнит с QR-ссылкой</p>

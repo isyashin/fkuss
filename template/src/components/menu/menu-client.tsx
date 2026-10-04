@@ -39,6 +39,17 @@ export function MenuClient({
   initialAddress?: string;
 }) {
   const [activeCategory, setActiveCategory] = useState(menu.categories[0]?.id ?? "");
+  const menus = menu.menus ?? [];
+  // Переключатель: группы меню + незагруппированные категории («Меню»)
+  const ungroupedCount = menu.categories.filter((c) => !(c.menuId ?? "")).length;
+  const switchItems = [...menus, ...(ungroupedCount > 0 ? [{ id: "", name: "Меню" }] : [])];
+  // Дефолт — группа первой категории: стартовый экран совпадает с прежним
+  // поведением (одно меню), даже когда группы настроены.
+  const [activeMenuId, setActiveMenuId] = useState(
+    menu.categories[0] ? (menu.categories[0].menuId ?? "") : (switchItems[0]?.id ?? "all"),
+  );
+  // Категории активной группы (без переключателя — все, как раньше)
+  const visibleCategories = switchItems.length === 0 ? menu.categories : menu.categories.filter((c) => (c.menuId ?? "") === activeMenuId);
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const add = useCart((s) => s.add);
@@ -111,8 +122,34 @@ export function MenuClient({
           Сейчас ресторан закрыт — принимаем предзаказы на время открытия
         </div>
       )}
+      {/* Переключатель меню («Хинкальная» / «Пироги и пицца») */}
+      {switchItems.length > 0 && (
+        <div className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b border-foreground/10">
+          <div className="mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-3 scrollbar-none" data-testid="menu-switch" role="tablist" aria-label="Меню ресторана">
+            {switchItems.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                role="tab"
+                aria-selected={activeMenuId === group.id}
+                data-active={activeMenuId === group.id ? "true" : undefined}
+                onClick={() => {
+                  setActiveMenuId(group.id);
+                  const first = menu.categories.find((c) => (c.menuId ?? "") === group.id);
+                  setActiveCategory(first?.id ?? "");
+                }}
+                className={`min-h-11 shrink-0 px-5 rounded-full text-sm font-semibold transition-colors ${
+                  activeMenuId === group.id ? "bg-foreground text-background" : "bg-card text-foreground"
+                }`}
+              >
+                {group.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Табы категорий — прилипают к верху; драг мышью / колесо / свайп */}
-      <div className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b border-foreground/10">
+      <div className={`sticky z-30 bg-background/95 backdrop-blur border-b border-foreground/10 ${switchItems.length > 0 ? "top-[104px]" : "top-14"}`}>
         <div
           ref={tabsRef}
           data-testid="menu-tabs"
@@ -133,7 +170,7 @@ export function MenuClient({
             suppressClickUntil.current = 0;
           }}
         >
-          {menu.categories.map((c) => (
+          {visibleCategories.map((c) => (
             <button
               key={c.id}
               role="tab"
@@ -154,7 +191,7 @@ export function MenuClient({
       </div>
 
       <div className="mx-auto max-w-5xl px-4">
-        {menu.categories.map((category) => (
+        {visibleCategories.map((category) => (
           <section key={category.id} id={`cat-${category.id}`} className="pt-6 scroll-mt-28">
             <h2 className="text-2xl mb-4">{category.name}</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">

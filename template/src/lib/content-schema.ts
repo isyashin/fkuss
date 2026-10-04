@@ -219,9 +219,19 @@ export const settingsSchema = z.object({
     .object({
       enabled: z.boolean().default(false),
       placeSlug: z.string().default(""),
+      // Источники синхронизации: placeSlug Яндекс.Еды + группа меню, в которую
+      // попадают его категории. Пусто → читается легаси placeSlug.
+      sources: z
+        .array(
+          z.object({
+            placeSlug: z.string().min(1),
+            menuId: z.string().default(""),
+          }),
+        )
+        .default([]),
       intervalMinutes: z.number().int().min(5).max(1440).default(60),
     })
-    .default({ enabled: false, placeSlug: "", intervalMinutes: 60 }),
+    .default({ enabled: false, placeSlug: "", sources: [], intervalMinutes: 60 }),
   booking: z.object({
     enabled: z.boolean().default(true),
     slotMinutes: z.number().int().min(15).max(180).default(30),

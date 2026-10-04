@@ -91,15 +91,23 @@ export async function POST(request: Request) {
   const dishIds = input.items.map((i) => i.dishId);
   const dishes = await prisma.dish.findMany({
     where: { id: { in: dishIds }, available: true },
-    include: { modifiers: true, modifierGroups: { include: { modifiers: true } } },
+    include: {
+      modifiers: true,
+      modifierGroups: { include: { modifiers: true } },
+      category: { select: { menuId: true } },
+    },
   });
   const dishMap = new Map(dishes.map((d) => [d.id, d]));
+  // Группы меню — для снимка названия в позиции заказа
+  const { resolveMenuName } = await import("@/lib/multi-menu");
+  const menuGroups = await prisma.menuGroup.findMany();
 
   const pricedItems: OrderItemInput[] = [];
   const orderLines: {
     dishId: string;
     name: string;
     price: number;
+    menuName: string;
     quantity: number;
     modifiers: { id: string; name: string; price: number }[];
     total: number;
@@ -148,6 +156,7 @@ export async function POST(request: Request) {
       dishId: dish.id,
       name: dish.name,
       price: dish.price,
+      menuName: resolveMenuName(menuGroups, dish.category?.menuId),
       quantity: item.quantity,
       modifiers: modifiers.map((m) => ({ id: m.id, name: m.name, price: m.price })),
       total: unitPrice * item.quantity,
@@ -334,6 +343,7 @@ export async function POST(request: Request) {
               dishId: l.dishId,
               name: l.name,
               price: l.price,
+              menuName: l.menuName,
               quantity: l.quantity,
               modifiers: l.modifiers,
               total: l.total,

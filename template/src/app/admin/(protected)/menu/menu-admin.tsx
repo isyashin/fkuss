@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addCategory, addDish, deleteDish, updateDish } from "./actions";
+import { addCategory, addDish, deleteDish, updateCategoryMenu, updateDish } from "./actions";
 import { dishImageUrl } from "@/lib/assets";
 import type { Category, Dish } from "@/generated/prisma/client";
 import adminStyles from "../admin-ui.module.css";
@@ -38,16 +38,19 @@ function draftFromDish(dish: Dish) {
   };
 }
 
-export function MenuAdmin({ categories }: { categories: (Category & { dishes: Dish[] })[] }) {
+export function MenuAdmin({ categories, menus }: { categories: (Category & { dishes: Dish[] })[]; menus: { id: string; name: string }[] }) {
   const [newCategory, setNewCategory] = useState("");
+  const [newCategoryMenu, setNewCategoryMenu] = useState("");
   const [query, setQuery] = useState("");
+  const [menuId, setMenuId] = useState("all");
   const [categoryId, setCategoryId] = useState("all");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const total = categories.reduce((sum, category) => sum + category.dishes.length, 0);
   const needle = query.trim().toLocaleLowerCase("ru");
-  const visible = categories.filter((category) => categoryId === "all" || category.id === categoryId).map((category) => ({
+  const menuFiltered = menuId === "all" ? categories : categories.filter((category) => (category.menuId ?? "") === menuId);
+  const visible = menuFiltered.filter((category) => categoryId === "all" || category.id === categoryId).map((category) => ({
     ...category,
     dishes: category.dishes.filter((dish) => !needle || [dish.name, dish.description, dish.composition, category.name].some((value) => value.toLocaleLowerCase("ru").includes(needle))),
   })).filter((category) => category.dishes.length > 0 || (!needle && categoryId === category.id));
@@ -57,10 +60,40 @@ export function MenuAdmin({ categories }: { categories: (Category & { dishes: Di
     <div className={`${styles.page} ${adminStyles.menuPage}`}>
       <div className={styles.intro}><span>Каталог</span><h1>Меню</h1><p>Блюда и категории текущего ресторана. Сохранённые изменения видны на сайте.</p></div>
       <div className={styles.toolbar}><label><span className={styles.srOnly}>Поиск по меню</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти блюдо или описание" aria-label="Поиск по меню" /></label><span>{visibleCount === total ? `${total} блюд` : `${visibleCount} из ${total} блюд`}</span></div>
-      <div className={styles.categories} role="group" aria-label="Категории меню"><button type="button" aria-pressed={categoryId === "all"} onClick={() => setCategoryId("all")}>Все <span>{total}</span></button>{categories.map((category) => <button type="button" key={category.id} aria-pressed={categoryId === category.id} onClick={() => setCategoryId(category.id)}>{category.name} <span>{category.dishes.length}</span></button>)}</div>
+      {menus.length > 0 && (
+        <div className={styles.categories} role="group" aria-label="Меню ресторана">
+          <button type="button" aria-pressed={menuId === "all"} onClick={() => { setMenuId("all"); setCategoryId("all"); }}>Все меню <span>{total}</span></button>
+          {menus.map((menu) => {
+            const count = categories.filter((c) => (c.menuId ?? "") === menu.id).reduce((s, c) => s + c.dishes.length, 0);
+            return <button type="button" key={menu.id} aria-pressed={menuId === menu.id} onClick={() => { setMenuId(menu.id); setCategoryId("all"); }}>{menu.name} <span>{count}</span></button>;
+          })}
+        </div>
+      )}
+      <div className={styles.categories} role="group" aria-label="Категории меню"><button type="button" aria-pressed={categoryId === "all"} onClick={() => setCategoryId("all")}>Все <span>{visibleCount}</span></button>{menuFiltered.map((category) => <button type="button" key={category.id} aria-pressed={categoryId === category.id} onClick={() => setCategoryId(category.id)}>{category.name} <span>{category.dishes.length}</span></button>)}</div>
       {visible.map((category) => (
         <section key={category.id} className={styles.section}>
-          <div className={styles.sectionHead}><h2>{category.name}</h2><span>{category.dishes.length}</span></div>
+          <div className={styles.sectionHead}>
+            <h2>{category.name}</h2>
+            {menus.length > 0 && (
+              <label className={adminStyles.categoryMenuSelect}>Меню:
+                <select
+                  value={category.menuId ?? ""}
+                  disabled={pending}
+                  onChange={(event) => {
+                    startTransition(async () => {
+                      setError("");
+                      try { await updateCategoryMenu(category.id, event.target.value); router.refresh(); }
+                      catch (cause) { setError(errorText(cause)); }
+                    });
+                  }}
+                >
+                  <option value="">— не задано —</option>
+                  {menus.map((menu) => <option key={menu.id} value={menu.id}>{menu.name}</option>)}
+                </select>
+              </label>
+            )}
+            <span>{category.dishes.length}</span>
+          </div>
           {!needle && <AddDishForm categoryId={category.id} categoryName={category.name} />}
           <div className={styles.grid}>
             {category.dishes.map((dish) => (
@@ -77,7 +110,7 @@ export function MenuAdmin({ categories }: { categories: (Category & { dishes: Di
           if (!newCategory.trim()) return;
           startTransition(async () => {
             setError("");
-            try { await addCategory(newCategory.trim()); setNewCategory(""); router.refresh(); }
+            try { await addCategory(newCategory.trim(), newCategoryMenu || undefined); setNewCategory(""); router.refresh(); }
             catch (cause) { setError(errorText(cause)); }
           });
         }}
@@ -90,6 +123,17 @@ export function MenuAdmin({ categories }: { categories: (Category & { dishes: Di
           placeholder="Новая категория"
           className="flex-1 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
         />
+        {menus.length > 0 && (
+          <select
+            value={newCategoryMenu}
+            onChange={(e) => setNewCategoryMenu(e.target.value)}
+            aria-label="Меню новой категории"
+            className="min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+          >
+            <option value="">Без меню</option>
+            {menus.map((menu) => <option key={menu.id} value={menu.id}>{menu.name}</option>)}
+          </select>
+        )}
         <button disabled={pending} className="min-h-11 px-5 rounded-full bg-accent text-white font-medium disabled:opacity-50">
           Добавить
         </button>

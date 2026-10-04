@@ -58,10 +58,18 @@ export interface Dish {
 export interface MenuCategory {
   id: string;
   name: string;
+  /** Группа меню («Хинкальная», «Пироги и пицца»); "" = вне групп. */
+  menuId?: string;
   dishes: Dish[];
 }
 
+export interface MenuGroup {
+  id: string;
+  name: string;
+}
+
 export interface Menu {
+  menus: MenuGroup[];
   categories: MenuCategory[];
 }
 
@@ -94,7 +102,11 @@ export interface Promo {
 }
 
 export const getRestaurant = cache(() => readJson<Restaurant>("restaurant.json"));
-export const getMenu = cache(() => readJson<Menu>("menu.json"));
+export const getMenu = cache(async (): Promise<Menu> => {
+  const menu = await readJson<Menu>("menu.json");
+  // Старый menu.json без блока menus — приводим к текущей форме.
+  return { menus: [], categories: [], ...menu };
+});
 export const getTheme = cache(() => readJson<ThemeConfig>("theme.json"));
 export const getPromos = cache(() => readJson<{ promos: Promo[] }>("promos.json"));
 export const getPages = cache(() =>

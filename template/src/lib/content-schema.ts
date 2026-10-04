@@ -95,11 +95,18 @@ export const dishSchema = z.object({
 });
 
 export const menuSchema = z.object({
+  // Группы меню («Хинкальная», «Пироги и пицца») — опционально: без них
+  // сайт ведёт себя как одноменю (обратная совместимость).
+  menus: z
+    .array(z.object({ id: idSchema, name: z.string().min(1) }))
+    .default([]),
   categories: z
     .array(
       z.object({
         id: idSchema,
         name: z.string().min(1),
+        // К какой группе меню относится категория ("" = без группы).
+        menuId: z.string().default(""),
         dishes: z.array(dishSchema).min(1),
       }),
     )

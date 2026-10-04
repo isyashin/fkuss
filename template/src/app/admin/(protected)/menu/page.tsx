@@ -7,10 +7,13 @@ export const dynamic = "force-dynamic";
 export default async function AdminMenuPage() {
   await requireAdminPermission("menu");
   const prisma = getPrisma();
-  const categories = await prisma.category.findMany({
-    orderBy: { position: "asc" },
-    include: { dishes: { orderBy: { position: "asc" } } },
-  });
+  const [categories, menus] = await Promise.all([
+    prisma.category.findMany({
+      orderBy: { position: "asc" },
+      include: { dishes: { orderBy: { position: "asc" } } },
+    }),
+    prisma.menuGroup.findMany({ orderBy: { position: "asc" } }),
+  ]);
 
-  return <MenuAdmin categories={categories} />;
+  return <MenuAdmin categories={categories} menus={menus.map((m) => ({ id: m.id, name: m.name }))} />;
 }

@@ -104,6 +104,10 @@ async function main() {
       });
     }
 
+    for (const [mi, group] of (menu.menus ?? []).entries()) {
+      await tx.menuGroup.create({ data: { id: group.id, name: group.name, position: mi } });
+    }
+
     for (const [ci, category] of menu.categories.entries()) {
       // BUG-011: externalId категории из cat-<num> (инжест)
       const catExt = category.id.match(/^cat-(\d+)$/);
@@ -113,6 +117,7 @@ async function main() {
           name: category.name,
           position: ci,
           externalId: catExt ? catExt[1] : null,
+          menuId: category.menuId || null,
         },
       });
       for (const [di, dish] of category.dishes.entries()) {

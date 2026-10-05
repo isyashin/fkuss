@@ -18,7 +18,7 @@ COPY package.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 COPY tsconfig.json ./
-COPY src/lib/db.ts src/lib/admin-users.ts src/lib/admin-password.ts src/lib/content-schema.ts src/lib/content-readiness.ts ./src/lib/
+COPY src/lib/db.ts src/lib/admin-users.ts src/lib/admin-password.ts src/lib/content-schema.ts src/lib/content-readiness.ts src/lib/pwa-icons.ts ./src/lib/
 COPY scripts/bootstrap-admin.ts scripts/seed.ts ./scripts/
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN npx prisma generate

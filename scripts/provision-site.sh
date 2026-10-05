@@ -75,11 +75,12 @@ json.dump(registry, open(path, "w"), indent=2)
 PY
   dpsql -d "$PLATFORM_DB" -c "DELETE FROM \"BalanceTransaction\" WHERE \"siteId\"='$SLUG'" >/dev/null 2>&1 || true
   dpsql -d "$PLATFORM_DB" -c "DELETE FROM \"Site\" WHERE slug='$SLUG'" >/dev/null 2>&1 || true
-  if [ -f /etc/caddy/Caddyfile ] && grep -q "^$DOMAIN {" /etc/caddy/Caddyfile; then
-    python3 - /etc/caddy/Caddyfile "$DOMAIN" <<'PY'
+  if [ -f /etc/caddy/Caddyfile ] && grep -q "^$DOMAIN {" /etc/caddy/Caddyfile 2>/dev/null; then
+    as_root cp /etc/caddy/Caddyfile /tmp/caddy-rollback-read.txt
+    python3 - "$DOMAIN" <<'PY'
 import sys
-path, domain = sys.argv[1], sys.argv[2]
-lines = open(path).read().splitlines(keepends=True)
+domain = sys.argv[1]
+lines = open("/tmp/caddy-rollback-read.txt").read().splitlines(keepends=True)
 out, skip = [], 0
 for line in lines:
     if skip:
@@ -89,8 +90,12 @@ for line in lines:
         skip = 1
         continue
     out.append(line)
-open(path, "w").writelines(out)
+open("/tmp/caddy-rollback.txt", "w").writelines(out)
 PY
+    rm -f /tmp/caddy-rollback-read.txt
+    # python пишет временный файл от пользователя — подменяем через sudo
+    as_root cp /tmp/caddy-rollback.txt /etc/caddy/Caddyfile
+    rm -f /tmp/caddy-rollback.txt
     as_root caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
     as_root systemctl reload caddy
   fi
@@ -194,8 +199,10 @@ if grep -q "^$DOMAIN {" "$CADDYFILE" 2>/dev/null; then
 elif grep -q '# resto-site-begin' "$CADDYFILE" 2>/dev/null; then
   as_root "$SRC/scripts/sync-caddy.sh" && log "Caddyfile синхронизирован"
 else
-  # Ручной конфиг (синк падает с ambiguous) — блок в стиле соседей
-  printf '%s {\n    reverse_proxy localhost:%s\n}\n' "$DOMAIN" "$PORT" | as_root tee -a "$CADDYFILE" >/dev/null
+  # Ручной конфиг (синк падает с ambiguous) — блок в стиле соседей.
+  # ВАЖНО: не пайпить контент в `as_root tee` — sudo -S съест его как пароль.
+  as_root sh -c 'printf "%s {\n    reverse_proxy localhost:%s\n}\n" "$1" "$2" >> "$3"' _ "$DOMAIN" "$PORT" "$CADDYFILE"
+  grep -q "^$DOMAIN {" "$CADDYFILE" || fail "блок $DOMAIN не появился в $CADDYFILE"
   if as_root caddy validate --config "$CADDYFILE" --adapter caddyfile >/dev/null 2>&1; then
     as_root systemctl reload caddy
     log "Caddy: блок добавлен, reload ok"

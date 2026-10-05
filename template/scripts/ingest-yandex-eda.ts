@@ -3,7 +3,7 @@
  * Использование: npx tsx scripts/ingest-yandex-eda.ts <url> --out <dir>
  * Пример: npx tsx scripts/ingest-yandex-eda.ts "https://eda.yandex.ru/r/chajxana_buxara?placeSlug=chajxana_buxara_xalyal" --out ../sites/buxara/content
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { menuSchema, restaurantSchema } from "../src/lib/content-schema";
@@ -70,7 +70,15 @@ async function fetchJson<T>(url: string): Promise<T> {
 
 async function main() {
   const url = process.argv[2];
-  const outIdx = process.argv.indexOf("--out");
+  function argvValue(flag: string): string | undefined {
+  const idx = process.argv.indexOf(flag);
+  return idx >= 0 ? process.argv[idx + 1] : undefined;
+}
+async function fileExists(p: string): Promise<boolean> {
+  try { await readFile(p); return true; } catch { return false; }
+}
+
+const outIdx = process.argv.indexOf("--out");
   const outDir = path.resolve(outIdx > 0 ? process.argv[outIdx + 1] : "content");
 
   if (!url) {
@@ -118,7 +126,28 @@ async function main() {
 
   await mkdir(path.join(outDir, "images", "dishes"), { recursive: true });
 
-  const menuJson = { categories: [] as unknown[] };
+  const menuJson = { menus: [] as { id: string; name: string }[], categories: [] as unknown[] };
+  const menuIdArg = argvValue("--menu-id");
+  const menuNameArg = argvValue("--menu-name");
+  if (menuIdArg) {
+    if (!menuNameArg) throw new Error("С --menu-id нужен --menu-name");
+    menuJson.menus.push({ id: menuIdArg, name: menuNameArg });
+  }
+  // Слияние: повторный запуск добавляет категории к существующему menu.json
+  // (кейс «несколько меню»: каждое заведение Яндекс.Еды — своё меню сайта).
+  const existingMenuPath = path.join(outDir, "menu.json");
+  try {
+    const existing = JSON.parse(await readFile(existingMenuPath, "utf-8")) as {
+      menus?: { id: string; name: string }[];
+      categories?: unknown[];
+    };
+    for (const group of existing.menus ?? []) {
+      if (!menuJson.menus.some((m) => m.id === group.id)) menuJson.menus.push(group);
+    }
+    menuJson.categories.push(...(existing.categories ?? []));
+  } catch {
+    // menu.json ещё нет — первый запуск
+  }
   let photoCount = 0;
   let dishCount = 0;
 
@@ -183,6 +212,7 @@ async function main() {
     menuJson.categories.push({
       id: `cat-${category.id}`,
       name: category.name,
+      menuId: menuIdArg ?? "",
       dishes,
     });
   }
@@ -190,9 +220,15 @@ async function main() {
   // Валидация zod до записи
   const menu = menuSchema.parse(menuJson);
 
-  const restaurant = restaurantSchema.parse({
+  // Инфо ресторана пишем один раз: при инжесте второго меню не затираем
+  // черновик первого заведения — и не валидируем чужой slug.
+  const restaurantExists = await fileExists(path.join(outDir, "restaurant.json"));
+
+  const restaurant = restaurantExists
+    ? null
+    : restaurantSchema.parse({
     name: place.name,
-    slug: place.slug.replace(/_/g, "-").slice(0, 64),
+    slug: place.slug.replace(/[_-]+/g, "-").replace(/^-|-$/g, "").slice(0, 64),
     cuisine: place.tags.map((t) => t.name.toLowerCase()).join(", "),
     phone: "DRAFT_PHONE_REPLACE_ME", // Яндекс.Еда не отдаёт телефон — заполнить вручную
     email: "DRAFT_EMAIL_REPLACE_ME@example.invalid", // заполнить при настройке
@@ -206,21 +242,24 @@ async function main() {
     logo: "images/logo.png",
   });
 
-  // Логотип/обложка ресторана
-  const coverUrl = imageUrl(place.picture?.uri, "512x512");
-  if (coverUrl) {
-    try {
-      const response = await fetch(coverUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
-      if (response.ok) {
-        const buffer = Buffer.from(await response.arrayBuffer());
-        await writeFile(path.join(outDir, "images", "logo.png"), await sharp(buffer).png().toBuffer());
+  if (restaurant) {
+    const coverUrl = imageUrl(place.picture?.uri, "512x512");
+    if (coverUrl) {
+      try {
+        const response = await fetch(coverUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+        if (response.ok) {
+          const buffer = Buffer.from(await response.arrayBuffer());
+          await writeFile(path.join(outDir, "images", "logo.png"), await sharp(buffer).png().toBuffer());
+        }
+      } catch {
+        console.warn("  ! обложка не скачалась");
       }
-    } catch {
-      console.warn("  ! обложка не скачалась");
     }
+    await writeFile(path.join(outDir, "restaurant.json"), JSON.stringify(restaurant, null, 2));
+  } else {
+    console.log("  restaurant.json уже есть — не перезаписываю (инжест второго меню)");
   }
 
-  await writeFile(path.join(outDir, "restaurant.json"), JSON.stringify(restaurant, null, 2));
   await writeFile(path.join(outDir, "menu.json"), JSON.stringify(menu, null, 2));
 
   // Дефолтные файлы, если их ещё нет

@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { getSiteRestaurant } from "@/lib/site";
+import { getSiteRestaurant, getSiteSettings } from "@/lib/site";
+import { isGuestCabinetEnabled } from "@/lib/guest-cabinet";
 
 export async function SiteHeader() {
-  const restaurant = await getSiteRestaurant();
+  const [restaurant, settings] = await Promise.all([getSiteRestaurant(), getSiteSettings()]);
+  const cabinetEnabled = isGuestCabinetEnabled(settings);
   return (
     <header className="sticky top-0 z-40 bg-background/90 backdrop-blur border-b border-foreground/10">
       <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
@@ -16,9 +18,11 @@ export async function SiteHeader() {
           <Link href="/booking" className="min-h-11 px-3 inline-flex items-center">
             Бронь
           </Link>
-          <Link href="/account" className="min-h-11 px-3 inline-flex items-center">
-            Кабинет
-          </Link>
+          {cabinetEnabled && (
+            <Link href="/account" className="min-h-11 px-3 inline-flex items-center">
+              Кабинет
+            </Link>
+          )}
           <a href={`tel:${restaurant.phone}`} className="hidden sm:inline-flex min-h-11 px-3 items-center text-accent font-medium">
             {restaurant.phone}
           </a>

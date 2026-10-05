@@ -21,6 +21,7 @@ export { contentAssetUrl } from "./assets";
 
 function withSettingsDefaults(settings: ContentSettings): ContentSettings {
   return { ...settings, pricing: settings.pricing ?? { globalMode: "yandex", globalPercent: 0 },
+    guestCabinet: settings.guestCabinet ?? { enabled: false, authMode: "email", smtpUrl: "", smtpFrom: "" },
     timezone: settings.timezone ?? "Europe/Moscow",
     delivery: {
       ...settings.delivery,
@@ -80,10 +81,13 @@ export async function getSiteMenu(): Promise<Menu> {
       },
     });
     if (categories.length > 0) {
+      const menuGroups = await prisma.menuGroup.findMany({ orderBy: { position: "asc" } });
       return {
+        menus: menuGroups.map((g) => ({ id: g.id, name: g.name })),
         categories: categories.map((c) => ({
           id: c.id,
           name: c.name,
+          menuId: c.menuId ?? "",
           dishes: c.dishes.map((d) => ({
             id: d.id,
             name: d.name,

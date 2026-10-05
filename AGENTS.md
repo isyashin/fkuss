@@ -35,6 +35,7 @@ worktree, пересборке или переносе интерфейса. Е�
 | `docs/CHANNELS.md` | Telegram / MAX / email / WhatsApp: получение токенов и подключение |
 | `docs/PAYMENTS.md` | PaymentProvider, ЮKassa и другие эквайринги |
 | `docs/BILLING.md` | Платформа владельца: биллинг сайтов, метрики, счета, экспорт |
+| `docs/GITHUB-SETUP.md` | Настройка репозитория: права, защита main, приватность |
 
 ## Жёсткие правила
 
@@ -92,11 +93,60 @@ scripts/update.sh [--no-restart]                    # git pull → сборка 
 
 Репозиторий: `https://github.com/isyashin/fkuss` (публичный, ветка main).
 
-- Код правится локально → коммит → пуш. docs/PLAN.md — в том же коммите.
+- **`main` защищён**: только pull request + зелёные проверки
+  (`validate`, `template`, `platform`), squash-merge, линейная история,
+  force-push запрещён (включая администраторов). Прямой пуш в main
+  отклоняется — не пытайся, сразу делай ветку и PR.
+- Код правится в своём ворктри → коммит → пуш ветки → PR →
+  squash-merge после зелёного CI. docs/PLAN.md — в том же коммите.
 - На сервере исходники живут в `~/resto/src` (clone); обновление —
   `update.sh` (pull → build → restart). tar-синк больше не используется.
 - Перед каждым коммитом: секреты только в `secrets/` и env-файлах —
   репозиторий публичный, утечка невосполнима.
+
+## Параллельная работа агентов
+
+Правило: **одна сессия — одна ветка — один каталог.** Агенты работают
+параллельно в изолированных ворктри и не мешают друг другу.
+
+1. Новая задача: `powershell -File scripts/new-agent-worktree.ps1 <agent>/<задача>`
+   — свежий ворктри `D:\fkuss-worktrees\<agent>-<задача>` от `origin/main`,
+   ветка сразу пушится на GitHub.
+2. Работай ТОЛЬКО в своём ворктри. Чужие ворктри, ветки и открытые сессии
+   не трогай. `test-front/`, `qa-artifacts/`, `secrets/` — никому не трогать.
+3. Готово: тесты → PR → зелёный CI → squash-merge →
+   `powershell -File scripts/remove-agent-worktree.ps1 <ветка>` (ворктри
+   и ветка удаляются локально и на GitHub).
+4. Главный каталог репозитория — справочный режим (main, чтение/поиск),
+   рабочие ветки в нём не держим; существующие чужие сессии в нём
+   не пересаживаем — правило действует для новых задач.
+
+## Быстрый старт задачи
+
+1. Ворктри: `scripts/new-agent-worktree.ps1 <agent>/<задача>` → работа в нём.
+2. Зависимости: `npm ci` (кэш `D:\npm-cache`), затем `npx prisma generate`
+   (нужен любой `DATABASE_URL`, подключение не требуется). Playwright:
+   `$env:PLAYWRIGHT_BROWSERS_PATH = "D:\playwright-browsers"`.
+3. Проверки перед PR — из каталога `template/` или `platform/`, НЕ из корня:
+   - template: `npx tsc --noEmit`, `npx vitest run`, `npm run build`;
+     при правках вёрстки/флоу — `npx playwright test`.
+   - platform: `npx tsc --noEmit`, `npx vitest run`, `npm run build`.
+4. PR → дождаться трёх зелёных проверок → squash-merge → удалить ворктри.
+
+Грабли (не переоткрывать): tsc/eslint из корня качают фейковый пакет —
+  только из `template/`/`platform/`; интеграционные vitest требуют живой
+  PostgreSQL (`DATABASE_URL`); чистый `tsc` не находит `LayoutProps`
+  (только `npm run build` генерирует next-типы) — это ожидаемо.
+
+## Дисциплина деплоя
+
+- Образы для dev/prod собираются ТОЛЬКО из main после мержа PR
+  (чекаут `origin/main`, а не рабочей ветки).
+- На dev-ВМ сборка work-образов — из `~/resto/admin-pr10-checkout`
+  (detached на origin/main); `~/resto/src` может быть на чьей-то ветке —
+  не деплоить оттуда.
+- Деплои выполняются по одному: сборка → up -d → проверки
+  (perf-smoke, ключевые сценарии) → следующий.
 
 ## Кастомные агенты и команды OpenCode
 

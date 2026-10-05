@@ -95,11 +95,18 @@ export const dishSchema = z.object({
 });
 
 export const menuSchema = z.object({
+  // Группы меню («Хинкальная», «Пироги и пицца») — опционально: без них
+  // сайт ведёт себя как одноменю (обратная совместимость).
+  menus: z
+    .array(z.object({ id: idSchema, name: z.string().min(1) }))
+    .default([]),
   categories: z
     .array(
       z.object({
         id: idSchema,
         name: z.string().min(1),
+        // К какой группе меню относится категория ("" = без группы).
+        menuId: z.string().default(""),
         dishes: z.array(dishSchema).min(1),
       }),
     )
@@ -241,9 +248,19 @@ export const settingsSchema = z.object({
     .object({
       enabled: z.boolean().default(false),
       placeSlug: z.string().default(""),
+      // Источники синхронизации: placeSlug Яндекс.Еды + группа меню, в которую
+      // попадают его категории. Пусто → читается легаси placeSlug.
+      sources: z
+        .array(
+          z.object({
+            placeSlug: z.string().min(1),
+            menuId: z.string().default(""),
+          }),
+        )
+        .default([]),
       intervalMinutes: z.number().int().min(5).max(1440).default(60),
     })
-    .default({ enabled: false, placeSlug: "", intervalMinutes: 60 }),
+    .default({ enabled: false, placeSlug: "", sources: [], intervalMinutes: 60 }),
   booking: z.object({
     enabled: z.boolean().default(true),
     slotMinutes: z.number().int().min(15).max(180).default(30),
@@ -253,6 +270,16 @@ export const settingsSchema = z.object({
   captcha: z.object({
     provider: z.enum(["none", "smartcaptcha"]).default("none"),
   }),
+  guestCabinet: z
+    .object({
+      enabled: z.boolean().default(false),
+      // email — код отправляется по SMTP (безопасный дефолт); screen — показывается
+      // на экране (только явный выбор ресторана, код нельзя светить по умолчанию).
+      authMode: z.enum(["screen", "email"]).default("email"),
+      smtpUrl: z.string().default(""),
+      smtpFrom: z.string().default(""),
+    })
+    .default({ enabled: false, authMode: "email", smtpUrl: "", smtpFrom: "" }),
   timezone: z.string().default("Europe/Moscow"),
 });
 

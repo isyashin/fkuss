@@ -10,6 +10,7 @@ import { useCart, type CartModifier } from "@/lib/cart/store";
 import { validateModifierSelection } from "@/lib/order/modifier-validation";
 import { CartBar } from "@/components/cart/cart-bar";
 import { CartSheet } from "@/components/cart/cart-sheet";
+import { menuSwitchItems } from "@/lib/multi-menu";
 
 function formatPrice(price: number): string {
   return `${price.toLocaleString("ru-RU")} ₽`;
@@ -24,8 +25,8 @@ export function MenuClient({
   isOpen,
   paymentProvider = "none",
   bonusBalance = 0,
+  cabinetEnabled = false,
   initialAddress = "",
-  ymapsKey = "",
 }: {
   menu: Menu;
   delivery: ContentSettings["delivery"];
@@ -35,10 +36,21 @@ export function MenuClient({
   isOpen?: boolean;
   paymentProvider?: string;
   bonusBalance?: number;
+  cabinetEnabled?: boolean;
   initialAddress?: string;
-  ymapsKey?: string;
 }) {
   const [activeCategory, setActiveCategory] = useState(menu.categories[0]?.id ?? "");
+  const menus = menu.menus ?? [];
+  // Переключатель показываем только в мультименю-режиме (есть группы);
+  // без групп — прежний вид: один ряд табов, без второй sticky-плашки.
+  const switchItems = menuSwitchItems(menus, menu.categories);
+  // Дефолт — группа первой категории: стартовый экран совпадает с прежним
+  // поведением (одно меню), даже когда группы настроены.
+  const [activeMenuId, setActiveMenuId] = useState(
+    menu.categories[0] ? (menu.categories[0].menuId ?? "") : (switchItems[0]?.id ?? "all"),
+  );
+  // Категории активной группы (без переключателя — все, как раньше)
+  const visibleCategories = switchItems.length === 0 ? menu.categories : menu.categories.filter((c) => (c.menuId ?? "") === activeMenuId);
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const add = useCart((s) => s.add);
@@ -111,8 +123,34 @@ export function MenuClient({
           Сейчас ресторан закрыт — принимаем предзаказы на время открытия
         </div>
       )}
+      {/* Переключатель меню («Хинкальная» / «Пироги и пицца») */}
+      {switchItems.length > 0 && (
+        <div className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b border-foreground/10">
+          <div className="mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-3 scrollbar-none" data-testid="menu-switch" role="tablist" aria-label="Меню ресторана">
+            {switchItems.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                role="tab"
+                aria-selected={activeMenuId === group.id}
+                data-active={activeMenuId === group.id ? "true" : undefined}
+                onClick={() => {
+                  setActiveMenuId(group.id);
+                  const first = menu.categories.find((c) => (c.menuId ?? "") === group.id);
+                  setActiveCategory(first?.id ?? "");
+                }}
+                className={`min-h-11 shrink-0 px-5 rounded-full text-sm font-semibold transition-colors ${
+                  activeMenuId === group.id ? "bg-foreground text-background" : "bg-card text-foreground"
+                }`}
+              >
+                {group.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Табы категорий — прилипают к верху; драг мышью / колесо / свайп */}
-      <div className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b border-foreground/10">
+      <div className={`sticky z-30 bg-background/95 backdrop-blur border-b border-foreground/10 ${switchItems.length > 0 ? "top-[104px]" : "top-14"}`}>
         <div
           ref={tabsRef}
           data-testid="menu-tabs"
@@ -133,7 +171,7 @@ export function MenuClient({
             suppressClickUntil.current = 0;
           }}
         >
-          {menu.categories.map((c) => (
+          {visibleCategories.map((c) => (
             <button
               key={c.id}
               role="tab"
@@ -154,7 +192,7 @@ export function MenuClient({
       </div>
 
       <div className="mx-auto max-w-5xl px-4">
-        {menu.categories.map((category) => (
+        {visibleCategories.map((category) => (
           <section key={category.id} id={`cat-${category.id}`} className="pt-6 scroll-mt-28">
             <h2 className="text-2xl mb-4">{category.name}</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
@@ -163,19 +201,23 @@ export function MenuClient({
                 .map((dish) => (
                   <button
                     key={dish.id}
+                    data-dish-id={dish.id}
+                    data-testid="dish-card"
                     onClick={() => setSelectedDish(dish)}
-                    className="text-left bg-card rounded-[var(--radius)] overflow-hidden shadow-sm active:scale-[0.98] transition-transform"
+                    className="text-left bg-card rounded-[var(--radius)] overflow-hidden shadow-sm active:scale-[0.98] transition-transform select-none"
                   >
                     <div className="relative aspect-square bg-foreground/5 overflow-hidden">
                       {/* Карточка: 400px WebP напрямую, без runtime-оптимизатора */}
-                      {/* scale-[1.15]: у исходников разная композиция (крупный план/общий),
-                          лёгкий зум от центра визуально унифицирует кадры */}
+                      {/* scale: у исходников разная композиция (крупный план/общий),
+                          лёгкий зум от центра визуально унифицирует кадры. Значение
+                          входит в хэш CSS-чанка: при «протухшем» кэше у гостей
+                          меняем его, чтобы браузер запросил свежий файл. */}
                       <img
                         src={dishImageUrl(dish.image, "sm")}
                         alt={dish.name}
                         loading="lazy"
                         decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover scale-[1.15]"
+                        className="absolute inset-0 w-full h-full object-cover scale-[1.2]"
                       />
                       {dish.tags.includes("hit") && (
                         <span className="absolute top-2 left-2 bg-accent text-white text-xs px-2 py-1 rounded-full">
@@ -230,8 +272,8 @@ export function MenuClient({
           guestContact={guestContact}
           paymentProvider={paymentProvider}
           bonusBalance={bonusBalance}
+          cabinetEnabled={cabinetEnabled}
           initialAddress={initialAddress}
-          ymapsKey={ymapsKey}
           onClose={() => setCartOpen(false)}
         />
       )}

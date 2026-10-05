@@ -4,8 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getPrisma } from "@/lib/db";
 import { getSessionCustomer } from "@/lib/auth";
+import { getSiteSettings } from "@/lib/site";
+import { isGuestCabinetEnabled } from "@/lib/guest-cabinet";
 
 async function requireCustomer() {
+  if (!isGuestCabinetEnabled(await getSiteSettings())) throw new Error("Личный кабинет отключён");
   const customer = await getSessionCustomer();
   if (!customer) throw new Error("Forbidden");
   return customer;

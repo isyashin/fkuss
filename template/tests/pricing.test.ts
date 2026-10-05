@@ -67,6 +67,11 @@ describe("calculateDeliveryPrice", () => {
   it("неизвестная зона — ошибка", () => {
     expect(() => calculateDeliveryPrice("delivery", 1000, zones, "Марс")).toThrow();
   });
+
+  it("пустой список зон — доставка бесплатно (как в форме заказа)", () => {
+    expect(calculateDeliveryPrice("delivery", 3392, [], "")).toBe(0);
+    expect(calculateDeliveryPrice("delivery", 3392, [], null)).toBe(0);
+  });
 });
 
 describe("checkMinOrder", () => {

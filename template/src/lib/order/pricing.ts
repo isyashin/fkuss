@@ -81,6 +81,8 @@ export function calculateDeliveryPrice(
   zoneName: string | null,
 ): number {
   if (type === "pickup") return 0;
+  // Зоны не настроены — доставка бесплатна (форма заказа считает так же).
+  if (zones.length === 0) return 0;
   const zone = zones.find((z) => z.name === zoneName);
   if (!zone) throw new Error(`Неизвестная зона доставки: ${zoneName}`);
   if (zone.enabled === false) throw new Error(`Зона доставки недоступна: ${zoneName}`);

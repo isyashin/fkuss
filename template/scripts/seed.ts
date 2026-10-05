@@ -47,6 +47,22 @@ async function main() {
   const promos = await readAndValidate("promos.json", promosSchema);
   const pages = await readAndValidate("pages.json", pagesSchema);
   const settings = await readAndValidate("settings.json", settingsSchema);
+  // E2E гоняет сценарии мультименю: добавляем вторую группу со своей категорией.
+  // Основное меню остаётся незагруппированным — проверяем и переключатель, и «Меню».
+  if (process.env.SEED_TWO_MENUS === "1") {
+    menu.menus = [...(menu.menus ?? []), { id: "menu-2", name: "Тестовое меню 2" }];
+    const donor = menu.categories[0].dishes[0];
+    menu.categories.push({
+      id: "cat-e2e-second",
+      name: "Допкатегория E2E",
+      menuId: "menu-2",
+      dishes: [{ ...donor, id: "dish-e2e-second", name: "Блюдо второй группы" }],
+    });
+  }
+  // E2E гоняет сценарии кабинета: включаем его флагом, не трогая дефолт «выключен».
+  if (process.env.SEED_GUEST_CABINET === "1") {
+    settings.guestCabinet = { ...settings.guestCabinet, enabled: true };
+  }
   const theme = await readAndValidate("theme.json", themeSchema);
   await assertContentReadiness(CONTENT_DIR, { restaurant, menu, promos, theme, settings });
 
@@ -100,6 +116,10 @@ async function main() {
       });
     }
 
+    for (const [mi, group] of (menu.menus ?? []).entries()) {
+      await tx.menuGroup.create({ data: { id: group.id, name: group.name, position: mi } });
+    }
+
     for (const [ci, category] of menu.categories.entries()) {
       // BUG-011: externalId категории из cat-<num> (инжест)
       const catExt = category.id.match(/^cat-(\d+)$/);
@@ -109,6 +129,7 @@ async function main() {
           name: category.name,
           position: ci,
           externalId: catExt ? catExt[1] : null,
+          menuId: category.menuId || null,
         },
       });
       for (const [di, dish] of category.dishes.entries()) {

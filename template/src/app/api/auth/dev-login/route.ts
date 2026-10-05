@@ -21,6 +21,11 @@ export async function POST(request: Request) {
   if (process.env.DEV_GUEST_LOGIN !== "1") {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  const { getSiteSettings } = await import("@/lib/site");
+  const { isGuestCabinetEnabled } = await import("@/lib/guest-cabinet");
+  if (!isGuestCabinetEnabled(await getSiteSettings())) {
+    return NextResponse.json({ error: "Личный кабинет отключён" }, { status: 403 });
+  }
   if (!rateLimit(`dev-login:${getClientIp(request)}`, 10, 10 * 60 * 1000)) {
     return NextResponse.json({ error: "Слишком много попыток" }, { status: 429 });
   }

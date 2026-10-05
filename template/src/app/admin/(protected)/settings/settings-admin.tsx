@@ -8,6 +8,8 @@ import type { ThemeConfig } from "@/lib/content";
 import styles from "./settings-admin.module.css";
 import type { PublicAdminSound } from "@/lib/admin-sound";
 import { SoundSettings } from "./sound-settings";
+import { GuestCabinetSettings } from "./guest-cabinet-settings";
+import { normalizeGuestCabinet } from "@/lib/guest-cabinet";
 import { visibleGuestChannels, type GuestChannels } from "@/lib/guest-contact";
 import { AdminIcon } from "../admin-icon";
 
@@ -123,6 +125,7 @@ export function SettingsAdmin({ settings, theme, sound, actor, restaurantSection
         <button type="button" className={styles.outlineButton} onClick={() => window.dispatchEvent(new Event("restaurant-admin-sidebar-toggle"))}>{sidebarCollapsed ? "Развернуть" : "Свернуть"} боковую панель</button>
       </section>
       <SoundSettings initial={sound}/>
+      <GuestCabinetSettings initial={normalizeGuestCabinet(settings)}/>
       <section className={styles.card} aria-label="Профиль администратора">
         <h2>Администратор</h2>
         <p className={styles.cardHint}>Профиль администратора ресторана.</p>

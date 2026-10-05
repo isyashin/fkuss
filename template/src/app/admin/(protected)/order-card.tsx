@@ -56,8 +56,17 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
       <div className={styles.lineItems}>{order.items.map((item) => {
         const dish = dishes.get(item.dishId);
         const modifiers = (item.modifiers as { name?: string }[] | null) ?? [];
-        return <div key={item.id} className={styles.lineItem}><div className={styles.linePhoto}>{dish?.image ? <Image src={dish.image} width={52} height={52} alt="" unoptimized/> : <span>Без фото</span>}</div><div className={styles.lineCopy}><strong>{item.name}</strong><small>{dish?.weight ? `${dish.weight} · ` : ""}{rub(item.price)} за шт.{modifiers.length ? ` · ${modifiers.map((modifier) => modifier.name).join(", ")}` : ""}</small></div><strong className={styles.linePrice}>{item.quantity} × {rub(item.total)}</strong></div>;
+        return <div key={item.id} className={styles.lineItem}><div className={styles.linePhoto}>{dish?.image ? <Image src={dish.image} width={52} height={52} alt="" unoptimized/> : <span>Без фото</span>}</div><div className={styles.lineCopy}><strong>{item.name}</strong><small>{item.menuName ? <span className={styles.menuBadge}>{item.menuName}</span> : null}{dish?.weight ? `${dish.weight} · ` : ""}{rub(item.price)} за шт.{modifiers.length ? ` · ${modifiers.map((modifier) => modifier.name).join(", ")}` : ""}</small></div><strong className={styles.linePrice}>{item.quantity} × {rub(item.total)}</strong></div>;
       })}</div>
+      {(() => {
+        const byMenu = new Map<string, number>();
+        for (const item of order.items) {
+          const key = item.menuName || "";
+          byMenu.set(key, (byMenu.get(key) ?? 0) + item.quantity);
+        }
+        const parts = [...byMenu.entries()].filter(([name]) => name).map(([name, qty]) => `${name} ×${qty}`);
+        return parts.length > 0 ? <p className={styles.menuSummary}>Меню заказа: {parts.join(" · ")}</p> : null;
+      })()}
       <div className={styles.totalRow}><span>Сумма блюд</span><strong>{rub(order.itemsTotal)}</strong></div>
       {order.deliveryPrice > 0 && <div className={styles.summaryLine}><span>Доставка</span><strong>{rub(order.deliveryPrice)}</strong></div>}
       {order.bonusSpent > 0 && <div className={styles.summaryLine}><span>Списано бонусов</span><strong>−{rub(order.bonusSpent)}</strong></div>}

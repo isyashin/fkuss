@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuthCode } from "@/lib/auth";
+import { getSiteSettings } from "@/lib/site";
+import { isGuestCabinetEnabled } from "@/lib/guest-cabinet";
 
 const schema = z.object({
   email: z.email(),
@@ -8,6 +10,9 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (!isGuestCabinetEnabled(await getSiteSettings())) {
+    return NextResponse.json({ error: "Личный кабинет отключён" }, { status: 403 });
+  }
   let body: unknown;
   try {
     body = await request.json();

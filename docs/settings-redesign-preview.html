@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Админка ресторана — новый макет</title>
+  <style>
+:root {
+  font-family: "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
+  color: #202723;
+  background: #f3f2ee;
+  font-synthesis: none;
+  --ink: #202723;
+  --muted: #68716a;
+  --line: #e2e4df;
+  --nav: #202924;
+  --nav-text: #bbc6bd;
+  --rail: #f5f6f2;
+  --paper: #fff;
+  --soft: #f7f8f5;
+  --accent: #ad573b;
+  --accent-dark: #8f4029;
+  --green: #30694a;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { min-width: 320px; margin: 0; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .5; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.shell { display: grid; grid-template-columns: 174px 244px minmax(0,1fr); min-height: 100vh; background: var(--paper); }
+.primary { position: sticky; top: 0; height: 100vh; padding: 28px 13px 20px; color: #fff; background: var(--nav); }
+.brand { display: flex; align-items: baseline; gap: 1px; padding: 1px 13px 40px; white-space: nowrap; }
+.brand strong { font: italic 27px Georgia, serif; letter-spacing: -.07em; }
+.brand i { color: #e29372; font: normal 29px Georgia, serif; }
+.global-nav { display: grid; gap: 4px; }
+.global-link { position: relative; width: 100%; min-height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border: 0; border-radius: 5px; background: transparent; color: var(--nav-text); text-align: left; font-size: 13px; font-weight: 520; }
+.global-link svg { flex: none; width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.global-link[aria-current="page"] { color: #fff; background: #ffffff14; }
+.global-link[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: #dc8e6b; }
+.global-link[data-preview-other]:hover { color: #fff; background: #ffffff12; }
+.primary-rule { height: 1px; margin: 15px 12px; background: #ffffff1f; }
+
+.section-rail { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 34px 16px 38px; border-right: 1px solid var(--line); background: var(--rail); scrollbar-width: thin; }
+.rail-head { padding: 0 13px 21px; }
+.rail-head h1 { margin: 0; font-size: 27px; line-height: 1.2; font-weight: 600; letter-spacing: -.045em; }
+.section-menu { display: grid; gap: 22px; }
+.menu-group h2 { margin: 0 13px 9px; color: #819087; font-size: 11px; line-height: 1.2; font-weight: 650; letter-spacing: .075em; text-transform: uppercase; }
+.section-link { position: relative; display: block; width: 100%; min-height: 44px; padding: 10px 13px; border: 0; border-radius: 5px; background: transparent; color: #59645d; text-align: left; font-size: 13px; line-height: 1.35; }
+.section-link:hover { color: var(--ink); background: #e9ede7; }
+.section-link[aria-current="page"] { color: var(--ink); background: #fff; font-weight: 650; box-shadow: 0 1px 2px #10201609; }
+.section-link[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px; border-radius: 2px; background: var(--accent); }
+
+.workspace { min-width: 0; background: var(--paper); }
+.mobile-top, .mobile-picker, .mobile-bottom { display: none; }
+.editor { max-width: 980px; min-height: 100vh; margin: 0 auto; }
+.editor-body { display: grid; gap: 35px; padding: 54px clamp(32px,5vw,72px) 100px; }
+.block { min-width: 0; padding-bottom: 34px; border-bottom: 1px solid var(--line); }
+.block:last-child { padding-bottom: 0; border-bottom: 0; }
+.block h3 { margin: 0 0 17px; font-size: 16px; line-height: 1.3; font-weight: 650; letter-spacing: -.015em; }
+.block > p, .hint { margin: 0 0 18px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.block h3 + p { margin-top: -8px; }
+.grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px 22px; }
+.grid.three { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.full { grid-column: 1/-1; }
+.field { min-width: 0; display: grid; align-content: start; gap: 8px; color: #3b473f; font-size: 12.5px; line-height: 1.35; font-weight: 600; }
+.field small { color: var(--muted); font-size: 11.5px; line-height: 1.45; font-weight: 400; }
+.field input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]), .field select, .field textarea { width: 100%; min-height: 47px; padding: 11px 13px; border: 1px solid #cdd3cc; border-radius: 6px; background: #fff; color: var(--ink); font-size: 14px; font-weight: 400; transition: border-color .15s, box-shadow .15s; }
+.field input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]):hover, .field select:hover, .field textarea:hover { border-color: #9faa9f; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #ad573b1f; outline: 0; }
+.field textarea { min-height: 105px; resize: vertical; line-height: 1.5; }
+.field input[type=color] { width: 64px; height: 47px; padding: 3px; border: 1px solid #cdd3cc; border-radius: 6px; background: #fff; }
+.field input[type=range] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.field input:disabled, .field select:disabled { background: #f2f3f0; color: #747c75; }
+
+.row { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 69px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.row:has(> input[type=checkbox]) { cursor: pointer; }
+.row:last-child { border-bottom: 0; }
+.row-copy { min-width: 0; }
+.row-copy strong { display: block; font-size: 14px; line-height: 1.35; font-weight: 590; }
+.row-copy small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.row > input[type=checkbox] { position: relative; flex: none; width: 46px; height: 44px; margin: 0; border: 0; appearance: none; cursor: pointer; }
+.row > input[type=checkbox]::before { content: ""; position: absolute; top: 10px; left: 2px; width: 42px; height: 24px; border-radius: 14px; background: #cbd1cb; transition: background .15s; }
+.row > input[type=checkbox]::after { content: ""; position: absolute; top: 13px; left: 5px; width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 1px 3px #1b241c2a; transition: transform .15s; }
+.row > input[type=checkbox]:checked::before { background: var(--green); }
+.row > input[type=checkbox]:checked::after { transform: translateX(18px); }
+.check-row { display: flex; align-items: center; gap: 11px; min-height: 44px; color: #3b473f; font-size: 13px; line-height: 1.4; cursor: pointer; }
+.check-row input { flex: none; width: 19px; height: 19px; margin: 0; accent-color: var(--green); }
+
+.choice-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.choice { display: block; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 6px; background: #fff; cursor: pointer; transition: border-color .15s, background .15s; }
+.choice:hover { border-color: #a6b0a7; }
+.choice:has(input:checked) { border-color: var(--accent); background: #fdf9f6; }
+.choice:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+.choice::before { content: ""; display: block; height: 52px; margin: -13px -13px 12px; border-bottom: 1px solid var(--line); background: #ede2d7; border-left: 10px solid #ae694a; }
+.choice:has(input[value=minimal])::before { background: #f3f3f0; border-left-color: #424b43; }
+.choice:has(input[value=elegant])::before { background: #29302b; border-left-color: #aa9875; }
+.choice input { width: 17px; height: 17px; margin: 0 7px 0 0; vertical-align: middle; accent-color: var(--accent); }
+.choice strong { display: inline; font-size: 13px; font-weight: 650; }
+.choice small { display: block; margin-top: 6px; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.choice-grid[style] .choice::before { display: none; }
+.choice-grid[style] .choice { min-height: 72px; }
+
+.list { display: grid; border-top: 1px solid var(--line); }
+.list-card { min-width: 0; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.list-card .title { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 13px; font-size: 13px; }
+.list-card .title strong { font-weight: 650; }
+.list-card .title + .grid { margin-top: 13px; }
+.list-card small { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.pill { color: var(--green); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.pill::before { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 7px 1px 0; border-radius: 50%; background: currentColor; }
+.weekday { display: grid; grid-template-columns: minmax(145px,1fr) 122px 12px 122px; align-items: center; gap: 12px; min-height: 68px; border-bottom: 1px solid var(--line); }
+.weekday .day-control { display: flex; align-items: center; gap: 11px; min-height: 48px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.weekday .day-control input { width: 19px; height: 19px; margin: 0; accent-color: var(--green); }
+.weekday .time-field { display: grid; grid-template-columns: 18px 1fr; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+.weekday .time-field input { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border: 1px solid #cdd3cc; border-radius: 6px; background: #fff; color: var(--ink); font-size: 13px; }
+.weekday .time-field input:disabled { background: #f2f3f0; color: #8d948e; }
+.weekday .time-divider { color: #a4aca4; text-align: center; }
+
+.subtle { padding: 15px 17px; border-left: 2px solid #adb9aa; background: var(--soft); color: #536157; font-size: 12.5px; line-height: 1.5; }
+.inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.inline-actions .hint { margin: 0; }
+.secondary, .danger, .play, .upload { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 15px; border: 1px solid #cbd1ca; border-radius: 6px; background: #fff; color: #344039; font-size: 12.5px; font-weight: 600; text-decoration: none; }
+.secondary:hover, .play:hover, .upload:hover { border-color: #89978c; background: #f7f9f6; }
+.danger { color: #a24435; }
+.upload { position: relative; cursor: pointer; }
+.upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.upload:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+.brand-mark { width: 54px; height: 54px; flex: none; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #e9ede7; color: #344539; font: italic 25px Georgia,serif; }
+.brand-mark img { width: 100%; height: 100%; object-fit: cover; }
+.background-preview { position: relative; height: 180px; margin-top: 16px; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background-size: cover; background-position: center; }
+.background-preview::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,var(--dim,.4)); }
+.preview { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 126px; padding: 20px; border: 1px solid #e0ddd4; background: #f9f6ef; font-size: 13px; }
+.preview strong { display: block; margin: 0 0 6px; font: 21px Georgia,serif; }
+.preview .swatch { width: 66px; height: 66px; flex: none; }
+.print-preview.magnet { max-width: 280px; min-height: 240px; flex-direction: column; align-items: flex-start; }
+
+.savebar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px clamp(32px,5vw,72px); border-top: 1px solid var(--line); background: #fffffff5; }
+.savebar span { color: #81512c; font-size: 12.5px; font-weight: 600; }
+.primary-button { min-height: 44px; padding: 0 20px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 650; }
+.primary-button:hover:not(:disabled) { border-color: var(--accent-dark); background: var(--accent-dark); }
+.toast { position: fixed; right: 24px; bottom: 24px; z-index: 20; max-width: 340px; padding: 13px 17px; border-radius: 6px; background: var(--nav); color: #fff; box-shadow: 0 8px 26px #1d281d2b; font-size: 12.5px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .2s, transform .2s; }
+.toast.show { opacity: 1; transform: none; }
+
+.review-notes { max-width: 960px; margin: 0 auto; padding: 50px 24px 70px; }
+.review-notes details { border-top: 1px solid #d8ddd6; padding: 22px 0; }
+.review-notes summary { cursor: pointer; font-size: 13px; font-weight: 650; }
+.review-notes p, .review-notes td { color: #536157; font-size: 12.5px; line-height: 1.55; }
+.review-notes table { width: 100%; margin-top: 18px; border-collapse: collapse; }
+.review-notes caption { margin: 0 0 10px; text-align: left; font-size: 13px; font-weight: 650; }
+.review-notes th, .review-notes td { padding: 12px 8px 12px 0; border-top: 1px solid #e0e3df; text-align: left; vertical-align: top; }
+.review-notes th { width: 28%; font-size: 12px; font-weight: 650; }
+
+@media (max-width: 1130px) {
+  .shell { grid-template-columns: 70px 218px minmax(0,1fr); }
+  .primary { padding-inline: 8px; }
+  .brand { justify-content: center; padding-inline: 0; }
+  .brand strong { font-size: 27px; }
+  .brand strong::first-letter { color: #fff; }
+  .brand strong { font-size: 0; }
+  .brand strong::before { content: "ф"; font: italic 29px Georgia,serif; }
+  .brand i { font-size: 24px; }
+  .global-link { justify-content: center; padding: 0; }
+  .global-link span { display: none; }
+  .primary-rule { margin-inline: 12px; }
+}
+@media (min-width: 761px) and (max-width: 850px) {
+  .weekday { grid-template-columns: 1fr 1fr; gap: 2px 14px; padding: 10px 0; }
+  .weekday .day-control { grid-column: 1/-1; }
+  .weekday .time-divider { display: none; }
+}
+@media (max-width: 760px) {
+  .shell { display: block; min-height: 100vh; }
+  .primary, .section-rail { display: none; }
+  .workspace { min-height: 100vh; }
+  .mobile-top { display: flex; align-items: center; min-height: 56px; padding: 0 20px; border-bottom: 1px solid var(--line); }
+  .mobile-top strong { font: italic 23px Georgia,serif; letter-spacing: -.07em; }
+  .mobile-top i { color: var(--accent); font: normal 24px Georgia,serif; }
+  .mobile-picker { display: block; padding: 18px 20px 0; }
+  .mobile-picker select { display: block; width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid #cdd3cc; border-radius: 6px; background: var(--soft); color: var(--ink); font-size: 14px; font-weight: 650; }
+  .editor { min-height: 0; }
+  .editor-body { gap: 30px; padding: 26px 20px 120px; }
+  .block { padding-bottom: 30px; }
+  .grid, .grid.three { grid-template-columns: 1fr; gap: 18px; }
+  .choice-grid { grid-template-columns: 1fr; }
+  .choice-grid:not([style]) .choice { display: grid; grid-template-columns: 52px minmax(0,1fr) 20px; column-gap: 10px; align-items: center; min-height: 70px; }
+  .choice-grid:not([style]) .choice::before { grid-column: 1; grid-row: 1/3; width: 42px; height: 42px; margin: 0; border: 0; border-left: 8px solid #ae694a; border-radius: 3px; }
+  .choice-grid:not([style]) .choice strong { grid-column: 2; grid-row: 1; }
+  .choice-grid:not([style]) .choice small { grid-column: 2; grid-row: 2; margin: 0; }
+  .choice-grid:not([style]) .choice input { grid-column: 3; grid-row: 1/3; margin: 0; }
+  .choice-grid[style] { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  .weekday { grid-template-columns: 1fr 1fr; gap: 2px 14px; padding: 10px 0; }
+  .weekday .day-control { grid-column: 1/-1; }
+  .weekday .time-divider { display: none; }
+  .weekday .time-field { grid-template-columns: 18px minmax(0,1fr); }
+  .savebar { position: fixed; left: 0; right: 0; bottom: 64px; min-height: 68px; padding: 11px 20px; box-shadow: 0 -5px 22px #20272310; }
+  .mobile-bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); min-height: 64px; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid var(--line); background: #fff; }
+  .mobile-link { display: grid; place-content: center; justify-items: center; gap: 3px; min-height: 64px; border: 0; background: none; color: #78847a; font-size: 10px; }
+  .mobile-link svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .mobile-link[aria-current="page"] { color: var(--accent); font-weight: 700; }
+  .mobile-link[data-preview-other]:active { color: var(--ink); }
+  .toast { right: 12px; left: 12px; bottom: 78px; max-width: none; }
+  .review-notes { padding: 20px 20px 95px; }
+  .review-notes table, .review-notes tbody, .review-notes tr, .review-notes th, .review-notes td { display: block; width: 100%; }
+  .review-notes th { padding-bottom: 0; }
+  .review-notes td { padding-top: 4px; border-top: 0; }
+}
+  </style>
+</head>
+<body>
+  <svg class="sr-only" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="ico-orders" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2zM8 8h8M8 12h6"/></symbol>
+    <symbol id="ico-bookings" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 15h3"/></symbol>
+    <symbol id="ico-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h12"/></symbol>
+    <symbol id="ico-settings" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="9" cy="18" r="2"/></symbol>
+  </svg>
+  <div class="shell">
+    <aside class="primary" aria-label="Основная навигация">
+      <div class="brand" aria-label="Фкусс"><strong>фкусс</strong><i>.</i></div>
+      <nav class="global-nav" aria-label="Разделы админки">
+        <button type="button" class="global-link" data-preview-other="Заказы"><svg aria-hidden="true"><use href="#ico-orders"/></svg><span>Заказы</span></button>
+        <button type="button" class="global-link" data-preview-other="Брони"><svg aria-hidden="true"><use href="#ico-bookings"/></svg><span>Брони</span></button>
+        <button type="button" class="global-link" data-preview-other="Меню"><svg aria-hidden="true"><use href="#ico-menu"/></svg><span>Меню</span></button>
+        <div class="primary-rule" role="presentation"></div>
+        <span class="global-link" aria-current="page"><svg aria-hidden="true"><use href="#ico-settings"/></svg><span>Настройки</span></span>
+      </nav>
+    </aside>
+
+    <aside class="section-rail" aria-label="Разделы настроек">
+      <div class="rail-head"><h1>Настройки</h1></div>
+      <nav class="section-menu" aria-label="Настройки">
+        <div class="menu-group" data-group="Ресторан"><h2>Ресторан</h2>
+          <button type="button" class="section-link" data-section="contacts">Данные и контакты</button>
+          <button type="button" class="section-link" data-section="hours">Часы работы</button>
+        </div>
+        <div class="menu-group" data-group="Сайт"><h2>Сайт</h2>
+          <button type="button" class="section-link" data-section="appearance">Оформление</button>
+          <button type="button" class="section-link" data-section="pages">Страницы</button>
+          <button type="button" class="section-link" data-section="gallery">Фотографии</button>
+          <button type="button" class="section-link" data-section="promos">Акции</button>
+          <button type="button" class="section-link" data-section="banquets">Банкеты</button>
+          <button type="button" class="section-link" data-section="print">Печатные материалы</button>
+        </div>
+        <div class="menu-group" data-group="Заказы и брони"><h2>Заказы и брони</h2>
+          <button type="button" class="section-link" data-section="delivery">Доставка и самовывоз</button>
+          <button type="button" class="section-link" data-section="payments">Оплата и бонусы</button>
+          <button type="button" class="section-link" data-section="booking">Бронирование</button>
+        </div>
+        <div class="menu-group" data-group="Меню"><h2>Меню</h2>
+          <button type="button" class="section-link" data-section="pricing">Правила цен</button>
+          <button type="button" class="section-link" data-section="sync">Импорт из Яндекс.Еды</button>
+        </div>
+        <div class="menu-group" data-group="Связь"><h2>Связь</h2>
+          <button type="button" class="section-link" data-section="guest">Связь с гостем</button>
+          <button type="button" class="section-link" data-section="notifications">Уведомления</button>
+        </div>
+        <div class="menu-group" data-group="Доступ и подписка"><h2>Доступ и подписка</h2>
+          <button type="button" class="section-link" data-section="team">Сотрудники</button>
+          <button type="button" class="section-link" data-section="billing">Подписка</button>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="workspace">
+      <header class="mobile-top"><strong>фкусс</strong><i>.</i></header>
+      <label class="mobile-picker" for="sectionPicker"><span class="sr-only">Раздел</span><select id="sectionPicker"></select></label>
+      <section class="editor" id="editor" aria-label="Данные и контакты">
+        <form class="editor-body" id="editorForm"></form>
+        <div class="savebar" id="savebar" hidden><span id="saveStatus" role="status">Есть несохранённые изменения</span><button class="primary-button" id="saveButton" type="submit" form="editorForm" disabled>Сохранить</button></div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-bottom" aria-label="Основная навигация">
+    <button type="button" class="mobile-link" data-preview-other="Заказы"><svg aria-hidden="true"><use href="#ico-orders"/></svg><span>Заказы</span></button>
+    <button type="button" class="mobile-link" data-preview-other="Брони"><svg aria-hidden="true"><use href="#ico-bookings"/></svg><span>Брони</span></button>
+    <button type="button" class="mobile-link" data-preview-other="Меню"><svg aria-hidden="true"><use href="#ico-menu"/></svg><span>Меню</span></button>
+    <span class="mobile-link" aria-current="page"><svg aria-hidden="true"><use href="#ico-settings"/></svg><span>Настройки</span></span>
+  </nav>
+  <div class="toast" id="toast" role="status"></div>
+
+  <template id="t-contacts">
+    <section class="block"><div class="grid"><label class="field">Название ресторана<input name="restaurantName" value="Кафе «Пример»" required></label><label class="field">Телефон для гостей<input name="restaurantPhone" type="tel" value="+7 999 000-00-00" required></label><label class="field">Email ресторана<input name="restaurantEmail" type="email" value="hello@example.ru"></label><label class="field">Адрес<input name="restaurantAddress" value="Москва, улица Примерная, 1"></label><label class="field">Номер WhatsApp<input name="publicWhatsapp" type="tel" value="+7 999 000-00-00"></label><label class="field">Ссылка на Telegram<input name="publicTelegram" type="url" placeholder="https://t.me/restaurant"></label></div></section>
+    <section class="block"><div class="inline-actions"><div class="brand-mark" aria-label="Пример логотипа">К</div><label class="upload">Загрузить логотип<input type="file" accept="image/png,image/jpeg,image/webp" data-upload="logo"></label><span class="hint" id="logoName">PNG, JPG или WebP</span></div></section>
+  </template>
+
+  <template id="t-hours">
+    <section class="block"><label class="field">Часовой пояс ресторана<select name="timezone"><option value="Europe/Kaliningrad">Калининград (UTC+2)</option><option value="Europe/Moscow" selected>Москва (UTC+3)</option><option value="Europe/Samara">Самара (UTC+4)</option><option value="Asia/Yekaterinburg">Екатеринбург (UTC+5)</option><option value="Asia/Omsk">Омск (UTC+6)</option><option value="Asia/Krasnoyarsk">Красноярск (UTC+7)</option><option value="Asia/Irkutsk">Иркутск (UTC+8)</option><option value="Asia/Yakutsk">Якутск (UTC+9)</option><option value="Asia/Vladivostok">Владивосток (UTC+10)</option><option value="Asia/Kamchatka">Камчатка (UTC+12)</option></select></label></section>
+    <section class="block"><h3>Обычная неделя</h3><p>Если время окончания раньше начала, ресторан работает через полночь.</p><div class="list" id="weekdayList"></div></section>
+    <section class="block"><h3>Особые дни</h3><div class="list" id="exceptionsList"></div><div class="inline-actions" style="margin-top:12px"><button type="button" class="secondary" data-action="add-exception">Добавить особый день</button></div></section>
+  </template>
+
+  <template id="t-delivery">
+    <section class="block"><div class="row"><div class="row-copy"><strong>Доставка</strong></div><input type="checkbox" name="deliveryEnabled" checked aria-label="Включить доставку"></div><div class="row"><div class="row-copy"><strong>Самовывоз</strong></div><input type="checkbox" name="pickupEnabled" checked aria-label="Включить самовывоз"></div><label class="field" style="margin-top:15px">Минимальная сумма заказа, ₽<input name="minOrder" type="number" min="0" step="1" value="800"></label></section>
+    <section class="block" id="deliveryZones"><h3>Зоны доставки</h3><div class="row"><div class="row-copy"><strong>Определять зону по адресу</strong><small>Работает, если карта и геокодер подключены.</small></div><input type="checkbox" name="geoEnabled" aria-label="Определять зону по адресу"></div><div id="geoFields" class="grid" style="margin:14px 0"><label class="field">Адрес вне зон<select name="outside"><option value="block">Не доставлять</option><option value="allow">Доставлять за отдельную плату</option></select></label><label class="field" id="outsidePriceField">Стоимость вне зон, ₽<input type="number" name="outsidePrice" min="0" value="300"></label></div><div class="list" id="zoneList"><div class="list-card"><div class="grid"><label class="field">Название зоны<input name="zoneName1" value="Центр"></label><label class="field">Доставка, мин<input name="zoneMinutes1" type="number" min="0" value="40"></label><label class="field">Заказ от, ₽<input name="zoneFrom1" type="number" min="0" value="0"></label><label class="field">Стоимость, ₽<input name="zonePrice1" type="number" min="0" value="200"></label><label class="field">Следующий порог: заказ от, ₽<input name="zoneFrom1b" type="number" min="0" value="2000"></label><label class="field">Стоимость при этом пороге, ₽<input name="zonePrice1b" type="number" min="0" value="0"></label></div><button class="secondary" type="button" data-action="add-tariff" style="margin-top:12px">Добавить порог стоимости</button><p class="hint" style="margin:11px 0 0">Границы задаются на карте.</p></div></div><div class="inline-actions" style="margin-top:13px"><button type="button" class="secondary" data-action="add-zone">Добавить зону</button></div></section>
+    <section class="block" id="deliveryOptions"><h3>Варианты доставки</h3><p>Стоимость берётся из зоны; здесь настраивается время.</p><div class="list" id="optionList"><div class="list-card" data-option><div class="grid"><label class="field">Название варианта<input name="optionName1" value="Как можно скорее"></label><label class="field">Когда доставить<select name="optionMode1"><option value="asap">Как можно скорее</option><option value="scheduled">К выбранному времени</option></select></label><label class="field">Доступен с<input name="optionFrom1" type="time" value="11:00"></label><label class="field">Доступен до<input name="optionTo1" type="time" value="23:00"></label></div><div class="grid three" data-scheduled hidden style="margin-top:12px"><label class="field">Шаг интервала, мин<input name="optionSlot1" type="number" min="15" value="30"></label><label class="field">Не раньше чем через, мин<input name="optionAhead1" type="number" min="0" value="60"></label><label class="field">На сколько дней вперёд<input name="optionDays1" type="number" min="0" max="30" value="7"></label></div><label class="field" style="margin-top:12px">Даты, когда вариант недоступен<input name="optionExceptions1" placeholder="2026-12-31, 2027-01-01"><small>Разделяйте даты запятой.</small></label></div></div><div class="inline-actions" style="margin-top:13px"><button type="button" class="secondary" data-action="add-option">Добавить вариант</button></div></section>
+  </template>
+
+  <template id="t-payments">
+    <section class="block"><h3>Оплата</h3><label class="field">Как гость оплачивает заказ<select name="payment"><option value="none">При получении</option><option value="yookassa">Онлайн через ЮKassa</option></select></label></section>
+<section class="block"><h3>Бонусы</h3><div class="grid"><label class="field">Кэшбэк с заказа, %<input name="cashback" type="number" min="0" max="100" value="5"></label><label class="field">Оплата бонусами до, %<input name="maxSpend" type="number" min="0" max="100" value="20"></label></div></section>
+  </template>
+
+  <template id="t-booking">
+    <section class="block"><div class="row"><div class="row-copy"><strong>Принимать брони на сайте</strong></div><input type="checkbox" name="bookingEnabled" checked aria-label="Включить бронирование"></div><div class="grid three" id="bookingFields" style="margin-top:15px"><label class="field">Шаг времени, мин<input name="slotMinutes" type="number" min="15" max="180" value="30"></label><label class="field">Гостей на один слот<input name="maxGuests" type="number" min="1" value="20"></label><label class="field">Минимум часов до визита<input name="hoursAhead" type="number" min="0" value="2"></label></div></section>
+  </template>
+
+  <template id="t-guest">
+    <section class="block"><h3>После оформления заказа</h3><p>Кнопка открывает WhatsApp после подтверждения заказа. Сообщение отправляет гость.</p><div class="row"><div class="row-copy"><strong>Показывать кнопку WhatsApp</strong><small>По умолчанию — номер из контактов: <span id="sharedWhatsapp">+7 999 000-00-00</span>.</small></div><input type="checkbox" name="whatsappAfterOrder" checked aria-label="Показывать кнопку WhatsApp после заказа"></div><div id="orderWhatsappOptions"><label class="check-row" style="margin-top:10px"><input type="checkbox" name="otherOrderWhatsapp">Другой номер для заказов</label><label class="field" id="orderWhatsappField" hidden>Номер для заказов<input type="tel" name="orderWhatsapp" placeholder="+7 999 000-00-00"></label></div></section>
+    <section class="block"><h3>Ответ гостю из админки</h3><div class="row"><div class="row-copy"><strong>WhatsApp</strong></div><input type="checkbox" name="replyWhatsapp" checked aria-label="Показывать ссылку WhatsApp для ответа гостю"></div><div class="row"><div class="row-copy"><strong>Telegram</strong><small>Поиск зависит от настроек приватности гостя.</small></div><input type="checkbox" name="replyTelegram" checked aria-label="Показывать ссылку Telegram для ответа гостю"></div></section>
+  </template>
+
+  <template id="t-notifications">
+    <section class="block"><h3>Новые заказы и брони</h3><div class="row"><div class="row-copy"><strong>Telegram</strong></div><input type="checkbox" name="notifyTelegram" aria-label="Включить уведомления Telegram"></div><div id="telegramField"><label class="field" style="margin:13px 0">ID чата Telegram<input name="telegramChat" placeholder="Например, -100123456789"></label></div><div class="row"><div class="row-copy"><strong>MAX</strong></div><input type="checkbox" name="notifyMax" aria-label="Включить уведомления MAX"></div><div id="maxField"><label class="field" style="margin:13px 0">ID чата MAX<input name="maxChat" placeholder="ID чата"></label></div><div class="row"><div class="row-copy"><strong>Email</strong></div><input type="checkbox" name="notifyEmail" checked aria-label="Включить уведомления по email"></div><div id="emailField"><label class="field" style="margin:13px 0">Адрес для уведомлений<input name="notifyAddress" type="email" value="orders@example.ru"></label></div></section>
+<section class="block"><h3>Звук в панели</h3><div class="row"><label class="check-row"><input type="radio" name="sound" value="none">Без звука</label></div><div class="row"><label class="check-row"><input type="radio" name="sound" value="one" checked>Сигнал 1</label><button class="play" type="button" data-action="play-sound" data-tone="one">Прослушать</button></div><div class="row"><label class="check-row"><input type="radio" name="sound" value="two">Сигнал 2</label><button class="play" type="button" data-action="play-sound" data-tone="two">Прослушать</button></div><div class="row" id="customSoundRow" hidden><label class="check-row"><input type="radio" name="sound" value="custom"><span id="customSoundLabel">Свой звук</span></label><div class="inline-actions"><button class="play" type="button" data-action="play-sound" data-tone="custom">Прослушать</button><button class="danger" type="button" data-action="remove-custom-sound">Удалить</button></div></div><div class="inline-actions" style="margin-top:13px"><label class="upload">Загрузить свой звук<input type="file" accept=".mp3,.wav,.ogg,audio/mpeg,audio/wav,audio/ogg" data-upload="sound"></label><span class="hint" id="soundName">MP3, WAV или Ogg до 2 МБ</span></div><label class="field" id="soundRepeatsField" style="margin-top:13px">Сколько раз повторить сигнал<input name="soundRepeats" type="number" min="1" max="10" value="2"><small>Повторяется до обработки нового заказа или брони.</small></label></section>
+  </template>
+
+  <template id="t-team">
+    <section class="block"><div class="list" id="teamList"><div class="list-card"><div class="title"><strong>Владелец</strong><span class="pill">Активен</span></div><small>Доступ ко всем разделам</small></div><div class="list-card"><div class="title"><strong>Сотрудник</strong><span class="pill">Активен</span></div><small>Заказы, брони и меню; настройки доступны после PIN владельца</small></div></div><div class="inline-actions" style="margin-top:13px"><button class="secondary" type="button" data-action="add-person">Добавить сотрудника</button></div></section>
+  </template>
+
+  <template id="t-billing">
+    <section class="block"><div class="subtle">Платформа не подключена. После подключения здесь появятся тариф, баланс и счета.</div></section>
+  </template>
+
+  <template id="t-appearance">
+    <section class="block"><div class="choice-grid"><label class="choice"><input type="radio" name="preset" value="warm" checked><strong>Тёплый</strong><small>Мягкий фон и крупные фото</small></label><label class="choice"><input type="radio" name="preset" value="minimal"><strong>Минимальный</strong><small>Простая типографика</small></label><label class="choice"><input type="radio" name="preset" value="elegant"><strong>Тёмный</strong><small>Контрастные детали</small></label></div><div class="grid" style="margin-top:16px"><label class="field">Фирменный цвет<input type="color" name="accent" value="#b85031"></label></div></section>
+    <section class="block"><div class="row"><div class="row-copy"><strong>Фото на первом экране</strong></div><input type="checkbox" name="backgroundEnabled" checked aria-label="Показывать фото на первом экране"></div><div id="backgroundFields" style="margin-top:15px"><div class="grid"><label class="field">Положение изображения<select name="backgroundPosition"><option>По центру</option><option>Сверху</option><option>Снизу</option></select></label><label class="field">Затемнение · <span id="dimValue">40 %</span><input type="range" name="dim" min="0" max="100" value="40"></label></div><label class="check-row"><input type="checkbox" name="disableOnMobile">Скрыть фон на телефонах</label><div class="inline-actions"><label class="upload">Загрузить фон<input type="file" accept="image/png,image/jpeg,image/webp" data-upload="background"></label><span class="hint" id="backgroundName">PNG, JPG или WebP</span></div><div class="background-preview" id="backgroundPreview" hidden role="img" aria-label="Предпросмотр фонового фото"></div></div></section>
+  </template>
+
+  <template id="t-pages">
+    <section class="block"><label class="field">Страница<select name="page"><option>О ресторане</option><option>Доставка и оплата</option><option>Контакты</option></select></label><div class="grid" style="margin-top:15px"><label class="field">Заголовок<input name="pageTitle" value="О ресторане"></label><label class="field full">Текст страницы<textarea name="pageText" rows="7">Здесь можно рассказать гостям о ресторане.</textarea></label></div><div class="inline-actions" style="margin-top:13px"><button class="secondary" type="button" data-action="page-preview">Показать предпросмотр</button></div><div class="subtle" id="pagePreview" hidden style="margin-top:12px"></div></section>
+  </template>
+
+  <template id="t-gallery">
+    <section class="block"><div class="list" id="galleryList"><div class="subtle" id="emptyGallery">Фото пока нет.</div></div><div class="inline-actions" style="margin-top:13px"><label class="upload">Добавить фото<input type="file" accept="image/png,image/jpeg,image/webp" data-upload="gallery"></label></div></section>
+  </template>
+
+  <template id="t-promos">
+    <section class="block"><div class="list" id="promoList"><div class="list-card"><div class="grid"><label class="field">Заголовок<input name="promoTitle1" value="Пример акции"></label><label class="field">Короткое описание<input name="promoDescription1" value="Специальное предложение для гостей"></label><label class="check-row full"><input type="checkbox" name="promoEnabled1" checked>Показывать на сайте</label></div></div></div><div class="inline-actions" style="margin-top:13px"><button class="secondary" type="button" data-action="add-promo">Добавить акцию</button></div></section>
+  </template>
+
+  <template id="t-banquets">
+    <section class="block"><div class="row"><div class="row-copy"><strong>Показывать банкеты на сайте</strong></div><input type="checkbox" name="banquetsEnabled" checked aria-label="Показывать раздел Банкеты"></div><div id="banquetFields" style="margin-top:15px"><div class="grid"><label class="field">Заголовок<input name="banquetTitle" value="Банкеты"></label><label class="field">Телефон менеджера<input name="banquetPhone" type="tel" placeholder="+7 999 000-00-00"></label><label class="field full">Описание<textarea name="banquetDescription">Расскажите гостям, какие события можно провести у вас.</textarea></label><label class="field">Условия<textarea name="banquetConditions"></textarea></label><label class="field">Цены<textarea name="banquetPrices"></textarea></label><label class="field">Текст кнопки<input name="banquetCta" value="Оставить заявку"></label><label class="field">Ссылка кнопки<input name="banquetUrl" type="url" placeholder="https://wa.me/..."></label></div></div></section><section class="block" id="banquetHalls"><h3>Залы</h3><div class="list" id="hallList"><div class="list-card"><div class="grid"><label class="field">Название зала<input name="hallName1" value="Основной зал"></label><label class="field">Вместимость<input name="hallCapacity1" value="До 40 гостей"></label></div></div></div><div class="inline-actions" style="margin-top:13px"><button class="secondary" type="button" data-action="add-hall">Добавить зал</button></div></section>
+  </template>
+
+  <template id="t-print">
+    <section class="block"><div class="choice-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"><label class="choice"><input type="radio" name="printKind" value="card" checked><strong>Визитка</strong><small>90 × 50 мм</small></label><label class="choice"><input type="radio" name="printKind" value="magnet"><strong>Магнит</strong><small>70 × 70 мм</small></label></div></section><section class="block"><div class="grid"><label class="field">Заголовок<input name="printTitle" value="Ваш ресторан"></label><label class="field">Текст рядом с QR-кодом<input name="printQrText" value="Откройте меню"></label><label class="field full">Адрес сайта<input name="printUrl" value="restaurant.example.ru" disabled><small>Подставляется автоматически.</small></label></div><div class="preview print-preview" id="printPreview" style="margin-top:15px"><div><strong id="printPreviewTitle">Ваш ресторан</strong><span id="printPreviewQr">Откройте меню</span></div><div class="swatch" style="display:grid;place-items:center;background:#fff;color:#333;border:1px solid #d9d5ce;font-size:11px;text-align:center">QR<br>код</div></div></section>
+  </template>
+
+  <template id="t-pricing">
+    <section class="block"><div class="grid"><label class="field">Общий режим цен<select name="priceMode"><option value="yandex">Цены из Яндекс.Еды</option><option value="manual">Ручные цены</option><option value="coefficient">Цены Яндекс.Еды с поправкой</option></select><small>Ручная цена блюда имеет приоритет. Поправка действует на добавки без ручной цены.</small></label><label class="field" id="pricePercentField">Поправка, %<input name="pricePercent" type="number" min="-100" max="500" value="0"></label></div></section>
+  </template>
+
+  <template id="t-sync">
+    <section class="block"><label class="field">Идентификатор ресторана в Яндекс.Еде<input name="placeSlug" placeholder="Например, restaurant_moscow"><small>Последняя часть ссылки на ресторан.</small></label><div class="row" style="margin-top:12px"><div class="row-copy"><strong>Обновлять автоматически</strong></div><input type="checkbox" name="syncEnabled" aria-label="Автоматически обновлять меню"></div><label class="field" id="syncIntervalField" style="margin-top:13px">Каждые, мин<input name="syncInterval" type="number" min="5" max="1440" value="60"></label></section><section class="block"><div class="subtle">Последнее обновление: нет данных.</div><div class="inline-actions" style="margin-top:13px"><button class="secondary" type="button" data-action="sync-now">Запустить обновление сейчас</button></div></section>
+  </template>
+
+  <section class="review-notes" id="reasoning"><details><summary>Решения по макету</summary>
+    <p>Это интерактивный прототип раздела «Настройки». «Заказы», «Брони» и «Меню» показаны для контекста. Сохранение действует до перезагрузки файла и не меняет данные ресторана.</p>
+    <table><caption>Что изменено и зачем</caption><tbody>
+      <tr><th>Роли разделены</th><td>Основная навигация оставляет сотруднику заказы, брони и редактирование блюд в меню. Настройки сайта и ресторана находятся в отдельном разделе для владельца или администратора.</td></tr>
+      <tr><th>Группы внутри настроек</th><td>Параметры собраны по задачам: ресторан, сайт, заказы, правила меню, связь, доступ и подписка. Содержание не разнесено по рабочим разделам сотрудника.</td></tr>
+      <tr><th>Звук среди уведомлений</th><td>Сигнал в панели и сообщения команде помогают заметить новый заказ или бронь. Они собраны в одном редакторе; сигнал можно отключить.</td></tr>
+      <tr><th>Спокойный рабочий экран</th><td>Убран внешний слой карточек, декоративные статусы, дублирующие заголовки и постоянная кнопка сохранения. Границы отделяют только разные задачи внутри формы.</td></tr>
+      <tr><th>Выбор раздела</th><td>На большом экране разделы видны слева, на телефоне — в одном списке. Поля открываются без прокрутки через остальные настройки.</td></tr>
+      <tr><th>Сохранение</th><td>Кнопка появляется после изменения и сохраняет только открытый раздел. При переходе с несохранёнными данными показывается предупреждение.</td></tr>
+      <tr><th>Что учитывать при внедрении</th><td>Понадобится сохранить права владельца и PIN для перенесённых экранов, перенести существующие номера WhatsApp и цены доставки, а расчёты заказов проверить серверными тестами.</td></tr>
+    </tbody></table>
+  </details></section>
+  <script>
+const form=document.getElementById('editorForm'),picker=document.getElementById('sectionPicker'),saveButton=document.getElementById('saveButton'),toast=document.getElementById('toast');
+    let current='contacts',dirty=false,toastTimer,soundContext,customAudio,customAudioUrl;const savedHTML={};let pageDrafts={'О ресторане':{title:'О ресторане',text:'Здесь можно рассказать гостям о ресторане.'},'Доставка и оплата':{title:'Доставка и оплата',text:'Условия получения и оплаты заказа.'},'Контакты':{title:'Контакты',text:'Адрес и способы связи с рестораном.'}};let savedPageDrafts=structuredClone(pageDrafts),pageSelected='О ресторане';
+    function notify(message){toast.textContent=message;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3300)}
+    function serialize(){const copy=form.cloneNode(true),source=[...form.querySelectorAll('input,select,textarea')],target=[...copy.querySelectorAll('input,select,textarea')];source.forEach((el,i)=>{const out=target[i];if(el.type==='file')return;if(el.type==='checkbox'||el.type==='radio'){out.checked=el.checked;if(el.checked)out.setAttribute('checked','');else out.removeAttribute('checked')}else if(el.tagName==='SELECT'){[...out.options].forEach((option,j)=>{option.selected=el.options[j].selected;if(option.selected)option.setAttribute('selected','');else option.removeAttribute('selected')})}else if(el.tagName==='TEXTAREA'){out.textContent=el.value}else out.setAttribute('value',el.value)});return copy.innerHTML}
+    function setDirty(value){dirty=value;document.getElementById('savebar').hidden=!value||current==='billing';saveButton.disabled=!value}
+    function section(id) {
+  const target = document.querySelector('.section-link[data-section="' + id + '"]');
+  if (!target) return;
+  if (id === current && form.childElementCount) return;
+  if (id !== current && dirty) {
+    if (!confirm('Изменения в текущем разделе не сохранены. Перейти без сохранения?')) {
+      picker.value = current;
+      return;
+    }
+    if (current === 'pages') pageDrafts = structuredClone(savedPageDrafts);
+  }
+
+  current = id;
+  document.querySelectorAll('.section-link').forEach((item) => {
+    if (item === target) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
+
+  picker.replaceChildren();
+  const nav = document.querySelector('.section-menu');
+  nav.querySelectorAll('.menu-group').forEach((group) => {
+    const optionGroup = document.createElement('optgroup');
+    optionGroup.label = group.dataset.group;
+    group.querySelectorAll('.section-link').forEach((item) => {
+      optionGroup.append(new Option(item.textContent, item.dataset.section));
+    });
+    picker.append(optionGroup);
+  });
+  picker.value = id;
+  document.getElementById('editor').setAttribute('aria-label', target.textContent);
+  form.innerHTML = savedHTML[id] ?? document.getElementById('t-' + id).innerHTML;
+  setDirty(false);
+  initialize(id);
+  updateConditional();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+    function initialize(id) {
+  if (id === 'hours' && !savedHTML[id]) {
+    const list = document.getElementById('weekdayList');
+    ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+      .forEach((day, i) => {
+        list.insertAdjacentHTML('beforeend', `<div class="weekday">
+          <label class="day-control"><input type="checkbox" name="dayOpen${i}" checked>${day}</label>
+          <label class="time-field">С<input type="time" name="dayFrom${i}" value="12:00"></label>
+          <span class="time-divider" aria-hidden="true">—</span>
+          <label class="time-field">До<input type="time" name="dayTo${i}" value="23:00"></label>
+        </div>`);
+      });
+  }
+  if (id === 'guest') {
+    const number = savedHTML.contacts ? extractSavedPhone() : null;
+    document.getElementById('sharedWhatsapp').textContent = number || '+7 999 000-00-00';
+  }
+  if (id === 'pages') {
+    pageSelected = form.elements.namedItem('page').value;
+    const draft = pageDrafts[pageSelected];
+    form.elements.namedItem('pageTitle').value = draft.title;
+    form.elements.namedItem('pageText').value = draft.text;
+  }
+}
+    function extractSavedPhone(){const holder=document.createElement('div');holder.innerHTML=savedHTML.contacts;return holder.querySelector('[name="publicWhatsapp"]')?.getAttribute('value')}
+    function updateConditional(){const read=name=>form.elements.namedItem(name),show=(id,value)=>{const element=document.getElementById(id);if(element)element.hidden=!value};const disable=(selector,value)=>{const element=form.querySelector(selector);if(element)element.disabled=!value};if(current==='appearance'){const on=read('backgroundEnabled').checked;show('backgroundFields',on);form.querySelectorAll('#backgroundFields input,#backgroundFields select').forEach(el=>el.disabled=!on);document.getElementById('dimValue').textContent=read('dim').value+' %';const preview=document.getElementById('backgroundPreview');preview.style.setProperty('--dim',Number(read('dim').value)/100);preview.style.backgroundPosition=({'По центру':'center','Сверху':'center top','Снизу':'center bottom'})[read('backgroundPosition').value]}if(current==='pricing'){const coeff=read('priceMode').value==='coefficient';show('pricePercentField',coeff);disable('[name="pricePercent"]',coeff)}if(current==='booking'){show('bookingFields',read('bookingEnabled').checked);form.querySelectorAll('#bookingFields input').forEach(el=>el.disabled=!read('bookingEnabled').checked)}if(current==='notifications'){[['telegramField','notifyTelegram'],['maxField','notifyMax'],['emailField','notifyEmail']].forEach(([id,name])=>{const on=read(name).checked;show(id,on);form.querySelectorAll('#'+id+' input').forEach(el=>el.disabled=!on)});const soundOn=read('sound').value!=='none';show('soundRepeatsField',soundOn);disable('[name="soundRepeats"]',soundOn)}if(current==='sync'){const on=read('syncEnabled').checked;show('syncIntervalField',on);disable('[name="syncInterval"]',on)}if(current==='banquets'){show('banquetFields',read('banquetsEnabled').checked);show('banquetHalls',read('banquetsEnabled').checked);form.querySelectorAll('#banquetHalls [name^="hallName"]').forEach(el=>el.required=read('banquetsEnabled').checked);form.querySelectorAll('#banquetFields input,#banquetFields textarea').forEach(el=>el.disabled=!read('banquetsEnabled').checked)}if(current==='delivery'){const deliveryOn=read('deliveryEnabled').checked;show('deliveryZones',deliveryOn);show('deliveryOptions',deliveryOn);form.querySelectorAll('#deliveryZones [name^="zoneName"],#deliveryOptions [name^="optionName"]').forEach(el=>el.required=deliveryOn);const on=read('geoEnabled').checked;show('geoFields',on);const outside=read('outside').value==='allow';show('outsidePriceField',on&&outside);disable('[name="outsidePrice"]',on&&outside);disable('[name="outside"]',on);form.querySelectorAll('[data-option]').forEach(card=>{const scheduled=card.querySelector('[name^="optionMode"]').value==='scheduled',fields=card.querySelector('[data-scheduled]');fields.hidden=!scheduled;fields.querySelectorAll('input').forEach(input=>input.disabled=!scheduled)})}if(current==='guest'){const enabled=read('whatsappAfterOrder').checked;show('orderWhatsappOptions',enabled);const other=enabled&&read('otherOrderWhatsapp').checked;show('orderWhatsappField',other);disable('[name="orderWhatsapp"]',other)}if(current==='pages'){const preview=document.getElementById('pagePreview');if(!preview.hidden)preview.textContent=(read('pageTitle').value||'Без заголовка')+' — '+(read('pageText').value||'Текст не заполнен')}if(current==='print'){document.getElementById('printPreviewTitle').textContent=read('printTitle').value||'Ваш ресторан';document.getElementById('printPreviewQr').textContent=read('printQrText').value||'Откройте меню';const magnet=form.querySelector('[name="printKind"][value="magnet"]').checked;document.getElementById('printPreview').classList.toggle('magnet',magnet);}if(current==='hours'){form.querySelectorAll('[name^="dayOpen"]').forEach((check,i)=>{form.querySelectorAll(`[name="dayFrom${i}"],[name="dayTo${i}"]`).forEach(input=>input.disabled=!check.checked)});form.querySelectorAll('#exceptionsList .list-card').forEach(card=>{const special=card.querySelector('select').value==='Особые часы',times=card.querySelector('[data-exception-times]');times.hidden=!special;times.querySelectorAll('input').forEach(input=>input.disabled=!special)})}}
+    function addCard(listId,html){document.getElementById(listId).insertAdjacentHTML('beforeend',html);setDirty(true);updateConditional()}
+    function playTone(kind){try{if(kind==='custom'){if(customAudio)void customAudio.play();else notify('Сначала загрузите звуковой файл');return}soundContext??=new(window.AudioContext||window.webkitAudioContext)();const times=kind==='one'?[660,880]:[523,659,784];times.forEach((frequency,index)=>{const oscillator=soundContext.createOscillator(),gain=soundContext.createGain(),at=soundContext.currentTime+index*.16;oscillator.type=kind==='one'?'sine':'triangle';oscillator.frequency.value=frequency;gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.08,at+.02);gain.gain.exponentialRampToValueAtTime(.0001,at+.14);oscillator.connect(gain).connect(soundContext.destination);oscillator.start(at);oscillator.stop(at+.15)})}catch{notify('Браузер не смог воспроизвести звук')}}
+    document.querySelectorAll('[data-preview-other]').forEach(button=>button.addEventListener('click',()=>notify('Раздел «'+button.dataset.previewOther+'» вне макета настроек')));
+    document.querySelectorAll('.section-link').forEach(button=>button.addEventListener('click',()=>section(button.dataset.section)));
+    picker.addEventListener('change',()=>section(picker.value));
+    form.addEventListener('input',event=>{if(event.target.type==='file'||(current==='pages'&&event.target.name==='page'))return;if(current==='pages'&&['pageTitle','pageText'].includes(event.target.name)){pageDrafts[pageSelected]={title:form.elements.namedItem('pageTitle').value,text:form.elements.namedItem('pageText').value}}setDirty(true);updateConditional()});form.addEventListener('change',event=>{if(current==='pages'&&event.target.name==='page'){pageSelected=event.target.value;const draft=pageDrafts[pageSelected];form.elements.namedItem('pageTitle').value=draft.title;form.elements.namedItem('pageText').value=draft.text;const preview=document.getElementById('pagePreview');preview.hidden=true;form.querySelector('[data-action="page-preview"]').textContent='Показать предпросмотр'}if(event.target.matches('[data-upload]')){const file=event.target.files?.[0];if(!file)return;const type=event.target.dataset.upload;if(type==='gallery'){document.getElementById('emptyGallery')?.remove();const n=document.querySelectorAll('#galleryList .list-card').length+1;const url=URL.createObjectURL(file);addCard('galleryList',`<div class="list-card"><img src="${url}" alt="Новое фото" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:10px"><label class="field">Подпись к фото<input name="galleryAlt${n}" value=""></label></div>`)}else{const label=document.getElementById(type+'Name');if(label)label.textContent=file.name;if(type==='logo'){const preview=form.querySelector('.brand-mark'),img=document.createElement('img');img.src=URL.createObjectURL(file);img.alt='Логотип';preview.replaceChildren(img)}if(type==='background'){const preview=document.getElementById('backgroundPreview');preview.style.backgroundImage='url("'+URL.createObjectURL(file)+'")';preview.hidden=false}if(type==='sound'){if(file.size>2*1024*1024){notify('Файл слишком большой. Максимум — 2 МБ');event.target.value='';label.textContent='MP3, WAV или Ogg до 2 МБ';return}if(customAudioUrl)URL.revokeObjectURL(customAudioUrl);customAudioUrl=URL.createObjectURL(file);customAudio=new Audio(customAudioUrl);document.getElementById('customSoundRow').hidden=false;document.getElementById('customSoundLabel').textContent=file.name;form.querySelector('[name="sound"][value="custom"]').checked=true}}setDirty(true)}updateConditional()});
+    form.addEventListener('submit',event=>{event.preventDefault();if(!form.reportValidity())return;savedHTML[current]=serialize();if(current==='pages')savedPageDrafts=structuredClone(pageDrafts);setDirty(false);notify('Изменения сохранены в макете до обновления страницы')});
+    form.addEventListener('click',event=>{const row=event.target.closest('.row'),toggle=row?.querySelector(':scope > input[type="checkbox"]');if(toggle&&event.target!==toggle&&!event.target.closest('button,a,label'))toggle.click()});
+    form.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(!button)return;const action=button.dataset.action;if(action==='play-sound'){playTone(button.dataset.tone);return}if(action==='remove-custom-sound'){if(customAudioUrl)URL.revokeObjectURL(customAudioUrl);customAudioUrl=undefined;customAudio=undefined;document.getElementById('customSoundRow').hidden=true;form.querySelector('[name="sound"][value="one"]').checked=true;document.getElementById('soundName').textContent='MP3, WAV или Ogg до 2 МБ';setDirty(true);return}if(action==='sync-now'){notify('Это макет: обновление Яндекс.Еды не запускается');return}if(action==='page-preview'){const box=document.getElementById('pagePreview');box.hidden=!box.hidden;box.textContent=(form.elements.namedItem('pageTitle').value||'Без заголовка')+' — '+(form.elements.namedItem('pageText').value||'Текст не заполнен');button.textContent=box.hidden?'Показать предпросмотр':'Скрыть предпросмотр';return}if(action==='add-exception'){const n=document.querySelectorAll('#exceptionsList .list-card').length+1;addCard('exceptionsList',`<div class="list-card"><div class="grid"><label class="field">Дата<input type="date" name="exceptionDate${n}" required></label><label class="field">Режим<select name="exceptionMode${n}"><option>Выходной</option><option>Особые часы</option></select></label></div><div class="grid" data-exception-times hidden style="margin-top:12px"><label class="field">С<input type="time" name="exceptionFrom${n}" value="12:00"></label><label class="field">До<input type="time" name="exceptionTo${n}" value="23:00"></label></div></div>`)}if(action==='add-promo'){const n=document.querySelectorAll('#promoList .list-card').length+1;addCard('promoList',`<div class="list-card"><div class="grid"><label class="field">Заголовок<input name="promoTitle${n}" required></label><label class="field">Короткое описание<input name="promoDescription${n}"></label><label class="check-row full"><input type="checkbox" name="promoEnabled${n}">Показывать на сайте</label></div></div>`)}if(action==='add-hall'){const n=document.querySelectorAll('#hallList .list-card').length+1;addCard('hallList',`<div class="list-card"><div class="grid"><label class="field">Название зала<input name="hallName${n}" required></label><label class="field">Вместимость<input name="hallCapacity${n}"></label></div></div>`)}if(action==='add-tariff'){const card=button.closest('.list-card'),zone=[...document.querySelectorAll('#zoneList .list-card')].indexOf(card)+1,tier=card.querySelectorAll('[name^="zoneFrom"]').length+1;card.querySelector('.grid').insertAdjacentHTML('beforeend',`<label class="field">Следующий порог: заказ от, ₽<input name="zoneFrom${zone}_${tier}" type="number" min="0" value="0"></label><label class="field">Стоимость при этом пороге, ₽<input name="zonePrice${zone}_${tier}" type="number" min="0" value="0"></label>`);setDirty(true);return}if(action==='add-zone'){const n=document.querySelectorAll('#zoneList .list-card').length+1;addCard('zoneList',`<div class="list-card"><div class="grid"><label class="field">Название зоны<input name="zoneName${n}" required></label><label class="field">Доставка, мин<input name="zoneMinutes${n}" type="number" min="0"></label><label class="field">Заказ от, ₽<input name="zoneFrom${n}" type="number" min="0" value="0"></label><label class="field">Стоимость, ₽<input name="zonePrice${n}" type="number" min="0" value="0"></label></div><button class="secondary" type="button" data-action="add-tariff" style="margin-top:12px">Добавить порог стоимости</button></div>`)}if(action==='add-option'){const n=document.querySelectorAll('#optionList .list-card').length+1;addCard('optionList',`<div class="list-card" data-option><div class="grid"><label class="field">Название варианта<input name="optionName${n}" required></label><label class="field">Когда доставить<select name="optionMode${n}"><option value="asap">Как можно скорее</option><option value="scheduled">К выбранному времени</option></select></label><label class="field">Доступен с<input name="optionFrom${n}" type="time" value="11:00"></label><label class="field">Доступен до<input name="optionTo${n}" type="time" value="23:00"></label></div><div class="grid three" data-scheduled hidden style="margin-top:12px"><label class="field">Шаг интервала, мин<input name="optionSlot${n}" type="number" min="15" value="30"></label><label class="field">Не раньше чем через, мин<input name="optionAhead${n}" type="number" min="0" value="60"></label><label class="field">На сколько дней вперёд<input name="optionDays${n}" type="number" min="0" max="30" value="7"></label></div><label class="field" style="margin-top:12px">Даты, когда вариант недоступен<input name="optionExceptions${n}" placeholder="2026-12-31, 2027-01-01"><small>Разделяйте даты запятой.</small></label></div>`)}if(action==='add-person'){const n=document.querySelectorAll('#teamList .list-card').length+1;addCard('teamList',`<div class="list-card"><div class="grid"><label class="field">Имя<input name="personName${n}" required></label><label class="field">Логин<input name="personLogin${n}" required></label><label class="field">Роль<select name="personRole${n}"><option>Сотрудник</option><option>Владелец</option></select></label><label class="field">Пароль<input name="personPassword${n}" type="password" minlength="12" required></label></div></div>`)}});
+
+    window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue=''}});
+    section('contacts');
+  </script>
+</body>
+</html>

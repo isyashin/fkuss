@@ -139,6 +139,11 @@ mv "$STAGE/content" "$SITE_DIR/content"
 rmdir "$STAGE"
 CID=$(docker run -d --user root -v "$SITE_DIR:/s" "$IMAGE" chown -R 100:101 /s/content)
 docker wait "$CID" >/dev/null; docker rm "$CID" >/dev/null
+# rm+mv меняет inode каталога — bind-mount контейнера продолжает смотреть на
+# старый (удалённый) каталог: пересоздаём контейнер, чтобы увидеть контент
+if docker ps -a --format '{{.Names}}' | grep -q "^${SLUG}-app-1$"; then
+  (cd "$SITE_DIR" && docker compose up -d --force-recreate >/dev/null)
+fi
 log "контент на месте ($(du -sh "$SITE_DIR/content" | cut -f1))"
 
 # ─── 3. Seed (серверный, без туннелей) ──────────────────────────────────────

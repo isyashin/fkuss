@@ -152,7 +152,7 @@ async function downloadFirstOk(urls: string[], what: string): Promise<Buffer | n
  * Шаг 4 лестницы: антибот на API. Playwright грузит карточку и перехватывает
  * ответы тех же эндпоинтов. Капча-сервисы и чужие сессии не используются.
  */
-async function fetchViaBrowser(pageUrl: string, placeSlug: string): Promise<{ catalog: CatalogResponse; menu: MenuResponse }> {
+async function fetchViaBrowser(pageUrl: string): Promise<{ catalog: CatalogResponse; menu: MenuResponse }> {
   const { chromium } = await import("@playwright/test");
   const browser = await chromium.launch();
   try {
@@ -224,7 +224,7 @@ async function main() {
     } catch (error) {
       if (!useBrowser) throw error;
       diag(`прямой API не пробит (${error instanceof Error ? error.message : error}) — включаю --browser`);
-      const captured = await fetchViaBrowser(url, placeSlug);
+      const captured = await fetchViaBrowser(url);
       catalog = captured.catalog;
       menuData = captured.menu;
     }

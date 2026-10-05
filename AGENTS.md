@@ -69,7 +69,11 @@ npm run build      # сборка
 Инжест и операции (в `template/`):
 
 ```bash
-npx tsx scripts/ingest-yandex-eda.ts <url> --out <dir>   # Яндекс.Еда → content/
+npx tsx scripts/assemble-content.ts --input <manifest> --out <dir>  # BUILD: манифест + источник (Еда|папка) → content/
+npx tsx scripts/validate-content.ts <dir>                           # VALIDATE: zod+readiness без БД
+npx tsx scripts/ingest-yandex-eda.ts <url> --out <dir>   # Яндекс.Еда → content/ (лестница устойчивости, --fixture-dir, --browser)
+npx tsx scripts/normalize-images.ts <in> <content>       # фото → WebP 800/400 по конвенции имён
+npx tsx scripts/new-content.ts <dir> --slug <s> --name "X"  # скелет content/ для папочного ввода
 npx tsx scripts/report-metrics.ts                        # метрики → платформа (нужны PLATFORM_URL, SITE_KEY)
 ```
 
@@ -83,7 +87,8 @@ npx tsx scripts/seed-test.ts       # тестовые тариф/сайт/вла
 Скрипты сервера (в `scripts/` корня):
 
 ```bash
-scripts/deploy.sh <subdomain> [--domain=<домен>]   # деплой сайта (реестр портов, БД, compose)
+scripts/deploy.sh <subdomain> [--domain=<домен>]   # базовый деплой (реестр портов, БД, compose)
+scripts/provision-site.sh <slug> <content.tar.gz>  # ПОЛНЫЙ цикл: deploy → seed → владелец → платформа → Caddy → проверки (гейт approvedBy; --rollback, --dry-run)
 scripts/backup.sh                                   # бэкап всех тенантов (14 последних)
 scripts/export-site.sh <slug>                       # экспорт сайта для клиента
 scripts/update.sh [--no-restart]                    # git pull → сборка → рестарт всех сервисов

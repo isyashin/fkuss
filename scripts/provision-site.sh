@@ -73,14 +73,22 @@ except FileNotFoundError: registry = {"sites": {}}
 registry.get("sites", {}).pop(slug, None)
 json.dump(registry, open(path, "w"), indent=2)
 PY
+  # FK-safe порядок: сначала дети Site, потом сам Site (иначе RESTRICT)
   dpsql -d "$PLATFORM_DB" -c "DELETE FROM \"BalanceTransaction\" WHERE \"siteId\"='$SLUG'" >/dev/null 2>&1 || true
+  dpsql -d "$PLATFORM_DB" -c "DELETE FROM \"MetricSnapshot\" WHERE \"siteId\"='$SLUG'" >/dev/null 2>&1 || true
+  dpsql -d "$PLATFORM_DB" -c "DELETE FROM \"Payment\" WHERE \"siteId\"='$SLUG'" >/dev/null 2>&1 || true
+  dpsql -d "$PLATFORM_DB" -c "DELETE FROM \"Invoice\" WHERE \"siteId\"='$SLUG'" >/dev/null 2>&1 || true
+  dpsql -d "$PLATFORM_DB" -c "DELETE FROM \"_OwnerAccountToSite\" WHERE \"A\"='$SLUG' OR \"B\"='$SLUG'" >/dev/null 2>&1 || true
   dpsql -d "$PLATFORM_DB" -c "DELETE FROM \"Site\" WHERE slug='$SLUG'" >/dev/null 2>&1 || true
-  if [ -f /etc/caddy/Caddyfile ] && grep -q "^$DOMAIN {" /etc/caddy/Caddyfile 2>/dev/null; then
-    as_root cp /etc/caddy/Caddyfile /tmp/caddy-rollback-read.txt
-    python3 - "$DOMAIN" <<'PY'
+  # временные файлы — в домашний каталог (sticky /tmp не даёт удалить чужое)
+  WORK="$BASE/.provision-rollback"
+  rm -rf "$WORK"; mkdir -p "$WORK"
+  if grep -q "^$DOMAIN {" /etc/caddy/Caddyfile 2>/dev/null; then
+    as_root cp /etc/caddy/Caddyfile "$WORK/Caddyfile.read"
+    python3 - "$DOMAIN" "$WORK" <<'PY'
 import sys
-domain = sys.argv[1]
-lines = open("/tmp/caddy-rollback-read.txt").read().splitlines(keepends=True)
+domain, work = sys.argv[1], sys.argv[2]
+lines = open(f"{work}/Caddyfile.read").read().splitlines(keepends=True)
 out, skip = [], 0
 for line in lines:
     if skip:
@@ -90,15 +98,13 @@ for line in lines:
         skip = 1
         continue
     out.append(line)
-open("/tmp/caddy-rollback.txt", "w").writelines(out)
+open(f"{work}/Caddyfile.new", "w").writelines(out)
 PY
-    rm -f /tmp/caddy-rollback-read.txt
-    # python пишет временный файл от пользователя — подменяем через sudo
-    as_root cp /tmp/caddy-rollback.txt /etc/caddy/Caddyfile
-    rm -f /tmp/caddy-rollback.txt
+    as_root cp "$WORK/Caddyfile.new" /etc/caddy/Caddyfile
     as_root caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
     as_root systemctl reload caddy
   fi
+  rm -rf "$WORK"
   rm -rf "$SITE_DIR"
   log "✓ откат завершён: БД, registry, платформа, Caddy, каталог удалены"
   exit 0

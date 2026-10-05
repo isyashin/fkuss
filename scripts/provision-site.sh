@@ -38,8 +38,8 @@ REGISTRY="$BASE/registry.json"
 SITE_DIR="$BASE/sites/$SLUG"
 DB_CONTAINER="${DB_CONTAINER:-template-db-1}"
 PLATFORM_DB="${PLATFORM_DB:-platform}"
-IMAGE="resto-template:latest"
-MIGRATOR="resto-template-migrator:latest"
+IMAGE="${RESTO_IMAGE:-resto-template:latest}"
+MIGRATOR="${MIGRATOR_IMAGE:-resto-template-migrator:latest}"
 DOMAIN="$SLUG.fkuss.ru"
 
 log()  { echo "[$SLUG] $*"; }

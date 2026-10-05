@@ -4,7 +4,7 @@
   "cuisine": "грузинская",
   "phone": "+79991234567",
   "email": "hello@u-mamy.ru",
-  "address": "ул. Пушкина, 10, Иваново",
+  "address": "Ивановская обл., г. Иваново, ул. Пушкина, 10",
   "workHours": [{ "days": "пн–вс", "from": "11:00", "to": "23:00" }],
   "socials": { "telegram": "", "max": "", "whatsapp": "+79991234567", "vk": "" },
   "seo": {

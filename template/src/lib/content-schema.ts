@@ -169,12 +169,41 @@ export const settingsSchema = z.object({
     enabled: z.boolean().default(true),
     pickupEnabled: z.boolean().default(true),
     minOrder: priceSchema.default(0),
+    // Зоны на карте: автоопределение зоны по адресу гостя (геокодер + полигоны).
+    // Работает только при заданном YANDEX_GEOCODER_API_KEY и ≥1 зоне с polygon.
+    geo: z
+      .object({
+        enabled: z.boolean().default(false),
+        // Что делать, если адрес гостя вне всех зон
+        outside: z.enum(["block", "allow"]).default("block"),
+        // Стоимость доставки вне зон (когда outside = "allow")
+        outsidePrice: priceSchema.default(0),
+      })
+      .default({ enabled: false, outside: "block", outsidePrice: 0 }),
     zones: z
       .array(
         z.object({
           name: z.string().min(1),
-          price: priceSchema,
-          freeFrom: priceSchema.nullable().default(null),
+          enabled: z.boolean().default(true),
+          // Тарифы «заказ от X ₽ → доставка Y ₽»; минимум одна строка.
+          // Если нет — условия мигрируют из legacy-полей price/freeFrom.
+          tariffs: z
+            .array(z.object({ from: priceSchema, price: priceSchema }))
+            .min(1)
+            .optional(),
+          price: priceSchema.optional(), // legacy
+          freeFrom: priceSchema.nullable().optional(), // legacy
+          deliveryMinutes: z.number().int().min(0).max(480).nullable().default(null),
+          // Полигон зоны: [[lat, lng], ...], минимум 3 точки; нет — зона без геометрии
+          polygon: z
+            .array(
+              z.tuple([
+                z.number().min(-90).max(90),
+                z.number().min(-180).max(180),
+              ]),
+            )
+            .min(3)
+            .optional(),
         }),
       )
       .default([]),

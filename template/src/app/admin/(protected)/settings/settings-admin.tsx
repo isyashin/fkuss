@@ -31,7 +31,7 @@ function SaveButton({ section, onSave, pending, feedback }: { section: string; o
   return <div className={styles.sectionActions}><button type="button" className={styles.saveButton} disabled={pending} onClick={onSave}>{pending && feedback.section === section ? "Сохраняю…" : "Сохранить"}</button>{feedback.section === section && feedback.text && <span role={feedback.error ? "alert" : "status"} className={feedback.error ? styles.error : styles.saved}>{feedback.text}</span>}</div>;
 }
 
-export function SettingsAdmin({ settings, theme, sound, actor, restaurantSection, otherSections }: { settings: ContentSettings; theme: ThemeConfig; sound: PublicAdminSound; actor: { name: string; role: string }; restaurantSection: ReactNode; otherSections: ReactNode }) {
+export function SettingsAdmin({ settings, theme, sound, actor, restaurantSection, otherSections, ymapsKey = "" }: { settings: ContentSettings; theme: ThemeConfig; sound: PublicAdminSound; actor: { name: string; role: string }; restaurantSection: ReactNode; otherSections: ReactNode; ymapsKey?: string }) {
   const [s, setS] = useState({ ...settings, guestContact: visibleGuestChannels(settings) });
   const savedSettings = useRef(settings);
   const [contactSaving, setContactSaving] = useState(false);
@@ -274,59 +274,10 @@ export function SettingsAdmin({ settings, theme, sound, actor, restaurantSection
             </select>
           </label>
         </div>
-        <h3 className={styles.subhead}>Зоны доставки</h3>
-        <div className={styles.zoneList}>
-          {s.delivery.zones.map((zone, i) => (
-            <div key={i} className={styles.zoneRow}>
-              <input
-                value={zone.name}
-                aria-label={`Название зоны ${i + 1}`}
-                onChange={(e) => {
-                  const zones = [...s.delivery.zones];
-                  zones[i] = { ...zone, name: e.target.value };
-                  setS({ ...s, delivery: { ...s.delivery, zones } });
-                }}
-                className="flex-1 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-              />
-              <input
-                type="number"
-                min={0}
-                step={1}
-                value={zone.price}
-                title="Цена доставки"
-                aria-label={`Цена доставки зоны ${i + 1}, ₽`}
-                onChange={(e) => {
-                  const zones = [...s.delivery.zones];
-                  zones[i] = { ...zone, price: Number(e.target.value) };
-                  setS({ ...s, delivery: { ...s.delivery, zones } });
-                }}
-                className="w-24 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-              />
-              <input
-                type="number"
-                min={0}
-                step={1}
-                value={zone.freeFrom ?? ""}
-                placeholder="Беспл. от"
-                title="Бесплатно от"
-                aria-label={`Бесплатно от для зоны ${i + 1}, ₽`}
-                onChange={(e) => {
-                  const zones = [...s.delivery.zones];
-                  zones[i] = { ...zone, freeFrom: e.target.value === "" ? null : Number(e.target.value) };
-                  setS({ ...s, delivery: { ...s.delivery, zones } });
-                }}
-                className="w-28 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-              />
-              <button type="button" onClick={() => setS({ ...s, delivery: { ...s.delivery, zones: s.delivery.zones.filter((_, index) => index !== i) } })}>Удалить зону</button>
-            </div>
-          ))}
-        </div>
-          <button
-            onClick={() => setS({ ...s, delivery: { ...s.delivery, zones: [...s.delivery.zones, { name: "Новая зона", price: 300, freeFrom: null }] } })}
-            className={styles.fullOutlineButton}
-          >
-            + Добавить зону
-          </button>
+        <p className={styles.note}>
+          Зоны доставки с картой и условиями редактируются в разделе
+          <a href="/admin/delivery" className="underline">Доставка</a>.
+        </p>
         <SaveButton section="delivery" pending={pending} feedback={feedback} onSave={() => saveContent("delivery")}/>
       </section>
 

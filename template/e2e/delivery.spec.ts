@@ -17,6 +17,7 @@ test("админ создаёт scheduled-вариант, гость заказ�
   await page.waitForURL(/\/admin$/);
 
   await page.goto("/admin/delivery");
+  await page.getByRole("tab", { name: "Варианты доставки" }).click();
   await page.getByRole("button", { name: "+ Вариант доставки" }).click();
   await page.getByLabel("Название").fill(optName);
   await page.getByLabel("Цена, ₽").fill("250");

@@ -11,10 +11,60 @@ export interface OrderItemInput {
   modifierPrices: number[]; // цены выбранных модификаторов из БД
 }
 
+export interface ZoneTariff {
+  from: number; // сумма заказа, начиная с которой действует цена
+  price: number;
+}
+
 export interface DeliveryZone {
   name: string;
-  price: number;
-  freeFrom: number | null;
+  enabled?: boolean; // false — зона выключена (не участвует в выборе и матчинге)
+  // Новый формат условий: уровни «заказ от X ₽ → доставка Y ₽»
+  tariffs?: ZoneTariff[];
+  // Legacy-поля: мигрируют в tariffs (price → уровень от 0, freeFrom → уровень с ценой 0)
+  price?: number;
+  freeFrom?: number | null;
+  deliveryMinutes?: number | null; // опциональное время доставки для показа гостю
+  polygon?: [number, number][]; // геометрия зоны (зоны на карте); в расчёте не участвует
+}
+
+/** Условия зоны в виде тарифов: новые tariffs или миграция из price/freeFrom */
+export function zoneTariffs(zone: DeliveryZone): ZoneTariff[] {
+  if (zone.tariffs && zone.tariffs.length > 0) {
+    return [...zone.tariffs].sort((a, b) => a.from - b.from);
+  }
+  const tariffs: ZoneTariff[] = [{ from: 0, price: zone.price ?? 0 }];
+  if (zone.freeFrom != null && zone.freeFrom > 0) {
+    tariffs.push({ from: zone.freeFrom, price: 0 });
+  }
+  return tariffs.sort((a, b) => a.from - b.from);
+}
+
+/** Цена доставки по тарифам: цена последнего уровня с from ≤ суммы заказа */
+export function tariffPrice(tariffs: ZoneTariff[], itemsTotal: number): number {
+  let price = tariffs[0]?.price ?? 0;
+  for (const tariff of tariffs) {
+    if (itemsTotal < tariff.from) break;
+    price = tariff.price;
+  }
+  return price;
+}
+
+const rub = (n: number) => `${n.toLocaleString("ru-RU")} ₽`;
+
+/** Сводка условий для списка зон и витрины: строка на уровень тарифа */
+export function tariffLines(zone: DeliveryZone): string[] {
+  const tariffs = zoneTariffs(zone);
+  if (tariffs.length === 1) {
+    return [tariffs[0].price === 0 ? "Доставка бесплатно" : `Доставка ${rub(tariffs[0].price)}`];
+  }
+  const lines: string[] = [];
+  tariffs.forEach((tariff, i) => {
+    const label = tariff.price === 0 ? "бесплатно" : rub(tariff.price);
+    if (i === 0 && tariff.from === 0) lines.push(`Доставка ${label}`);
+    else lines.push(`от ${rub(tariff.from)} — ${label}`);
+  });
+  return lines;
 }
 
 export function calculateItemsTotal(items: OrderItemInput[]): number {
@@ -35,8 +85,8 @@ export function calculateDeliveryPrice(
   if (zones.length === 0) return 0;
   const zone = zones.find((z) => z.name === zoneName);
   if (!zone) throw new Error(`Неизвестная зона доставки: ${zoneName}`);
-  if (zone.freeFrom !== null && itemsTotal >= zone.freeFrom) return 0;
-  return zone.price;
+  if (zone.enabled === false) throw new Error(`Зона доставки недоступна: ${zoneName}`);
+  return tariffPrice(zoneTariffs(zone), itemsTotal);
 }
 
 export function checkMinOrder(

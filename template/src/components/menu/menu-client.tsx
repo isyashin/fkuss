@@ -27,6 +27,7 @@ export function MenuClient({
   bonusBalance = 0,
   cabinetEnabled = false,
   initialAddress = "",
+  ymapsKey = "",
 }: {
   menu: Menu;
   delivery: ContentSettings["delivery"];
@@ -38,6 +39,8 @@ export function MenuClient({
   bonusBalance?: number;
   cabinetEnabled?: boolean;
   initialAddress?: string;
+  /** Ключ JS API Яндекс.Карт — зоны на карте и подсказки адресов. */
+  ymapsKey?: string;
 }) {
   const [activeCategory, setActiveCategory] = useState(menu.categories[0]?.id ?? "");
   const menus = menu.menus ?? [];

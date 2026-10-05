@@ -22,5 +22,6 @@ export default async function AdminSettingsPage() {
   const [settings, theme, sound] = await Promise.all([getSiteSettings(), getSiteTheme(), readAdminSound(getPrisma())]);
 
   return <SettingsAdmin settings={settings} theme={theme} sound={publicAdminSound(sound)} actor={{ name: actor.name, role: actor.role }}
-    restaurantSection={<RestaurantSettingsSection/>} otherSections={<OtherSettingsSections/>}/>;
+    restaurantSection={<RestaurantSettingsSection/>} otherSections={<OtherSettingsSections/>}
+    ymapsKey={process.env.YANDEX_MAPS_API_KEY ?? ""}/>;
 }

@@ -74,9 +74,16 @@ test("две вкладки админки получают событие од�
   });
   expect(booking.ok()).toBe(true);
 
-  // Обе вкладки видят событие в панели (поллинг ~10 с + запас)
+  // Обе вкладки видят событие в панели (поллинг ~10 с + запас).
+  // Под нагрузкой CI гидратация мобильной оболочки отстаёт — кликаем по колокольчику
+  // до фактического открытия панели, затем ждём текст события.
   for (const tab of [page, pageB]) {
-    await tab.getByRole("button", { name: /Оповещения/ }).first().click();
+    const bell = tab.getByRole("button", { name: /Оповещения/ }).first();
+    await expect(bell).toBeVisible();
+    await expect.poll(async () => {
+      await bell.click().catch(() => false);
+      return tab.getByRole("region", { name: "Новые события" }).isVisible().catch(() => false);
+    }, { timeout: 30_000, intervals: [900, 1600] }).toBe(true);
     await expect(tab.getByText("2026-12-06 в", { exact: false }).first()).toBeVisible({ timeout: 30_000 });
   }
   await context.close();

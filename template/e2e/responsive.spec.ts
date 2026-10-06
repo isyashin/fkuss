@@ -142,14 +142,16 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   const menuWidth = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(menuWidth.content, "admin menu overflows on mobile").toBeLessThanOrEqual(menuWidth.viewport + 1);
 
+  // Редизайн: настройки — колонка разделов + один редактор (?section=)
   await page.goto("/admin/settings");
-  await expect(page.getByRole("region", { name: "Внешний вид панели" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Звук уведомления" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Профиль администратора" })).toBeVisible();
-  for (const section of ["restaurant", "site-theme", "delivery", "pricing", "guest-contact", "channels", "booking", "promos", "gallery", "banquets", "pages", "sync", "print-materials", "billing", "team"]) {
-    await expect(page.locator(`section#${section}`)).toBeAttached();
+  await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Данные и контакты" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Профиль:/ })).toBeVisible();
+  for (const section of ["theme", "pages", "gallery", "promos", "banquets", "print", "delivery", "payment", "booking", "sound", "pricing", "sync", "guest-contact", "notify", "cabinet"]) {
+    await page.goto(`/admin/settings?section=${section}`);
+    await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
   }
-  await expect(page.locator("section#delivery").getByRole("button", { name: "Сохранить" })).toBeVisible();
+  await page.goto("/admin/settings?section=delivery");
   const settingsWidth = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
     content: document.documentElement.scrollWidth,

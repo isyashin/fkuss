@@ -23,7 +23,7 @@ test("VIS-01/03: загрузка фона через админку, приме
 
   await page.goto("/admin/settings?section=theme");
   await page.getByLabel("Фон включён").check();
-  const appearance = page.locator("section[aria-label=`"Оформление сайта`"]");
+  const appearance = page.locator('section[aria-label="Оформление сайта"]');
   const saveAppearance = async () => {
     await appearance.getByRole("button", { name: "Сохранить" }).click();
     await expect(appearance.getByRole("status")).toHaveText("Сохранено", { timeout: 15000 });

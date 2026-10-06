@@ -97,6 +97,10 @@ export function AdminNotifications() {
     window.dispatchEvent(new Event(ENABLED_EVENT));
   }
 
+  // Последний запуск опроса — доступен вне эффекта: при открытии панели
+  // запрашиваем события сразу, не дожидаясь interval (фоновые вкладки
+  // браузер троттлит — панель должна наполниться по клику).
+  const pollRef = useRef<() => Promise<void>>(async () => {});
   useEffect(() => {
     let cancelled = false;
     let busy = false;
@@ -184,6 +188,7 @@ export function AdminNotifications() {
       } finally { busy = false; }
     }
     void poll();
+    pollRef.current = poll;
     const timer = window.setInterval(() => void poll(), 10000);
     const onSoundChange = (event: Event) => { sound.current = (event as CustomEvent<PublicAdminSound>).detail; };
     window.addEventListener("admin-sound-change", onSoundChange);
@@ -206,7 +211,12 @@ export function AdminNotifications() {
   }
 
   return <div className={styles.notifWrap}>
-    <button type="button" className={styles.footButton} aria-label={`Оповещения${unread ? `: ${unread}` : ""}`} aria-expanded={open} onClick={() => { setOpen((value) => !value); setUnread(0); }}>
+    <button type="button" className={styles.footButton} aria-label={`Оповещения${unread ? `: ${unread}` : ""}`} aria-expanded={open} onClick={() => {
+      const next = !open;
+      setOpen(next);
+      setUnread(0);
+      if (next) void pollRef.current();
+    }}>
       <AdminIcon name="bell"/>{unread > 0 && <span className={styles.footBadge}>{unread}</span>}{enabled && <span className={styles.footOn} title="Звук новых заказов включён"/>}
     </button>
     {open && <div className={styles.notifPanel} role="region" aria-label="Новые события">

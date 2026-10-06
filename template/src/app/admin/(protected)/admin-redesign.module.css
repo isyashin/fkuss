@@ -20,6 +20,29 @@
   --rd-danger: #a3473b;
   --rd-font: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
 
+  /* Мост для legacy-разделов на старом языке (orders/bookings/menu): их CSS
+     использует --admin-* и короткие токены, которые раньше задавал admin-ui .shell. */
+  --admin-bg: var(--rd-bg);
+  --admin-surface: var(--rd-surface);
+  --admin-surface-2: var(--rd-queue);
+  --admin-line: var(--rd-line);
+  --admin-text: var(--rd-text);
+  --admin-muted: var(--rd-muted);
+  --admin-accent: var(--rd-accent);
+  --admin-accent-soft: rgba(173, 87, 59, 0.12);
+  --admin-green: var(--rd-success);
+  --background: var(--rd-bg);
+  --foreground: var(--rd-text);
+  --card: var(--rd-surface);
+  --muted: var(--rd-muted);
+  --accent: var(--rd-accent);
+  /* Алиасы для новых «Настроек» */
+  --queue: var(--rd-queue);
+  --surface: var(--rd-surface);
+  --line: var(--rd-line);
+  --text: var(--rd-text);
+  --danger: var(--rd-danger);
+
   display: grid;
   grid-template-columns: 174px minmax(0, 1fr);
   min-height: 100vh;
@@ -34,6 +57,21 @@
   --rd-surface: #1b211c;
   --rd-bg: #141915;
   --rd-line: #333d35;
+  --admin-bg: var(--rd-bg);
+  --admin-surface: var(--rd-surface);
+  --admin-surface-2: var(--rd-queue);
+  --admin-line: var(--rd-line);
+  --admin-text: var(--rd-text);
+  --admin-muted: var(--rd-muted);
+  --admin-accent: #cf8664;
+  --admin-accent-soft: rgba(207, 134, 100, 0.22);
+  --admin-green: #8fceac;
+  --background: var(--rd-bg);
+  --foreground: var(--rd-text);
+  --card: var(--rd-surface);
+  --muted: var(--rd-muted);
+  --accent: var(--rd-accent);
+  color-scheme: dark;
 }
 
 /* === Тёмная главная колонка === */
@@ -101,7 +139,7 @@
 .profilePopover small { color: var(--rd-muted); }
 .profilePopover nav { display: grid; gap: 2px; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--rd-line); }
 .profilePopover a, .profilePopover button {
-  display: flex; align-items: center; min-height: 38px; padding: 0 8px;
+  display: flex; align-items: center; min-height: 44px; padding: 0 8px;
   border: 0; border-radius: 7px; background: transparent; cursor: pointer;
   color: var(--rd-text); font: inherit; font-size: 13px; text-align: left; text-decoration: none;
 }
@@ -177,8 +215,8 @@
     background: var(--rd-nav); color: #fff;
   }
   .topbar .logo { width: 34px; height: 34px; }
-  .topbar strong { font-size: 14px; min-width: 0; overflow: hidden; text-overflow: white-space; }
-  .topbar .footButton { width: auto; min-height: 44px; padding: 0 8px; margin-left: auto; }
+  .topbar strong { font-size: 14px; min-width: 0; overflow: hidden; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .footButton { width: auto; min-width: 44px; min-height: 44px; padding: 0 8px; margin-left: auto; }
   .workspace { min-height: 100dvh; }
   .main { padding: 16px 14px calc(84px + env(safe-area-inset-bottom)); }
   .bottomNav {
@@ -210,9 +248,9 @@
   color: var(--rd-text); font-size: 13px;
 }
 .notifItems { display: grid; gap: 4px; margin-bottom: 10px; }
-.notifItems a { display: block; min-height: 38px; padding: 8px 10px; border-radius: 8px; color: var(--rd-text); text-decoration: none; }
+.notifItems a { display: block; min-height: 44px; padding: 8px 10px; border-radius: 8px; color: var(--rd-text); text-decoration: none; }
 .notifItems a:hover { background: var(--rd-queue); }
-.enableSound { width: 100%; min-height: 40px; border: 1px solid var(--rd-accent); border-radius: 9px; background: transparent; color: var(--rd-accent); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.enableSound { width: 100%; min-height: 44px; border: 1px solid var(--rd-accent); border-radius: 9px; background: transparent; color: var(--rd-accent); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .enableSound:hover { background: rgba(173, 87, 59, 0.08); }
 
 /* Якоря поповеров */
@@ -227,4 +265,3 @@
   .topbar .footBadge { margin-left: 0; }
 }
 
-.topbar .footButton { min-width: 44px; }

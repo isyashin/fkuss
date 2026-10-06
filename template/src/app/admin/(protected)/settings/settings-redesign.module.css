@@ -22,7 +22,7 @@
 .groupLabel:first-child { margin-top: 0; }
 .sectionLink {
   display: flex; align-items: center; gap: 8px;
-  width: 100%; min-height: 40px; padding: 0 12px;
+  width: 100%; min-height: 44px; padding: 0 12px;
   border: 0; border-radius: 9px; background: transparent; cursor: pointer;
   color: var(--text, #202723); font: inherit; font-size: 13.5px; font-weight: 600; text-align: left; text-decoration: none;
 }
@@ -46,14 +46,14 @@
   border: 1px solid var(--line, #e2e4df); border-radius: 12px;
   background: var(--surface, #fff); box-shadow: 0 8px 24px rgba(20, 26, 21, 0.12);
 }
-.saveBar button { min-height: 42px; }
+.saveBar button { min-height: 44px; }
 .saveStatus { font-size: 12.5px; font-weight: 600; }
 .saveStatus.error { color: var(--danger, #a3473b); }
 .divider { height: 1px; margin: 18px 0; background: var(--line, #e2e4df); }
 
 /* legacy-обёртки: встройка существующих секций (restaurant/delivery/...) в новый каркас */
 .legacyCard { background: var(--surface, #fff); border: 1px solid var(--line, #e2e4df); border-radius: 14px; padding: 22px 24px; }
-.legacyCard :global(h2) { margin: 0 0 4px; font-size: 18px; font-family: var(--font); }
+.legacyCard :global(h2) { margin: 0 0 4px; font-size: 18px; font-family: var(--rd-font); }
 .legacyCard :global(.cardHint) { margin: 0 0 14px; font-size: 12.5px; color: var(--muted, #68716a); }
 
 @media (max-width: 900px) {

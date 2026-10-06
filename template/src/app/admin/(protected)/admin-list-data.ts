@@ -28,7 +28,8 @@ export async function loadOrdersPage(prisma: PrismaClient, query: OrderListQuery
     take: ADMIN_PAGE_SIZE,
     include: { items: true },
   });
-  return { orders, counts, ...window };
+  // total — в терминах активного режима/фильтра, чтобы пагинатор не расходился со списком.
+  return { orders, counts: { ...counts, total }, ...window };
 }
 
 export async function loadBookingsPage(prisma: PrismaClient, query: BookingListQuery) {

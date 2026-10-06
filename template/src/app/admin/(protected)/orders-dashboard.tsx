@@ -45,7 +45,9 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       <div className={styles.filters} role="group" aria-label="Режим очереди заказов">
         {ORDER_MODES.map((mode) => <Link key={mode} prefetch={false} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{mode === "all" ? "Все" : mode === "current" ? "Текущие" : mode === "new" ? "Новые" : "История"} <span className={styles.count}>{counts.byMode[mode]}</span></Link>)}
       </div>
-      <div className={styles.filters} role="group" aria-label="Фильтр заказов">{ORDER_STATUSES.map((status) => <Link key={status} prefetch={false} href={href({ ...query, status, page: 1 })} aria-current={query.status === status ? "page" : undefined}>{status === "all" ? "Все" : orderStatusLabel(status)} <span className={styles.count}>{counts.byStatus[status]}</span></Link>)}</div>
+      {query.mode === "all" && (
+        <div className={styles.filters} role="group" aria-label="Фильтр заказов">{ORDER_STATUSES.map((status) => <Link key={status} prefetch={false} href={href({ ...query, status, page: 1 })} aria-current={query.status === status ? "page" : undefined}>{status === "all" ? "Все" : orderStatusLabel(status)} <span className={styles.count}>{counts.byStatus[status]}</span></Link>)}</div>
+      )}
       <div className={styles.list}>{orders.length ? orders.map((order) => <div className={`${styles.orderPreview} ${order.type === "delivery" ? styles.deliveryPreview : styles.pickupPreview} ${selected?.id === order.id ? styles.selectedPreview : ""}`} key={order.id}>
         <button type="button" className={styles.orderOpen} aria-label={`Открыть заказ № ${order.number}`} aria-pressed={selected?.id === order.id} onClick={() => setSelectedId(order.id)}/>
         <div className={styles.orderLead}><span className={`${styles.orderType} ${order.type === "delivery" ? styles.deliveryType : styles.pickupType}`}>{order.type === "delivery" ? "Доставка" : "Самовывоз"}</span><span className={styles.orderMeta}><strong>№ {order.number}</strong><small>{orderTime(order.createdAt, timeZone)}</small></span></div>

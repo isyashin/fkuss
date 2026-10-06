@@ -21,9 +21,9 @@ test("VIS-01/03: загрузка фона через админку, приме
   await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
-  await page.goto("/admin/settings");
+  await page.goto("/admin/settings?section=theme");
   await page.getByLabel("Фон включён").check();
-  const appearance = page.locator("section#site-theme");
+  const appearance = page.locator("section[aria-label=`"Оформление сайта`"]");
   const saveAppearance = async () => {
     await appearance.getByRole("button", { name: "Сохранить" }).click();
     await expect(appearance.getByRole("status")).toHaveText("Сохранено", { timeout: 15000 });
@@ -40,7 +40,7 @@ test("VIS-01/03: загрузка фона через админку, приме
   // флаг «Отключить на мобильных» выключаем, чтобы проверить применение
   const isMobile = test.info().project.name.includes("mobile");
   if (isMobile) {
-    await page.goto("/admin/settings");
+    await page.goto("/admin/settings?section=theme");
     await page.getByLabel("Отключить фон на мобильных").uncheck();
     await saveAppearance();
   }
@@ -52,7 +52,7 @@ test("VIS-01/03: загрузка фона через админку, приме
     .toContain("content-asset");
 
   // Удаление
-  await page.goto("/admin/settings");
+  await page.goto("/admin/settings?section=theme");
   await appearance.getByRole("button", { name: "Удалить" }).click({ force: true });
   await saveAppearance();
 

@@ -100,7 +100,7 @@ test("повторы сигнала настраиваются и отдаютс
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
-  await page.goto("/admin/settings");
+  await page.goto("/admin/settings?section=sound");
   const repeats = page.getByLabel("Повторы сигнала");
   await expect(repeats).toBeVisible();
 

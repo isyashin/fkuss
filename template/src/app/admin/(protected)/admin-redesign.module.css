@@ -223,3 +223,5 @@
   .topbar .popWrap .profilePopover { bottom: auto; }
   .topbar .footBadge { margin-left: 0; }
 }
+
+.topbar .footButton { min-width: 44px; }

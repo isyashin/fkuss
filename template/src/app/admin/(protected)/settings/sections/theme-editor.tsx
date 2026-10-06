@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { saveBackground, saveTheme } from "../actions";
 import { contentAssetUrl } from "@/lib/assets";
 import type { ThemeConfig } from "@/lib/content";
@@ -27,10 +27,10 @@ export function ThemeEditor({ theme }: { theme: ThemeConfig }) {
     disableOnMobile: theme.background?.disableOnMobile ?? true,
   };
   const [bg, setBg] = useState<Bg>(initialBg);
-  const saved = useRef({ preset: theme.preset, accent: theme.accent, bg: initialBg });
+  const [saved, setSaved] = useState({ preset: theme.preset, accent: theme.accent, bg: initialBg });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const dirty = preset !== saved.current.preset || accent !== saved.current.accent || JSON.stringify(bg) !== JSON.stringify(saved.current.bg);
+  const dirty = preset !== saved.preset || accent !== saved.accent || JSON.stringify(bg) !== JSON.stringify(saved.bg);
 
   function save() {
     startTransition(async () => {
@@ -38,7 +38,7 @@ export function ThemeEditor({ theme }: { theme: ThemeConfig }) {
       try {
         await saveTheme({ preset, accent });
         await saveBackground(bg);
-        saved.current = { preset, accent, bg };
+        setSaved({ preset, accent, bg });
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
         setStatus({ text: cause instanceof Error ? cause.message : "Не удалось сохранить", error: true });

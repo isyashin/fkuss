@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { saveSettings } from "../actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import rd from "../../admin-redesign.module.css";
@@ -18,10 +18,10 @@ const TIMEZONES = [
 export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
   const [delivery, setDelivery] = useState(settings.delivery);
   const [timezone, setTimezone] = useState(settings.timezone);
-  const saved = useRef({ delivery: settings.delivery, timezone: settings.timezone });
+  const [saved, setSaved] = useState({ delivery: settings.delivery, timezone: settings.timezone });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const dirty = JSON.stringify(delivery) !== JSON.stringify(saved.current.delivery) || timezone !== saved.current.timezone;
+  const dirty = JSON.stringify(delivery) !== JSON.stringify(saved.delivery) || timezone !== saved.timezone;
 
   function save() {
     startTransition(async () => {
@@ -29,7 +29,7 @@ export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
       try {
         const next: ContentSettings = { ...settings, delivery, timezone };
         await saveSettings(next);
-        saved.current = { delivery, timezone };
+        setSaved({ delivery, timezone });
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
         setStatus({ text: cause instanceof Error ? cause.message : "Не удалось сохранить", error: true });

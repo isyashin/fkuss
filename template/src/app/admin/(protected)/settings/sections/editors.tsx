@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { saveAllAdminSettings, saveSettings } from "../actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { ThemeConfig } from "@/lib/content";
@@ -11,10 +11,10 @@ import styles from "../settings-redesign.module.css";
 export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSettings; theme: ThemeConfig }) {
   const [payment, setPayment] = useState(settings.payment);
   const [loyalty, setLoyalty] = useState(settings.loyalty);
-  const saved = useRef({ payment: settings.payment, loyalty: settings.loyalty });
+  const [saved, setSaved] = useState({ payment: settings.payment, loyalty: settings.loyalty });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const dirty = JSON.stringify(payment) !== JSON.stringify(saved.current.payment) || JSON.stringify(loyalty) !== JSON.stringify(saved.current.loyalty);
+  const dirty = JSON.stringify(payment) !== JSON.stringify(saved.payment) || JSON.stringify(loyalty) !== JSON.stringify(saved.loyalty);
 
   function save() {
     startTransition(async () => {
@@ -27,7 +27,7 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
           theme: { preset: theme.preset, accent: theme.accent },
           background: theme.background ?? { enabled: false, image: "", position: "center", dimPercent: 40, disableOnMobile: true },
         });
-        saved.current = { payment, loyalty };
+        setSaved({ payment, loyalty });
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
         setStatus({ text: cause instanceof Error ? cause.message : "Не удалось сохранить", error: true });
@@ -67,10 +67,10 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
 export function PricingEditor({ settings, theme }: { settings: ContentSettings; theme: ThemeConfig }) {
   const [mode, setMode] = useState(settings.pricing.globalMode);
   const [percent, setPercent] = useState(settings.pricing.globalPercent);
-  const saved = useRef({ mode: settings.pricing.globalMode, percent: settings.pricing.globalPercent });
+  const [saved, setSaved] = useState({ mode: settings.pricing.globalMode, percent: settings.pricing.globalPercent });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const dirty = mode !== saved.current.mode || percent !== saved.current.percent;
+  const dirty = mode !== saved.mode || percent !== saved.percent;
 
   function save() {
     startTransition(async () => {
@@ -84,7 +84,7 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
           theme: { preset: theme.preset, accent: theme.accent },
           background: theme.background ?? { enabled: false, image: "", position: "center", dimPercent: 40, disableOnMobile: true },
         });
-        saved.current = { mode, percent };
+        setSaved({ mode, percent });
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
         setStatus({ text: cause instanceof Error ? cause.message : "Не удалось сохранить", error: true });
@@ -118,10 +118,10 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
 /** Параметры бронирования. */
 export function BookingEditor({ settings }: { settings: ContentSettings }) {
   const [booking, setBooking] = useState(settings.booking);
-  const saved = useRef(settings.booking);
+  const [saved, setSaved] = useState(settings.booking);
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const dirty = JSON.stringify(booking) !== JSON.stringify(saved.current);
+  const dirty = JSON.stringify(booking) !== JSON.stringify(saved);
 
   function save() {
     startTransition(async () => {
@@ -129,7 +129,7 @@ export function BookingEditor({ settings }: { settings: ContentSettings }) {
       try {
         const next: ContentSettings = { ...settings, booking };
         await saveSettings(next);
-        saved.current = booking;
+        setSaved(booking);
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
         setStatus({ text: cause instanceof Error ? cause.message : "Не удалось сохранить", error: true });

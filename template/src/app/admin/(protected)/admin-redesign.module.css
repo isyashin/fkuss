@@ -1,0 +1,225 @@
+/* admin-redesign.module.css — фундамент нового визуального языка админки.
+   Токены и оболочка по «редизайн админки/DESIGN-SPEC.md»:
+   тёмная главная колонка, светлая очередь/разделы, акцент #ad573b.
+   Рабочая область поддерживает личную тёмную тему через [data-theme="dark"]. */
+
+.shell {
+  /* Токены */
+  --rd-text: #202723;
+  --rd-muted: #68716a;
+  --rd-nav: #202924;
+  --rd-nav-text: #bbc6bd;
+  --rd-queue: #f5f6f2;
+  --rd-surface: #fff;
+  --rd-bg: #f7f8f5;
+  --rd-line: #e2e4df;
+  --rd-accent: #ad573b;
+  --rd-accent-hover: #8f4029;
+  --rd-success: #30694a;
+  --rd-warn: #9a6423;
+  --rd-danger: #a3473b;
+  --rd-font: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  display: grid;
+  grid-template-columns: 174px minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--rd-bg);
+  color: var(--rd-text);
+  font-family: var(--rd-font);
+}
+.shell[data-theme="dark"] {
+  --rd-text: #e6eae5;
+  --rd-muted: #9aa79d;
+  --rd-queue: #232a25;
+  --rd-surface: #1b211c;
+  --rd-bg: #141915;
+  --rd-line: #333d35;
+}
+
+/* === Тёмная главная колонка === */
+.rail {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--rd-nav);
+  color: var(--rd-nav-text);
+  padding: 14px 10px calc(14px + env(safe-area-inset-bottom));
+}
+.brand { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 8px; border-radius: 10px; color: inherit; text-decoration: none; }
+.brand:hover { background: rgba(255, 255, 255, 0.06); }
+.logo { width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 10px; background: rgba(255, 255, 255, 0.08); color: #fff; font-weight: 700; overflow: hidden; }
+.brandText { min-width: 0; display: grid; }
+.brandText strong { font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brandText small { font-size: 11px; color: var(--rd-nav-text); }
+
+.primaryNav { display: grid; gap: 4px; margin-top: 6px; }
+.navLink {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  min-height: 44px; padding: 0 12px;
+  border-radius: 9px;
+  color: var(--rd-nav-text); text-decoration: none; font-size: 13.5px; font-weight: 600;
+}
+.navLink:hover { background: rgba(255, 255, 255, 0.07); color: #fff; }
+.navLink svg { flex: 0 0 auto; }
+/* Активный: фон + узкая акцентная полоса слева (не только цвет текста) */
+.navLink.current { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.navLink.current::before {
+  content: ""; position: absolute; left: -10px; top: 9px; bottom: 9px;
+  width: 3px; border-radius: 0 3px 3px 0; background: var(--rd-accent);
+}
+.navBadge {
+  margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px;
+  display: inline-grid; place-items: center;
+  border-radius: 999px; background: var(--rd-accent); color: #fff;
+  font-size: 11px; font-weight: 700; font-style: normal;
+}
+
+/* Низ колонки: колокольчик, тема, профиль (spec: не пятый пункт навигации) */
+.railFoot { margin-top: auto; display: grid; gap: 6px; }
+.footButton {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px; padding: 0 12px;
+  border: 0; border-radius: 9px; background: transparent; cursor: pointer;
+  color: var(--rd-nav-text); font: inherit; font-size: 13px; font-weight: 600; text-align: left; text-decoration: none;
+}
+.footButton:hover { background: rgba(255, 255, 255, 0.07); color: #fff; }
+.footBadge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 5px; display: inline-grid; place-items: center; border-radius: 999px; background: var(--rd-accent); color: #fff; font-size: 11px; font-weight: 700; }
+
+/* Поповер профиля (общий для rail и мобильной шапки) */
+.profilePopover {
+  position: absolute; z-index: 60; bottom: 64px; left: 10px; width: 250px;
+  padding: 14px; border-radius: 12px;
+  background: var(--rd-surface); border: 1px solid var(--rd-line);
+  box-shadow: 0 12px 32px rgba(20, 26, 21, 0.22);
+  display: grid; gap: 8px; color: var(--rd-text);
+}
+.profilePopover strong { font-size: 14px; }
+.profilePopover small { color: var(--rd-muted); }
+.profilePopover nav { display: grid; gap: 2px; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--rd-line); }
+.profilePopover a, .profilePopover button {
+  display: flex; align-items: center; min-height: 38px; padding: 0 8px;
+  border: 0; border-radius: 7px; background: transparent; cursor: pointer;
+  color: var(--rd-text); font: inherit; font-size: 13px; text-align: left; text-decoration: none;
+}
+.profilePopover a:hover, .profilePopover button:hover { background: var(--rd-queue); }
+
+/* === Рабочая область === */
+.workspace { display: flex; flex-direction: column; min-width: 0; min-height: 100vh; }
+.main { flex: 1; min-width: 0; padding: 22px 26px 90px; }
+
+/* === Мобильная шапка (≤760) === */
+.topbar { display: none; }
+
+/* === Нижняя навигация (≤760) === */
+.bottomNav { display: none; }
+
+/* === Приimitives для этапов 2-4 (кнопки, поля, карточки, статусы) === */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--rd-line); border-radius: 10px;
+  background: var(--rd-surface); color: var(--rd-text);
+  font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; text-decoration: none;
+}
+.btn:hover { background: var(--rd-queue); }
+.btnPrimary { border-color: var(--rd-accent); background: var(--rd-accent); color: #fff; }
+.btnPrimary:hover { border-color: var(--rd-accent-hover); background: var(--rd-accent-hover); }
+.btnPrimary:disabled { opacity: 0.55; cursor: not-allowed; }
+.btnDanger { border-color: var(--rd-danger); color: var(--rd-danger); }
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 12.5px; color: var(--rd-muted); }
+.input, .textarea, .select {
+  width: 100%; min-height: 44px; padding: 0 12px;
+  border: 1px solid var(--rd-line); border-radius: 10px;
+  background: var(--rd-surface); color: var(--rd-text);
+  font: inherit; font-size: 14px;
+}
+.textarea { padding: 10px 12px; min-height: 84px; }
+.input:focus-visible, .textarea:focus-visible, .select:focus-visible, .btn:focus-visible, .navLink:focus-visible, .footButton:focus-visible {
+  outline: 2px solid var(--rd-accent); outline-offset: 2px;
+}
+.card { background: var(--rd-surface); border: 1px solid var(--rd-line); border-radius: 14px; padding: 20px 22px; }
+.cardTitle { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
+.cardHint { margin: 0 0 16px; font-size: 12.5px; color: var(--rd-muted); line-height: 1.5; }
+.chip {
+  display: inline-flex; align-items: center; min-height: 24px; padding: 0 9px;
+  border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap;
+}
+.chipNeutral { background: var(--rd-queue); color: var(--rd-muted); }
+.chipSuccess { background: rgba(48, 105, 74, 0.12); color: var(--rd-success); }
+.chipWarn { background: rgba(154, 100, 35, 0.12); color: var(--rd-warn); }
+.chipDanger { background: rgba(163, 71, 59, 0.12); color: var(--rd-danger); }
+.saved { color: var(--rd-success); font-size: 12.5px; font-weight: 600; }
+
+/* === Средняя ширина: колонка 70 px с иконками === */
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 70px minmax(0, 1fr); }
+  .brandText, .navLink span:not(.navBadge) { display: none; }
+  .navLink { justify-content: center; padding: 0; }
+  .navLink.current::before { left: -8px; }
+  .navBadge { position: absolute; top: 3px; right: 3px; margin: 0; min-width: 17px; height: 17px; font-size: 10px; }
+  .footButton { justify-content: center; padding: 0; }
+  .footButton span { display: none; }
+}
+
+/* === Телефон: верхняя строка 56 px + нижняя навигация 64 px === */
+@media (max-width: 760px) {
+  .shell { display: block; min-height: 100dvh; }
+  .rail { display: none; }
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; gap: 10px;
+    height: 56px; padding: 0 12px;
+    background: var(--rd-nav); color: #fff;
+  }
+  .topbar .logo { width: 34px; height: 34px; }
+  .topbar strong { font-size: 14px; min-width: 0; overflow: hidden; text-overflow: white-space; }
+  .topbar .footButton { width: auto; min-height: 44px; padding: 0 8px; margin-left: auto; }
+  .workspace { min-height: 100dvh; }
+  .main { padding: 16px 14px calc(84px + env(safe-area-inset-bottom)); }
+  .bottomNav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    min-height: 64px; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: var(--rd-surface); border-top: 1px solid var(--rd-line);
+  }
+  .bottomNav a {
+    position: relative; display: grid; place-items: center; gap: 2px;
+    min-height: 52px; border-radius: 10px;
+    color: var(--rd-muted); text-decoration: none; font-size: 10.5px; font-weight: 600;
+  }
+  .bottomNav a.current { color: var(--rd-accent); background: rgba(173, 87, 59, 0.1); }
+  .bottomNav em {
+    position: absolute; top: 2px; right: calc(50% - 22px);
+    min-width: 17px; height: 17px; padding: 0 4px; display: grid; place-items: center;
+    border-radius: 999px; background: var(--rd-accent); color: #fff; font-size: 10px; font-style: normal; font-weight: 700;
+  }
+}
+
+/* === Колокольчик событий (оболочка) === */
+.notifWrap { position: relative; }
+.footOn { width: 8px; height: 8px; margin-left: 6px; border-radius: 999px; background: var(--rd-success); }
+.notifPanel {
+  position: absolute; z-index: 60; bottom: 64px; left: 10px; width: 300px; max-height: 60vh; overflow: auto;
+  padding: 14px; border-radius: 12px;
+  background: var(--rd-surface); border: 1px solid var(--rd-line); box-shadow: 0 12px 32px rgba(20, 26, 21, 0.22);
+  color: var(--rd-text); font-size: 13px;
+}
+.notifItems { display: grid; gap: 4px; margin-bottom: 10px; }
+.notifItems a { display: block; min-height: 38px; padding: 8px 10px; border-radius: 8px; color: var(--rd-text); text-decoration: none; }
+.notifItems a:hover { background: var(--rd-queue); }
+.enableSound { width: 100%; min-height: 40px; border: 1px solid var(--rd-accent); border-radius: 9px; background: transparent; color: var(--rd-accent); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.enableSound:hover { background: rgba(173, 87, 59, 0.08); }
+
+/* Якоря поповеров */
+.popWrap { position: relative; }
+.popWrap .profilePopover { left: 0; bottom: calc(100% + 10px); }
+@media (max-width: 760px) {
+  .topbar .notifPanel, .topbar .profilePopover { left: auto; right: 0; bottom: auto; top: calc(100% + 10px); }
+  .topbar .popWrap .profilePopover { bottom: auto; }
+  .topbar .footBadge { margin-left: 0; }
+}

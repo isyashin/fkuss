@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { hasRecentAdminEvent, playAdminSound, primeAdminAudio } from "@/lib/admin-audio";
 import { setFaviconBadge, clearFaviconBadge } from "@/lib/favicon-badge";
 import type { PublicAdminSound } from "@/lib/admin-sound";
-import styles from "./admin-ui.module.css";
+import styles from "./admin-redesign.module.css";
 import { AdminIcon } from "./admin-icon";
 
 type EventItem = { id: string; kind: string; label: string; createdAt: string; status?: string | null };
@@ -205,13 +205,13 @@ export function AdminNotifications() {
     }
   }
 
-  return <div className={styles.notificationWrap}>
-    <button type="button" className={styles.notificationButton} aria-label={`Оповещения${unread ? `: ${unread}` : ""}`} aria-expanded={open} onClick={() => { setOpen((value) => !value); setUnread(0); }}>
-      <AdminIcon name="bell"/>{unread > 0 && <span className={styles.notificationCount}>{unread}</span>}{enabled && <span className={styles.notificationOn} title="Звук новых заказов включён"/>}
+  return <div className={styles.notifWrap}>
+    <button type="button" className={styles.footButton} aria-label={`Оповещения${unread ? `: ${unread}` : ""}`} aria-expanded={open} onClick={() => { setOpen((value) => !value); setUnread(0); }}>
+      <AdminIcon name="bell"/>{unread > 0 && <span className={styles.footBadge}>{unread}</span>}{enabled && <span className={styles.footOn} title="Звук новых заказов включён"/>}
     </button>
-    {open && <div className={styles.notificationPanel} role="region" aria-label="Новые события">
+    {open && <div className={styles.notifPanel} role="region" aria-label="Новые события">
       <strong>Новые события</strong>
-      {events.length ? <div className={styles.notificationItems}>{events.map((event) => <Link key={event.id} href={event.kind === "booking" ? "/admin/bookings" : "/admin"} onClick={() => setOpen(false)}>{event.label}</Link>)}</div> : <p>Новых заказов и броней пока нет.</p>}
+      {events.length ? <div className={styles.notifItems}>{events.map((event) => <Link key={event.id} href={event.kind === "booking" ? "/admin/bookings" : "/admin"} onClick={() => setOpen(false)}>{event.label}</Link>)}</div> : <p>Новых заказов и броней пока нет.</p>}
       <p role="status">{hint}</p>
       {!enabled && <button type="button" className={styles.enableSound} onClick={() => void enableSound()}>Включить звук</button>}
     </div>}

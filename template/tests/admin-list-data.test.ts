@@ -13,7 +13,7 @@ describe("admin database page requests", () => {
       findMany: async (args: Record<string, unknown>) => { request = args; return [{ id: "last-page" }]; },
     } } as unknown as PrismaClient;
 
-    const result = await loadOrdersPage(prisma, { status: "new", type: "delivery", sort: "asc", page: 3 });
+    const result = await loadOrdersPage(prisma, { status: "new", type: "delivery", sort: "asc", page: 3, mode: "all" });
     expect(result).toMatchObject({ page: 3, pageCount: 3, counts: { total: 62, byStatus: { all: 62, new: 62 }, byType: { all: 70, delivery: 62, pickup: 8 } } });
     expect(result.orders).toHaveLength(1);
     expect(request).toMatchObject({ where: { status: "new", type: "delivery" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], skip: 50, take: 25, include: { items: true } });

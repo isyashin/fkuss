@@ -5,6 +5,7 @@ import {
   bookingListCounts,
   orderListCounts,
   pageWindow,
+  ORDER_MODE_STATUSES,
   type BookingListQuery,
   type OrderListQuery,
 } from "@/lib/admin-list-query";
@@ -12,9 +13,12 @@ import {
 export async function loadOrdersPage(prisma: PrismaClient, query: OrderListQuery) {
   const groups = await prisma.order.groupBy({ by: ["status", "type"], _count: { _all: true } });
   const counts = orderListCounts(groups, query.type, query.status);
-  const window = pageWindow(counts.total, query.page);
+  const total = query.mode !== "all" ? counts.byMode[query.mode] : counts.total;
+  const window = pageWindow(total, query.page);
   const where: Prisma.OrderWhereInput = {
-    ...(query.status !== "all" ? { status: query.status } : {}),
+    ...(query.mode !== "all"
+      ? { status: { in: ORDER_MODE_STATUSES[query.mode] } }
+      : query.status !== "all" ? { status: query.status } : {}),
     ...(query.type !== "all" ? { type: query.type } : {}),
   };
   const orders = await prisma.order.findMany({

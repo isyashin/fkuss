@@ -10,8 +10,8 @@ import {
 
 describe("admin list query", () => {
   it("rejects invalid filters and oversized or ambiguous page values", () => {
-    expect(parseOrderListQuery({ status: "new", type: "pickup", sort: "asc", page: "3" })).toEqual({ status: "new", type: "pickup", sort: "asc", page: 3 });
-    expect(parseOrderListQuery({ status: "paid", type: "unknown", sort: "random", page: "999999999999999999999" })).toEqual({ status: "all", type: "all", sort: "desc", page: 1 });
+    expect(parseOrderListQuery({ status: "new", type: "pickup", sort: "asc", page: "3" })).toEqual({ status: "new", type: "pickup", sort: "asc", page: 3, mode: "all" });
+    expect(parseOrderListQuery({ status: "paid", type: "unknown", sort: "random", page: "999999999999999999999" })).toEqual({ status: "all", type: "all", sort: "desc", page: 1, mode: "all" });
     expect(parseBookingListQuery({ status: ["new", "confirmed"], page: "-2" })).toEqual({ status: "all", sort: "desc", page: 1 });
   });
 

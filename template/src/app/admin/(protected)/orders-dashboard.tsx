@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Order, OrderItem, Reservation } from "@/generated/prisma/client";
 import { orderStatusLabel } from "@/lib/order-status";
-import { adminListHref, orderListCounts, ORDER_STATUSES, ORDER_TYPES, type OrderListQuery } from "@/lib/admin-list-query";
+import { adminListHref, orderListCounts, ORDER_MODES, ORDER_STATUSES, ORDER_TYPES, type OrderListQuery } from "@/lib/admin-list-query";
 import { OrderCard } from "./order-card";
 import { AdminPagination } from "./admin-pagination";
 import { AdminIcon } from "./admin-icon";
@@ -41,6 +41,9 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
           <details className={styles.typeFilter}><summary>{typeNames[query.type]}</summary><div>{ORDER_TYPES.map((type) => <Link key={type} href={href({ ...query, type, page: 1 })} aria-current={query.type === type ? "page" : undefined}>{typeNames[type]}</Link>)}</div></details>
           <Link className={styles.sortButton} prefetch={false} href={href({ ...query, sort: query.sort === "desc" ? "asc" : "desc", page: 1 })}>По времени · {query.sort === "desc" ? "сначала новые" : "сначала старые"} <span>⌄</span></Link>
         </div>
+      </div>
+      <div className={styles.filters} role="group" aria-label="Режим очереди заказов">
+        {ORDER_MODES.map((mode) => <Link key={mode} prefetch={false} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{mode === "all" ? "Все" : mode === "current" ? "Текущие" : mode === "new" ? "Новые" : "История"} <span className={styles.count}>{counts.byMode[mode]}</span></Link>)}
       </div>
       <div className={styles.filters} role="group" aria-label="Фильтр заказов">{ORDER_STATUSES.map((status) => <Link key={status} prefetch={false} href={href({ ...query, status, page: 1 })} aria-current={query.status === status ? "page" : undefined}>{status === "all" ? "Все" : orderStatusLabel(status)} <span className={styles.count}>{counts.byStatus[status]}</span></Link>)}</div>
       <div className={styles.list}>{orders.length ? orders.map((order) => <div className={`${styles.orderPreview} ${order.type === "delivery" ? styles.deliveryPreview : styles.pickupPreview} ${selected?.id === order.id ? styles.selectedPreview : ""}`} key={order.id}>

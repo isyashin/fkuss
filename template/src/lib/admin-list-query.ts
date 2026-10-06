@@ -5,13 +5,21 @@ export const ADMIN_PAGE_SIZE = 25;
 export const ORDER_STATUSES = ["all", ...ORDER_STATUS_CODES] as const;
 export const BOOKING_STATUSES = ["all", "new", "confirmed", "rejected", "cancelled"] as const;
 export const ORDER_TYPES = ["all", "delivery", "pickup"] as const;
+// Режимы очереди заказов (редизайн staff-экрана): группы статусов.
+export const ORDER_MODES = ["all", "current", "new", "history"] as const;
+export const ORDER_MODE_STATUSES: Record<Exclude<OrderModeFilter, "all">, string[]> = {
+  current: ["new", "accepted", "cooking", "ready", "handed_to_courier"],
+  new: ["new"],
+  history: ["delivered", "issued", "cancelled"],
+};
 
 export type RawAdminQuery = Record<string, string | string[] | undefined>;
 export type OrderStatusFilter = typeof ORDER_STATUSES[number];
 export type BookingStatusFilter = typeof BOOKING_STATUSES[number];
 export type OrderTypeFilter = typeof ORDER_TYPES[number];
+export type OrderModeFilter = typeof ORDER_MODES[number];
 export type SortDirection = "asc" | "desc";
-export type OrderListQuery = { status: OrderStatusFilter; type: OrderTypeFilter; sort: SortDirection; page: number };
+export type OrderListQuery = { status: OrderStatusFilter; type: OrderTypeFilter; sort: SortDirection; page: number; mode: OrderModeFilter };
 export type BookingListQuery = { status: BookingStatusFilter; sort: SortDirection; page: number };
 
 function scalar(value: string | string[] | undefined): string | undefined {
@@ -34,6 +42,7 @@ export function parseOrderListQuery(raw: RawAdminQuery): OrderListQuery {
     type: oneOf(scalar(raw.type), ORDER_TYPES, "all"),
     sort: oneOf(scalar(raw.sort), ["asc", "desc"] as const, "desc"),
     page: pageNumber(scalar(raw.page)),
+    mode: oneOf(scalar(raw.mode), ORDER_MODES, "all"),
   };
 }
 
@@ -58,7 +67,8 @@ export function orderListCounts(groups: readonly OrderGroup[], type: OrderTypeFi
   const count = (predicate: (group: OrderGroup) => boolean) => groups.reduce((sum, group) => sum + (predicate(group) ? group._count._all : 0), 0);
   const byStatus = Object.fromEntries(ORDER_STATUSES.map((key) => [key, count((group) => (type === "all" || group.type === type) && (key === "all" || group.status === key))])) as Record<OrderStatusFilter, number>;
   const byType = Object.fromEntries(ORDER_TYPES.map((key) => [key, count((group) => (status === "all" || group.status === status) && (key === "all" || group.type === key))])) as Record<OrderTypeFilter, number>;
-  return { byStatus, byType, total: byStatus[status] };
+  const byMode = Object.fromEntries(ORDER_MODES.map((key) => [key, key === "all" ? byStatus.all : count((group) => (type === "all" || group.type === type) && ORDER_MODE_STATUSES[key as Exclude<OrderModeFilter, "all">].includes(group.status))])) as Record<OrderModeFilter, number>;
+  return { byStatus, byType, byMode, total: byStatus[status] };
 }
 
 export function bookingListCounts(groups: readonly BookingGroup[]) {
@@ -69,6 +79,7 @@ export function adminListHref(base: "/admin" | "/admin/bookings", query: OrderLi
   const params = new URLSearchParams();
   if (query.status !== "all") params.set("status", query.status);
   if ("type" in query && query.type !== "all") params.set("type", query.type);
+  if ("mode" in query && query.mode !== "all") params.set("mode", query.mode);
   if (query.sort !== "desc") params.set("sort", query.sort);
   if (query.page > 1) params.set("page", String(query.page));
   const search = params.toString();

@@ -214,3 +214,9 @@
 /* Мультименю: пометка группы меню в позиции заказа */
 .menuBadge { display:inline-flex; align-items:center; min-height:20px; padding:1px 7px; margin-right:6px; border-radius:999px; background:var(--admin-surface-2); border:1px solid var(--admin-line); color:var(--admin-muted); font-size:10px; font-weight:700; white-space:nowrap; }
 .menuSummary { margin:2px 0 10px; color:var(--admin-muted); font-size:12px; }
+
+/* Редизайн: главный следующий шаг и отдельная опасная отмена */
+.primaryAction { width:100%; min-height:48px; border:1px solid var(--admin-accent); border-radius:10px; background:var(--admin-accent); color:#fff; font-size:13px; font-weight:700; cursor:pointer; }
+.primaryAction:disabled { opacity:.55; }
+.cancelAction { width:100%; min-height:44px; border:1px solid #a3473b; border-radius:10px; background:transparent; color:#a3473b; font-size:12px; font-weight:700; cursor:pointer; }
+.cancelAction:hover { background:rgba(163,71,59,.08); }

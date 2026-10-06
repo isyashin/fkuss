@@ -75,7 +75,17 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
       {editBlocked && <p className={styles.muted}>{editBlocked}</p>}
     </>)}
     {tab === "items" && <label className={styles.statusEditor}><span>Статус заказа</span><select value={order.status} disabled={pending || editing} onChange={(event) => run(event.target.value)}><option value={order.status}>{orderStatusLabel(order.status)}</option>{actions.map((action) => <option key={action.status} value={action.status}>{action.label}</option>)}</select>{editing && <small>Сначала сохраните изменения состава.</small>}</label>}
-    {actions.length > 0 && <div className={styles.actions}>{actions.map((action) => <button key={action.status} type="button" disabled={pending} onClick={() => run(action.status)}>{action.label}</button>)}</div>}
+    {(() => {
+      // Редизайн: одна главная кнопка следующего шага; отмена — отдельно и со стилем опасного действия.
+      const forward = actions.filter((action) => action.status !== "cancelled");
+      const cancel = actions.find((action) => action.status === "cancelled");
+      const next = forward[0];
+      return <>
+        {next && <div className={styles.actions}><button type="button" className={styles.primaryAction} disabled={pending} onClick={() => run(next.status)}>{next.label}</button></div>}
+        {forward.length > 1 && <div className={styles.actions}>{forward.slice(1).map((action) => <button key={action.status} type="button" disabled={pending} onClick={() => run(action.status)}>{action.label}</button>)}</div>}
+        {cancel && <div className={styles.actions}><button type="button" className={styles.cancelAction} disabled={pending} onClick={() => { if (window.confirm(`Отменить заказ № ${order.number}?`)) run(cancel.status); }}>Отменить заказ</button></div>}
+      </>;
+    })()}
     {info}
     {error && <p className={styles.error} role="alert">{error}</p>}
   </>;

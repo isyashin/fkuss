@@ -1,0 +1,65 @@
+/* settings-redesign.module.css — раскладка «Настроек» по макету:
+   колонка разделов (с группами) + белый редактор. Одна открытая задача. */
+
+.layout {
+  display: grid;
+  grid-template-columns: 244px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  max-width: 1260px;
+}
+.sectionsCol {
+  position: sticky;
+  top: 22px;
+  max-height: calc(100vh - 44px);
+  overflow: auto;
+  padding: 16px 10px 16px 16px;
+  border-radius: 14px;
+  background: var(--queue, #f5f6f2);
+  border: 1px solid var(--line, #e2e4df);
+}
+.groupLabel { margin: 14px 0 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #68716a); }
+.groupLabel:first-child { margin-top: 0; }
+.sectionLink {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; min-height: 40px; padding: 0 12px;
+  border: 0; border-radius: 9px; background: transparent; cursor: pointer;
+  color: var(--text, #202723); font: inherit; font-size: 13.5px; font-weight: 600; text-align: left; text-decoration: none;
+}
+.sectionLink:hover { background: rgba(32, 41, 36, 0.06); }
+.sectionLink.current { background: var(--surface, #fff); box-shadow: inset 3px 0 0 var(--accent, #ad573b); }
+
+.editor { min-width: 0; display: grid; gap: 16px; align-content: start; }
+.editorCard { background: var(--surface, #fff); border: 1px solid var(--line, #e2e4df); border-radius: 14px; padding: 22px 24px; }
+.editorTitle { margin: 0 0 4px; font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+.editorHint { margin: 0 0 18px; font-size: 12.5px; line-height: 1.55; color: var(--muted, #68716a); }
+.formGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; margin-bottom: 16px; }
+.note { margin: 10px 0 0; font-size: 12.5px; color: var(--muted, #68716a); }
+.note a { color: var(--accent, #ad573b); }
+.toggleList { display: grid; gap: 4px; margin-bottom: 14px; }
+.toggleRow { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13.5px; cursor: pointer; }
+.toggleRow input { width: 18px; height: 18px; accent-color: var(--accent, #ad573b); }
+.saveBar {
+  position: sticky; bottom: 12px; z-index: 5;
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 18px; padding: 10px 12px;
+  border: 1px solid var(--line, #e2e4df); border-radius: 12px;
+  background: var(--surface, #fff); box-shadow: 0 8px 24px rgba(20, 26, 21, 0.12);
+}
+.saveBar button { min-height: 42px; }
+.saveStatus { font-size: 12.5px; font-weight: 600; }
+.saveStatus.error { color: var(--danger, #a3473b); }
+.divider { height: 1px; margin: 18px 0; background: var(--line, #e2e4df); }
+
+/* legacy-обёртки: встройка существующих секций (restaurant/delivery/...) в новый каркас */
+.legacyCard { background: var(--surface, #fff); border: 1px solid var(--line, #e2e4df); border-radius: 14px; padding: 22px 24px; }
+.legacyCard :global(h2) { margin: 0 0 4px; font-size: 18px; font-family: var(--font); }
+.legacyCard :global(.cardHint) { margin: 0 0 14px; font-size: 12.5px; color: var(--muted, #68716a); }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .sectionsCol { position: static; max-height: none; display: flex; gap: 4px; overflow-x: auto; padding: 8px; }
+  .groupLabel { display: none; }
+  .sectionLink { white-space: nowrap; width: auto; }
+  .formGrid { grid-template-columns: 1fr; }
+}

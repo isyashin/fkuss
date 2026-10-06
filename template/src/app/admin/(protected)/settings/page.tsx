@@ -14,6 +14,8 @@ import { BanquetsAdmin } from "../banquets/banquets-admin";
 import { PagesAdmin } from "../pages/pages-admin";
 import { SyncAdmin } from "../sync/sync-admin";
 import { PrintMaterialsAdmin } from "../print-materials/print-materials-admin";
+import { DeliveryTabs } from "../delivery/delivery-tabs";
+import { geocodeAddress } from "@/lib/delivery/geocoder";
 import { GuestCabinetSettings } from "./guest-cabinet-settings";
 import { SoundSettings } from "./sound-settings";
 import { normalizeGuestCabinet } from "@/lib/guest-cabinet";
@@ -96,6 +98,25 @@ async function SectionPrint() {
     <PrintMaterialsAdmin initialSettings={printSettings} brand={brand} restaurantSlug={restaurant.slug} /></div>;
 }
 
+async function SectionDeliveryZones({ settings }: { settings: Awaited<ReturnType<typeof getSiteSettings>> }) {
+  const prisma = getPrisma();
+  const [options, restaurant] = await Promise.all([
+    prisma.deliveryOption.findMany({ orderBy: { position: "asc" } }),
+    getSiteRestaurant(),
+  ]);
+  // Центр карты — геокодинг адреса ресторана (см. /admin/delivery).
+  let restaurantCenter: { lat: number; lng: number } | null = null;
+  if (restaurant.address.trim()) {
+    const geo = await geocodeAddress(restaurant.address);
+    if (geo.ok) restaurantCenter = { lat: geo.point.lat, lng: geo.point.lng };
+  }
+  return <div className={styles.editorCard}>
+    <h2 className={styles.editorTitle}>Зоны и условия доставки</h2>
+    <p className={styles.editorHint}>Geo-режим: полигональные зоны на карте с тарифами. Работает при наличии ключей Яндекс.Карт в среде сайта.</p>
+    <DeliveryTabs options={options} settings={settings} restaurantCenter={restaurantCenter} ymapsKey={process.env.YANDEX_MAPS_API_KEY ?? ""} />
+  </div>;
+}
+
 export default async function AdminSettingsPage({ searchParams }: { searchParams: Promise<{ section?: string }> }) {
   const actor = await getAdminActor();
   if (!actor) redirect("/admin/login");
@@ -119,7 +140,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       case "promos": return <SectionPromos />;
       case "banquets": return <SectionBanquets settings={settings} />;
       case "print": return <SectionPrint />;
-      case "delivery": return <DeliveryEditor settings={settings} />;
+      case "delivery": return <><DeliveryEditor settings={settings} /><SectionDeliveryZones settings={settings} /></>;
       case "payment": return <PaymentLoyaltyEditor settings={settings} theme={theme} />;
       case "booking": return <BookingEditor settings={settings} />;
       case "pricing": return <PricingEditor settings={settings} theme={theme} />;

@@ -24,6 +24,9 @@ describe("admin notification sound", () => {
     expect(parseSoundRepeats(3.6)).toBe(4);
     expect(parseSoundRepeats(20)).toBe(20);
     expect(parseSoundRepeats(99)).toBe(20);
+    // встроенный сигнал «Заказ с сайта» — выбор и парсинг
+    expect(parseAdminSound({ selected: "site" }).selected).toBe("site");
+    expect(parseAdminSound({ selected: "несуществует" }).selected).toBe("standard1");
     // parseAdminSound протаскивает repeats и дефолтит старые записи
     expect(parseAdminSound({ selected: "standard2" }).repeats).toBe(10);
     expect(parseAdminSound({ selected: "standard2", repeats: 5 }).repeats).toBe(5);

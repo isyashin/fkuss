@@ -219,8 +219,11 @@
 .popWrap { position: relative; }
 .popWrap .profilePopover { left: 0; bottom: calc(100% + 10px); }
 @media (max-width: 760px) {
-  .topbar .notifPanel, .topbar .profilePopover { left: auto; right: 0; bottom: auto; top: calc(100% + 10px); }
-  .topbar .popWrap .profilePopover { bottom: auto; }
+  .topbar .notifPanel, .topbar .profilePopover {
+    position: fixed; left: 10px; right: 10px; width: auto;
+    top: calc(56px + env(safe-area-inset-top, 0px) + 8px); bottom: auto;
+    max-height: 55vh; overflow: auto;
+  }
   .topbar .footBadge { margin-left: 0; }
 }
 

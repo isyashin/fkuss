@@ -41,8 +41,11 @@ test("VIS-01/03: загрузка фона через админку, приме
   const isMobile = test.info().project.name.includes("mobile");
   if (isMobile) {
     await page.goto("/admin/settings?section=theme");
-    await page.getByLabel("Отключить фон на мобильных").uncheck();
-    await saveAppearance();
+    // Кнопка «Сохранить» появляется только при изменениях (редизайн):
+    // меняем флаг только если он ещё не в нужном состоянии.
+    const disableMobile = page.getByLabel("Отключить фон на мобильных");
+    if (await disableMobile.isChecked()) await disableMobile.uncheck();
+    if (await appearance.getByRole("button", { name: "Сохранить" }).isVisible().catch(() => false)) await saveAppearance();
   }
 
   // На витрине — background-image в стилях body (ждём применения)

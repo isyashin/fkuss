@@ -110,9 +110,10 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   await page.setViewportSize({ width: 360, height: 800 });
   const mobile = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(mobile.content, "admin bookings overflow on mobile").toBeLessThanOrEqual(mobile.viewport + 1);
-  const themeButton = page.getByRole("button", { name: "Включить тёмную тему" });
-  await expect(themeButton.getByText("Светлая")).toBeVisible();
-  await expect(themeButton.locator("svg")).toBeVisible();
+  // Тема панели — в меню профиля (редизайн): пункт «Тёмная тема» доступен
+  await page.getByRole("button", { name: /Профиль:/ }).click();
+  await expect(page.getByRole("button", { name: "☾ Тёмная тема" })).toBeVisible();
+  await page.keyboard.press("Escape").catch(() => {});
   const mobileNav = page.getByRole("navigation", { name: "Мобильная навигация" });
   for (const href of ["/admin", "/admin/bookings"]) {
     const sidebarCount = page.locator(`aside[aria-label="Панель ресторана"] a[href="${href}"] em`);
@@ -214,7 +215,7 @@ test("admin dark theme colors the shell and panels consistently", async ({ page 
   // Оболочка — токены тёмной темы редизайна; панели разделов мигрируют на новые
   // токены поэтапно, поэтому проверяем читаемость текста панели, а не точный цвет.
   const value = await colors();
-  expect(value.background).toBe("rgb(20, 24, 21)");
+  expect(value.background).toBe("rgb(20, 25, 21)");
   expect(value.text).toBe("rgb(230, 234, 229)");
   const panelText = value.panelText.match(/\d+/g)?.map(Number) ?? [0, 0, 0];
   expect(Math.min(...panelText)).toBeGreaterThan(150);

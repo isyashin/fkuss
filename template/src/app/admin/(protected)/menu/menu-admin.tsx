@@ -1,14 +1,18 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addCategory, addDish, deleteDish, updateCategoryMenu, updateDish } from "./actions";
 import { dishImageUrl } from "@/lib/assets";
 import type { Category, Dish } from "@/generated/prisma/client";
-import adminStyles from "../admin-ui.module.css";
+import ui from "../admin-ui.module.css";
+import rd from "../admin-redesign.module.css";
+import { StatusPill } from "../status-pill";
+import { ConfirmDialog } from "../confirm-dialog";
 import styles from "./menu-admin.module.css";
 
 const errorText = (error: unknown) => error instanceof Error ? error.message : "Не удалось сохранить изменение";
+const rub = (value: number) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
 
 async function uploadDishPhoto(dishId: string, file: File): Promise<void> {
   const form = new FormData();
@@ -29,6 +33,7 @@ async function uploadDishPhoto(dishId: string, file: File): Promise<void> {
 function draftFromDish(dish: Dish) {
   return {
     name: dish.name,
+    categoryId: dish.categoryId,
     weight: dish.weight,
     composition: dish.composition,
     description: dish.description,
@@ -37,269 +42,342 @@ function draftFromDish(dish: Dish) {
     coefficientPercent: dish.coefficientPercent,
   };
 }
+type DishDraft = ReturnType<typeof draftFromDish>;
 
 export function MenuAdmin({ categories, menus }: { categories: (Category & { dishes: Dish[] })[]; menus: { id: string; name: string }[] }) {
-  const [newCategory, setNewCategory] = useState("");
-  const [newCategoryMenu, setNewCategoryMenu] = useState("");
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [menuId, setMenuId] = useState("all");
   const [categoryId, setCategoryId] = useState("all");
+  const [availability, setAvailability] = useState<"all" | "available" | "unavailable">("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [mobileDetail, setMobileDetail] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
+  const [newCategoryMenu, setNewCategoryMenu] = useState("");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
-  const total = categories.reduce((sum, category) => sum + category.dishes.length, 0);
+  const categoryDialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => { const dialog = categoryDialogRef.current; if (!dialog) return; if (categoryDialogOpen && !dialog.open) dialog.showModal(); if (!categoryDialogOpen && dialog.open) dialog.close(); }, [categoryDialogOpen]);
+
   const needle = query.trim().toLocaleLowerCase("ru");
-  const menuFiltered = menuId === "all" ? categories : categories.filter((category) => (category.menuId ?? "") === menuId);
-  const visible = menuFiltered.filter((category) => categoryId === "all" || category.id === categoryId).map((category) => ({
-    ...category,
-    dishes: category.dishes.filter((dish) => !needle || [dish.name, dish.description, dish.composition, category.name].some((value) => value.toLocaleLowerCase("ru").includes(needle))),
-  })).filter((category) => category.dishes.length > 0 || (!needle && categoryId === category.id));
-  const visibleCount = visible.reduce((sum, category) => sum + category.dishes.length, 0);
+  const menuFiltered = useMemo(() => menuId === "all" ? categories : categories.filter((category) => (category.menuId ?? "") === menuId), [categories, menuId]);
+  const flat = useMemo(() => menuFiltered
+    .filter((category) => categoryId === "all" || category.id === categoryId)
+    .map((category) => ({
+      ...category,
+      dishes: category.dishes.filter((dish) => {
+        if (availability === "available" && !dish.available) return false;
+        if (availability === "unavailable" && dish.available) return false;
+        return !needle || [dish.name, dish.description, dish.composition].some((value) => value.toLocaleLowerCase("ru").includes(needle));
+      }),
+    }))
+    .filter((category) => category.dishes.length > 0 || categoryId === category.id), [menuFiltered, categoryId, availability, needle]);
+  const allDishes = flat.flatMap((category) => category.dishes);
+  const selected = allDishes.find((dish) => dish.id === selectedId) ?? null;
+
+  const select = (id: string | null, create = false) => {
+    setSelectedId(id);
+    setCreating(create);
+    setMobileDetail(true);
+    setError("");
+  };
 
   return (
-    <div className={`${styles.page} ${adminStyles.menuPage}`}>
-      <div className={styles.intro}><span>Каталог</span><h1>Меню</h1><p>Блюда и категории текущего ресторана. Сохранённые изменения видны на сайте.</p></div>
-      <div className={styles.toolbar}><label><span className={styles.srOnly}>Поиск по меню</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти блюдо или описание" aria-label="Поиск по меню" /></label><span>{visibleCount === total ? `${total} блюд` : `${visibleCount} из ${total} блюд`}</span></div>
-      {menus.length > 0 && (
-        <div className={styles.categories} role="group" aria-label="Меню ресторана">
-          <button type="button" aria-pressed={menuId === "all"} onClick={() => { setMenuId("all"); setCategoryId("all"); }}>Все меню <span>{total}</span></button>
-          {menus.map((menu) => {
-            const count = categories.filter((c) => (c.menuId ?? "") === menu.id).reduce((s, c) => s + c.dishes.length, 0);
-            return <button type="button" key={menu.id} aria-pressed={menuId === menu.id} onClick={() => { setMenuId(menu.id); setCategoryId("all"); }}>{menu.name} <span>{count}</span></button>;
-          })}
+    <div className={`${ui.dashboard} ${styles.menuLayout} ${mobileDetail ? ui.mobileDetail : ""}`}>
+      <section className={ui.ordersPanel} aria-label="Список блюд">
+        <div className={ui.queueHead}>
+          <h1>Меню</h1>
+          <button type="button" className={rd.btnPrimary} onClick={() => select(null, true)}>+ Блюдо</button>
         </div>
-      )}
-      <div className={styles.categories} role="group" aria-label="Категории меню"><button type="button" aria-pressed={categoryId === "all"} onClick={() => setCategoryId("all")}>Все <span>{visibleCount}</span></button>{menuFiltered.map((category) => <button type="button" key={category.id} aria-pressed={categoryId === category.id} onClick={() => setCategoryId(category.id)}>{category.name} <span>{category.dishes.length}</span></button>)}</div>
-      {visible.map((category) => (
-        <section key={category.id} className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2>{category.name}</h2>
-            {menus.length > 0 && (
-              <label className={adminStyles.categoryMenuSelect}>Меню:
-                <select
-                  value={category.menuId ?? ""}
-                  disabled={pending}
-                  onChange={(event) => {
-                    startTransition(async () => {
-                      setError("");
-                      try { await updateCategoryMenu(category.id, event.target.value); router.refresh(); }
-                      catch (cause) { setError(errorText(cause)); }
-                    });
-                  }}
-                >
-                  <option value="">— не задано —</option>
-                  {menus.map((menu) => <option key={menu.id} value={menu.id}>{menu.name}</option>)}
-                </select>
-              </label>
-            )}
-            <span>{category.dishes.length}</span>
+        <div className={styles.menuTools}>
+          <input className={ui.searchInput} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти блюдо" aria-label="Поиск блюда" />
+          <div className={styles.menuFilterRow}>
+            <select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); }} aria-label="Категория меню">
+              <option value="all">Все категории</option>
+              {menuFiltered.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
+            <select value={availability} onChange={(event) => setAvailability(event.target.value as typeof availability)} aria-label="Доступность блюд">
+              <option value="all">Все блюда</option>
+              <option value="available">В меню</option>
+              <option value="unavailable">Недоступны</option>
+            </select>
           </div>
-          {!needle && <AddDishForm categoryId={category.id} categoryName={category.name} />}
-          <div className={styles.grid}>
-            {category.dishes.map((dish) => (
-              <DishRow key={dish.id} dish={dish} categoryName={category.name} />
-            ))}
-          </div>
-        </section>
-      ))}
-      {visible.length === 0 && <p className={styles.empty}>По этому запросу блюд нет.</p>}
+          {menus.length > 0 && (
+            <div className={styles.menuFilterRow}>
+              <select value={menuId} onChange={(event) => { setMenuId(event.target.value); setCategoryId("all"); }} aria-label="Меню ресторана">
+                <option value="all">Все меню</option>
+                {menus.map((menu) => <option key={menu.id} value={menu.id}>{menu.name}</option>)}
+              </select>
+            </div>
+          )}
+          <button type="button" className={`${rd.btnText} ${styles.categoryAdd}`} onClick={() => setCategoryDialogOpen(true)}>+ Категория</button>
+        </div>
+        <div className={ui.list}>
+          {flat.length ? flat.map((category) => (
+            <div key={category.id}>
+              {categoryId === "all" && <p className={ui.dayDivider}>{category.name}</p>}
+              {category.dishes.map((dish) => (
+                <div key={dish.id} className={`${styles.menuRow} ${dish.image ? styles.hasPhoto : ""} ${selected?.id === dish.id && !creating ? ui.selectedPreview : ""}`}>
+                  <button type="button" className={ui.orderOpen} aria-label={`Открыть блюдо ${dish.name}`} aria-pressed={selected?.id === dish.id && !creating} onClick={() => select(dish.id)} />
+                  {dish.image && <span className={styles.dishPhoto}><img src={dishImageUrl(dish.image, "sm")} alt="" loading="lazy" /></span>}
+                  <span className={styles.dishCopy}>
+                    <strong>{dish.name}</strong>
+                    <small>{dish.weight}{dish.description ? ` · ${dish.description}` : ""}</small>
+                    {!dish.manualAvailable && <StatusPill tone="danger">Стоп вручную</StatusPill>}
+                    {dish.manualAvailable && !dish.available && <StatusPill tone="source">Нет в источнике</StatusPill>}
+                  </span>
+                  <span className={styles.dishPrice}>{rub(dish.price)}</span>
+                </div>
+              ))}
+              {category.dishes.length === 0 && <p className={ui.empty}>В этой категории блюд нет.</p>}
+            </div>
+          )) : <p className={ui.empty}>По этим условиям блюд нет.</p>}
+        </div>
+      </section>
+      <section className={ui.detailPanel} aria-label="Выбранное блюдо">
+        {creating ? (
+          <NewDishEditor categories={menuFiltered} menus={menus} defaultCategoryId={categoryId !== "all" ? categoryId : menuFiltered[0]?.id ?? ""}
+            onClose={() => setCreating(false)} onCreated={(id) => { setCreating(false); setSelectedId(id); router.refresh(); }} />
+        ) : selected ? (
+          <DishEditor key={selected.id} dish={selected} categories={menuFiltered} menus={menus}
+            onBack={() => setMobileDetail(false)} onDeleted={() => { setSelectedId(null); router.refresh(); }} />
+        ) : (
+          <div className={ui.detailInner}><p className={ui.empty}>Выберите блюдо.</p></div>
+        )}
+        {error && <p className={ui.error} role="alert">{error}</p>}
+      </section>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
+      <dialog ref={categoryDialogRef} className={rd.dialog} onClose={() => setCategoryDialogOpen(false)}>
+        <form className={rd.dialogBody} onSubmit={(event) => {
+          event.preventDefault();
           if (!newCategory.trim()) return;
           startTransition(async () => {
             setError("");
-            try { await addCategory(newCategory.trim(), newCategoryMenu || undefined); setNewCategory(""); router.refresh(); }
+            try { await addCategory(newCategory.trim(), newCategoryMenu || undefined); setNewCategory(""); setNewCategoryMenu(""); setCategoryDialogOpen(false); router.refresh(); }
             catch (cause) { setError(errorText(cause)); }
           });
-        }}
-        className={styles.addCategory}
-      >
-        <div><h2>Новая категория</h2><p>Создайте раздел, затем добавьте в него блюда.</p></div>
-        <input
-          value={newCategory}
-          onChange={(e) => setNewCategory(e.target.value)}
-          placeholder="Новая категория"
-          className="flex-1 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-        />
-        {menus.length > 0 && (
-          <select
-            value={newCategoryMenu}
-            onChange={(e) => setNewCategoryMenu(e.target.value)}
-            aria-label="Меню новой категории"
-            className="min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-          >
-            <option value="">Без меню</option>
-            {menus.map((menu) => <option key={menu.id} value={menu.id}>{menu.name}</option>)}
-          </select>
-        )}
-        <button disabled={pending} className="min-h-11 px-5 rounded-full bg-accent text-white font-medium disabled:opacity-50">
-          Добавить
-        </button>
-      </form>
-      {error && <p className={styles.error} role="alert">{error}</p>}
+        }}>
+          <h2 className={rd.dialogTitle}>Новая категория</h2>
+          <label className={rd.field}><span>Название</span>
+            <input className={rd.input} value={newCategory} onChange={(event) => setNewCategory(event.target.value)} maxLength={120} required autoComplete="off" />
+          </label>
+          {menus.length > 0 && (
+            <label className={rd.field} style={{ marginTop: 14 }}><span>Меню</span>
+              <select className={rd.select} value={newCategoryMenu} onChange={(event) => setNewCategoryMenu(event.target.value)}>
+                <option value="">Без меню</option>
+                {menus.map((menu) => <option key={menu.id} value={menu.id}>{menu.name}</option>)}
+              </select>
+            </label>
+          )}
+          <div className={rd.dialogActions} style={{ marginTop: 24 }}>
+            <button type="button" className={rd.btn} onClick={() => setCategoryDialogOpen(false)}>Отмена</button>
+            <button type="submit" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending}>Добавить</button>
+          </div>
+        </form>
+      </dialog>
     </div>
   );
 }
 
-function DishRow({ dish, categoryName }: { dish: Dish; categoryName: string }) {
+function DishEditor({ dish, categories, menus, onBack, onDeleted }: { dish: Dish; categories: (Category & { dishes: Dish[] })[]; menus: { id: string; name: string }[]; onBack: () => void; onDeleted: () => void }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<DishDraft>(() => draftFromDish(dish));
+  const [saved, setSaved] = useState<DishDraft>(() => draftFromDish(dish));
   const [error, setError] = useState("");
-  const [form, setForm] = useState(() => draftFromDish(dish));
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+  const dirty = JSON.stringify(form) !== JSON.stringify(saved);
+
+  const save = () => startTransition(async () => {
+    setError("");
+    try { await updateDish(dish.id, form); setSaved(form); router.refresh(); }
+    catch (cause) { setError(errorText(cause)); }
+  });
+  const toggleStop = () => startTransition(async () => {
+    setError("");
+    try { await updateDish(dish.id, { manualAvailable: !dish.manualAvailable }); router.refresh(); }
+    catch (cause) { setError(errorText(cause)); }
+  });
 
   return (
-    <article className={`${styles.dishCard} ${editing ? styles.isEditing : ""}`} aria-label={dish.name}>
-      <button
-        onClick={() => fileRef.current?.click()}
-        title={dish.image ? "Заменить фото" : "Добавить фото"}
-        aria-label={`${dish.image ? "Заменить" : "Добавить"} фото блюда ${dish.name}`}
-        disabled={pending}
-        className={styles.dishPhoto}
-      >
-        {dish.image ? (
-          <img src={dishImageUrl(dish.image, "sm")} alt={dish.name} loading="lazy" className={styles.dishImage} />
-        ) : (
-          <span className={styles.dishPlaceholder}>Фото не добавлено</span>
-        )}
-      </button>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
+    <div className={ui.detailInner}>
+      <button type="button" className={ui.backButton} onClick={onBack}>← К меню</button>
+      <div className={ui.detailHeader}>
+        <div className={ui.detailTitle}><h2>{dish.name}</h2></div>
+        <p className={ui.muted}>{categories.find((category) => category.id === dish.categoryId)?.name ?? "Без категории"} · на витрине {rub(dish.price)}</p>
+      </div>
+      <div className={styles.photoControl}>
+        <span className={styles.editorPhoto}>{dish.image ? <img src={dishImageUrl(dish.image, "sm")} alt={dish.name} /> : <span>Нет фото</span>}</span>
+        <div>
+          <button type="button" className={rd.btn} onClick={() => fileRef.current?.click()} disabled={pending}>{dish.image ? "Заменить фото" : "Добавить фото"}</button>
+          <small className={rd.hint} style={{ display: "block", marginTop: 7 }}>PNG, JPG или WebP. Фото обновится на витрине сразу после загрузки.</small>
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={async (event) => {
+          const file = event.target.files?.[0];
           if (!file) return;
           setError("");
           try { await uploadDishPhoto(dish.id, file); router.refresh(); }
           catch (cause) { setError(errorText(cause)); }
-          e.target.value = "";
-        }}
-      />
-
-      {editing ? (
-        <form className={`${styles.dishBody} ${styles.editForm}`} onSubmit={(event) => {
-          event.preventDefault();
-          startTransition(async () => {
-            setError("");
-            try { await updateDish(dish.id, form); setEditing(false); router.refresh(); }
-            catch (cause) { setError(errorText(cause)); }
-          });
-        }}>
-          <label>Название<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={120} /></label>
-          <div className={styles.formRow}>
-            <label>Цена на витрине, ₽<input type="number" min={0} max={1000000} step={1} required value={form.priceMode === "manual" ? form.manualPrice ?? "" : dish.price} onChange={(e) => setForm({ ...form, priceMode: "manual", manualPrice: e.target.value === "" ? null : Number(e.target.value) })}/></label>
-            <label>Вес / объём<input value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} maxLength={50}/></label>
-          </div>
-          <label>Режим цены<select value={form.priceMode} onChange={(e) => {
-            const priceMode = e.target.value as typeof form.priceMode;
-            setForm({ ...form, priceMode, manualPrice: priceMode === "manual" ? form.manualPrice ?? dish.price : form.manualPrice });
-          }}>
-            <option value="inherit">Общая настройка</option>
-            <option value="yandex" disabled={dish.yandexPrice === null}>Цена Яндекс.Еды</option>
-            <option value="manual">Ручная цена</option>
-            <option value="coefficient" disabled={dish.yandexPrice === null}>Яндекс ± %</option>
-          </select></label>
-          {form.priceMode === "coefficient" && <label>Цена Яндекс ± %<input type="number" min={-100} max={500} value={form.coefficientPercent ?? ""} onChange={(e) => setForm({ ...form, coefficientPercent: e.target.value === "" ? null : Number(e.target.value) })}/></label>}
-          <p className={styles.priceNote}>{dish.yandexPrice !== null ? `Яндекс: ${dish.yandexPrice} ₽ · ` : ""}Итог на витрине: {dish.price} ₽</p>
-          <label>Описание<textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3}/></label>
-          <label>Состав<textarea value={form.composition} onChange={(e) => setForm({ ...form, composition: e.target.value })} rows={2}/></label>
-          <p className={styles.priceNote}>Фото можно заменить нажатием на изображение выше.</p>
-          <div className={styles.formActions}>
-            <button type="submit" disabled={pending} className={styles.primaryButton}>Сохранить</button>
-            <button type="button" onClick={() => setEditing(false)} className={styles.outlineButton}>Отмена</button>
-            <button type="button" disabled={pending} onClick={() => {
-              if (confirm(`Удалить «${dish.name}»?`)) startTransition(async () => {
-                setError("");
-                try { await deleteDish(dish.id); router.refresh(); }
-                catch (cause) { setError(errorText(cause)); }
-              });
-            }} className={styles.deleteButton}>Удалить</button>
-          </div>
-        </form>
-      ) : (
-        <div className={styles.dishBody}>
-          <span className={styles.eyebrow}>{categoryName}</span>
-          <h3 className={styles.dishTitle}>{dish.name}</h3>
-          <p className={styles.dishDescription}>{dish.description || "Описание не указано"}</p>
-          <div className={styles.dishBottom}><span>{dish.weight || "Вес не указан"}</span><strong>{dish.price.toLocaleString("ru-RU")} ₽</strong></div>
-          <div className={styles.dishActions}>
-            <button type="button" onClick={() => { setForm(draftFromDish(dish)); setEditing(true); }} className={styles.outlineButton}>
-              Править
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => startTransition(async () => { setError(""); try { await updateDish(dish.id, { manualAvailable: !dish.manualAvailable }); router.refresh(); } catch (cause) { setError(errorText(cause)); } })}
-              className={`${styles.availability} ${dish.available ? "" : styles.unavailable}`}
-              aria-label={`${dish.manualAvailable ? "Поставить на стоп" : "Снять со стопа"}: ${dish.name}`}
-              title={dish.manualAvailable ? "Поставить на стоп вручную" : "Вернуть в меню"}
-            >
-              {dish.available ? "В наличии" : "Нет в наличии"}
-            </button>
-          </div>
-          {!dish.available && <p className={styles.availabilityNote}>Недоступно на витрине{dish.manualAvailable ? " по данным Яндекс.Еды" : ""}</p>}
+          event.target.value = "";
+        }} />
+      </div>
+      <div className={styles.menuFields}>
+        <label className={rd.field}><span>Название</span>
+          <input className={rd.input} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required maxLength={120} />
+        </label>
+        <div className={styles.menuPriceRow}>
+          <label className={rd.field}><span>Категория</span>
+            <select className={rd.select} value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })}>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
+          </label>
+          {menus.length > 0 && (
+            <label className={rd.field}><span>Меню</span>
+              <select className={rd.select} value={categories.find((category) => category.id === dish.categoryId)?.menuId ?? ""} disabled={pending}
+                onChange={(event) => startTransition(async () => {
+                  setError("");
+                  try { await updateCategoryMenu(dish.categoryId, event.target.value); router.refresh(); }
+                  catch (cause) { setError(errorText(cause)); }
+                })}>
+                <option value="">— не задано —</option>
+                {menus.map((menu) => <option key={menu.id} value={menu.id}>{menu.name}</option>)}
+              </select>
+            </label>
+          )}
         </div>
-      )}
-      {error && <p className={styles.error} role="alert">{error}</p>}
-    </article>
+        <div className={styles.menuPriceRow}>
+          <label className={rd.field}><span>Вес / объём</span>
+            <input className={rd.input} value={form.weight} onChange={(event) => setForm({ ...form, weight: event.target.value })} maxLength={50} />
+          </label>
+          <label className={rd.field}><span>Режим цены</span>
+            <select className={rd.select} value={form.priceMode} onChange={(event) => {
+              const priceMode = event.target.value as DishDraft["priceMode"];
+              setForm({ ...form, priceMode, manualPrice: priceMode === "manual" ? form.manualPrice ?? dish.price : form.manualPrice });
+            }}>
+              <option value="inherit">Общая настройка</option>
+              <option value="yandex" disabled={dish.yandexPrice === null}>Цена Яндекс.Еды</option>
+              <option value="manual">Ручная цена</option>
+              <option value="coefficient" disabled={dish.yandexPrice === null}>Яндекс ± %</option>
+            </select>
+          </label>
+        </div>
+        {form.priceMode === "manual" && (
+          <label className={rd.field}><span>Цена на витрине, ₽</span>
+            <input className={rd.input} type="number" min={0} max={1000000} step={1} value={form.manualPrice ?? ""} onChange={(event) => setForm({ ...form, manualPrice: event.target.value === "" ? null : Number(event.target.value) })} />
+          </label>
+        )}
+        {form.priceMode === "coefficient" && (
+          <label className={rd.field}><span>Цена Яндекс ± %</span>
+            <input className={rd.input} type="number" min={-100} max={500} value={form.coefficientPercent ?? ""} onChange={(event) => setForm({ ...form, coefficientPercent: event.target.value === "" ? null : Number(event.target.value) })} />
+          </label>
+        )}
+        <p className={rd.hint}>{dish.yandexPrice !== null ? `Цена в Яндекс.Еде: ${rub(dish.yandexPrice)} · ` : ""}На витрине: {rub(dish.price)}</p>
+        <label className={rd.field}><span>Описание</span>
+          <textarea className={rd.textarea} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} />
+        </label>
+        <label className={rd.field}><span>Состав</span>
+          <textarea className={rd.textarea} value={form.composition} onChange={(event) => setForm({ ...form, composition: event.target.value })} rows={2} />
+        </label>
+      </div>
+      <div className={styles.menuStatusAction}>
+        {!dish.manualAvailable
+          ? <button type="button" className={rd.btn} disabled={pending} onClick={toggleStop}>Снять со стопа</button>
+          : <button type="button" className={rd.btn} disabled={pending} onClick={toggleStop}>Поставить на стоп</button>}
+        {!dish.available && <p className={rd.hint} style={{ marginTop: 8 }}>{dish.manualAvailable ? "Блюда нет в источнике — снятие стопа не вернёт его на витрину." : "Блюдо недоступно на витрине."}</p>}
+      </div>
+      {error && <p className={ui.error} role="alert">{error}</p>}
+      <div className={styles.menuSavebar}>
+        <span>{dirty ? "Есть несохранённые изменения" : "Изменений нет"}</span>
+        <div>
+          <button type="button" className={rd.btn} disabled={pending || !dirty} onClick={() => { setForm(saved); }}>Отмена</button>
+          <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !dirty} onClick={save}>{pending ? "Сохраняем…" : "Сохранить"}</button>
+        </div>
+      </div>
+      <button type="button" className={`${rd.btnText} ${rd.btnDanger} ${styles.menuDelete}`} disabled={pending} onClick={() => setConfirmDelete(true)}>Удалить блюдо</button>
+      <ConfirmDialog request={confirmDelete ? {
+        title: "Удалить блюдо?",
+        text: `«${dish.name}» исчезнет из меню и витрины.`,
+        acceptLabel: "Удалить",
+        onAccept: () => startTransition(async () => {
+          setError("");
+          try { await deleteDish(dish.id); onDeleted(); }
+          catch (cause) { setError(errorText(cause)); }
+        }),
+      } : null} onClose={() => setConfirmDelete(false)} />
+    </div>
   );
 }
 
-function AddDishForm({ categoryId, categoryName }: { categoryId: string; categoryName: string }) {
+function NewDishEditor({ categories, menus, defaultCategoryId, onClose, onCreated }: { categories: (Category & { dishes: Dish[] })[]; menus: { id: string; name: string }[]; defaultCategoryId: string; onClose: () => void; onCreated: (id: string) => void }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", price: 0, weight: "", composition: "", description: "" });
+  const [form, setForm] = useState({ name: "", price: 0, weight: "", composition: "", description: "", categoryId: defaultCategoryId });
   const [photo, setPhoto] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
-
-  if (!open) {
-    return (
-      <><button onClick={() => { setError(""); setOpen(true); }} className={styles.addDishButton}>
-        + Блюдо
-      </button>{error && <p className={styles.error} role="alert">{error}</p>}</>
-    );
-  }
+  const dirty = form.name.trim().length > 0;
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
+    <div className={ui.detailInner}>
+      <button type="button" className={ui.backButton} onClick={onClose}>← К меню</button>
+      <div className={ui.detailHeader}>
+        <div className={ui.detailTitle}><h2>Новое блюдо</h2></div>
+        <p className={ui.muted}>Обязательны название и цена. Фото можно добавить сразу или позже.</p>
+      </div>
+      <form className={styles.menuFields} onSubmit={(event) => {
+        event.preventDefault();
+        if (!form.name.trim() || !form.price) return;
         startTransition(async () => {
           setError("");
           let createdId: string | null = null;
           try {
-            createdId = await addDish({ categoryId, ...form });
+            createdId = await addDish({ categoryId: form.categoryId, name: form.name, price: form.price, weight: form.weight, composition: form.composition, description: form.description });
             if (photo) await uploadDishPhoto(createdId, photo);
-            setOpen(false);
-            setPhoto(null);
-            setForm({ name: "", price: 0, weight: "", composition: "", description: "" });
-            router.refresh();
+            onCreated(createdId);
           } catch (cause) {
             setError(createdId ? `Блюдо добавлено, но фото не сохранилось: ${errorText(cause)}. Загрузите фото в карточке блюда.` : errorText(cause));
-            if (createdId) { setOpen(false); setPhoto(null); setForm({ name: "", price: 0, weight: "", composition: "", description: "" }); }
-            router.refresh();
+            if (createdId) onCreated(createdId);
           }
+          router.refresh();
         });
-      }}
-      className={styles.addDishForm}
-    >
-      <h3>Новое блюдо · {categoryName}</h3>
-      <label>Название<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={120}/></label>
-      <div className={styles.formRow}>
-        <label>Цена, ₽<input type="number" min={0} max={1000000} step={1} value={form.price || ""} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} required/></label>
-        <label>Вес / объём<input type="text" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} maxLength={50}/></label>
-      </div>
-      <label>Описание<textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3}/></label>
-      <label>Состав<textarea value={form.composition} onChange={(e) => setForm({ ...form, composition: e.target.value })} rows={2}/></label>
-      <label>Фото блюда<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} /></label>
-      <div className={styles.formActions}><button type="submit" disabled={pending} className={styles.primaryButton}>Добавить блюдо</button><button type="button" onClick={() => setOpen(false)} className={styles.outlineButton}>Отмена</button></div>
-      {error && <p className={styles.error} role="alert">{error}</p>}
-    </form>
+      }}>
+        <label className={rd.field}><span>Название</span>
+          <input className={rd.input} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required maxLength={120} />
+        </label>
+        <div className={styles.menuPriceRow}>
+          <label className={rd.field}><span>Категория</span>
+            <select className={rd.select} value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })}>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
+          </label>
+          <label className={rd.field}><span>Цена, ₽</span>
+            <input className={rd.input} type="number" min={0} max={1000000} step={1} value={form.price || ""} onChange={(event) => setForm({ ...form, price: Number(event.target.value) })} required />
+          </label>
+        </div>
+        <label className={rd.field}><span>Вес / объём</span>
+          <input className={rd.input} value={form.weight} onChange={(event) => setForm({ ...form, weight: event.target.value })} maxLength={50} />
+        </label>
+        <label className={rd.field}><span>Описание</span>
+          <textarea className={rd.textarea} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} />
+        </label>
+        <label className={rd.field}><span>Состав</span>
+          <textarea className={rd.textarea} value={form.composition} onChange={(event) => setForm({ ...form, composition: event.target.value })} rows={2} />
+        </label>
+        <label className={rd.field}><span>Фото блюда</span>
+          <input className={rd.input} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} />
+        </label>
+        {error && <p className={ui.error} role="alert">{error}</p>}
+        <div className={styles.menuSavebar}>
+          <span>{dirty ? "Есть несохранённые изменения" : "Заполните название и цену"}</span>
+          <div>
+            <button type="button" className={rd.btn} disabled={pending} onClick={onClose}>Отмена</button>
+            <button type="submit" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !form.name.trim() || !form.price}>{pending ? "Сохраняем…" : "Добавить блюдо"}</button>
+          </div>
+        </div>
+      </form>
+    </div>
   );
 }

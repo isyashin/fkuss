@@ -119,19 +119,13 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
 
   await page.goto("/admin/menu");
   await expect(page.getByRole("heading", { name: "Меню", exact: true })).toBeVisible();
-  const categoryGroup = page.getByRole("group", { name: "Категории меню" });
-  await expect(categoryGroup).toBeVisible();
-  expect(await categoryGroup.evaluate((element) => getComputedStyle(element).flexWrap)).toBe("wrap");
-  const firstDish = page.getByRole("article").first();
-  await expect(firstDish.getByRole("heading", { level: 3 })).toBeVisible();
-  await expect(firstDish.getByRole("button", { name: /фото блюда/ })).toBeVisible();
-  await expect(firstDish.locator("p").first()).toBeVisible();
-  await firstDish.getByRole("button", { name: "Править" }).click();
-  await expect(firstDish.getByLabel("Описание")).toBeVisible();
-  await firstDish.getByLabel("Режим цены").selectOption("inherit");
-  await expect(firstDish.getByLabel("Цена на витрине, ₽")).toBeVisible();
-  await firstDish.getByRole("button", { name: "Отмена" }).click();
-  await page.getByRole("button", { name: "+ Блюдо" }).first().click();
+  await expect(page.getByRole("group", { name: "Категория меню" })).toBeVisible();
+  // Очередь блюдов: строка открывает редактор справа
+  await page.getByRole("button", { name: /Открыть блюдо/ }).first().click();
+  await expect(page.getByLabel("Описание")).toBeVisible();
+  await page.getByLabel("Режим цены").selectOption("inherit");
+  await expect(page.getByLabel("Название")).toBeVisible();
+  await page.getByRole("button", { name: "+ Блюдо" }).click();
   await expect(page.getByRole("heading", { name: /Новое блюдо/ })).toBeVisible();
   await page.getByRole("button", { name: "Отмена" }).click();
   const menuWidth = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
@@ -178,14 +172,14 @@ test("admin orders use two readable columns at 1280px", async ({ page }) => {
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/admin/menu");
-  const search = await page.getByRole("textbox", { name: "Поиск по меню" }).boundingBox();
+  const search = await page.getByRole("textbox", { name: "Поиск блюда" }).boundingBox();
   expect(search).not.toBeNull();
-  expect(search!.width).toBeGreaterThan(800);
-  const dishFont = await page.getByRole("article").first().getByRole("heading", { level: 3 })
-    .evaluate((element) => ({ family: getComputedStyle(element).fontFamily, weight: getComputedStyle(element).fontWeight }));
-  // Меню ещё на старой типографике; миграция — отдельным этапом редизайна.
-  expect(dishFont.family).toContain("Arial");
-  expect(dishFont.weight).toBe("400");
+  // Поиск занимает колонку очереди (не шире её)
+  expect(search!.width).toBeGreaterThan(250);
+  expect(search!.width).toBeLessThan(360);
+  const dishFont = await page.getByRole("button", { name: /Открыть блюдо/ }).first()
+    .evaluate((element) => getComputedStyle(element).fontFamily);
+  expect(dishFont).toContain("Segoe UI");
 });
 
 test("admin dark theme colors the shell and panels consistently", async ({ page }) => {

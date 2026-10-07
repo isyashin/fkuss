@@ -48,16 +48,15 @@ test("сотрудник: меню доступно, настройки откр
   await expect(page.getByRole("link", { name: "Меню" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Настройки" })).toBeVisible();
 
-  // Меню редактируется: меняем вес первого блюда и возвращаемся к списку
+  // Меню редактируется: открываем первое блюдо, меняем вес и сохраняем
   await page.goto("/admin/menu");
   await expect(page.getByRole("heading", { name: "Меню" })).toBeVisible();
-  const editButtons = page.getByRole("button", { name: "Править" });
-  await editButtons.first().click();
-  const weightInput = page.locator("label", { hasText: "Вес / объём" }).locator("input");
+  await page.getByRole("button", { name: /Открыть блюдо/ }).first().click();
+  const weightInput = page.getByLabel("Вес / объём");
   const original = await weightInput.inputValue();
   await weightInput.fill(original === "300 г" ? "301 г" : "300 г");
-  await page.getByRole("button", { name: "Сохранить" }).first().click();
-  await expect(editButtons.first()).toBeVisible({ timeout: 15000 });
+  await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+  await expect(page.getByText("Изменений нет")).toBeVisible({ timeout: 15000 });
 
   // Владельческий раздел по прямой ссылке — на экран PIN
   // (networkidle: не уходить со страницы посреди refresh после сохранения блюда)

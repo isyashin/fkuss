@@ -37,6 +37,7 @@ test("ближайшая бронь доступна в разделе «Бро�
       [id, nowInTimeZone("Europe/Moscow").date, "23:59", 2, guestName, "+79990000003"]);
     await page.goto("/admin/login");
     await loginAdminUi(page);
+    await expect(page).toHaveURL(/\/admin$/);
     // Редизайн: брони живут в своём разделе, на дашборде заказов их нет.
     // Выбор — по прямой ссылке ?selected=: не зависит от позиции в списке.
     await page.goto(`/admin/bookings?selected=${id}`);

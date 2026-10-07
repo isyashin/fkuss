@@ -122,9 +122,10 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   await expect(page.getByLabel("Категория меню")).toBeVisible();
   // Очередь блюдов: строка открывает редактор справа
   await page.getByRole("button", { name: /Открыть блюдо/ }).first().click();
-  await expect(page.getByLabel("Описание")).toBeVisible();
-  await page.getByLabel("Режим цены").selectOption("inherit");
-  await expect(page.getByLabel("Название")).toBeVisible();
+  const dishDetail = page.getByRole("region", { name: "Выбранное блюдо" });
+  await expect(dishDetail.getByLabel("Описание")).toBeVisible();
+  await dishDetail.getByLabel("Режим цены").selectOption("inherit");
+  await expect(dishDetail.getByLabel("Название")).toBeVisible();
   await page.getByRole("button", { name: "+ Блюдо" }).click();
   await expect(page.getByRole("heading", { name: /Новое блюдо/ })).toBeVisible();
   await page.getByRole("button", { name: "Отмена" }).click();
@@ -164,7 +165,7 @@ test("admin orders use two readable columns at 1280px", async ({ page }) => {
   expect(orders!.width).toBeGreaterThanOrEqual(400);
   expect(detail!.width).toBeGreaterThan(400);
   expect(detail!.x).toBeGreaterThanOrEqual(orders!.x + orders!.width);
-  await expect(page.getByRole("form", { name: "Поиск заказа" })).toBeVisible();
+  await expect(page.getByRole("search", { name: "Поиск заказа" })).toBeVisible();
 
   await page.setViewportSize({ width: 960, height: 900 });
   const width = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));

@@ -42,11 +42,14 @@ test("фавикон показывает необработанные зака�
   await page.getByRole("button", { name: /Оповещения/ }).first().click();
   await expect.poll(async () => (await iconHref()).startsWith("data:image/png"), { timeout: 10_000, intervals: [700, 1200] }).toBe(true);
 
-  // Обработка брони: подтверждение в разделе «Брони» (редизайн: виджета на дашборде нет); счёт возвращается к n0
+  // Обработка брони: подтверждение в разделе «Брони» (редизайн: виджета на дашборде нет); счёт возвращается к n0.
+  // БД общая с другими спеками: среди броней 2026-12-05 есть уже подтверждённые
+  // прогонами других проектов — выбираем именно новую.
   await page.goto("/admin/bookings");
-  const bookingItem = page.getByRole("button", { name: /Открыть бронь 2026-12-05/ }).first();
-  await expect(bookingItem).toBeVisible({ timeout: 20000 });
-  await bookingItem.click();
+  const bookingRow = page.locator("div", { has: page.getByRole("button", { name: /Открыть бронь 2026-12-05/ }) })
+    .filter({ hasText: "Новая" }).first();
+  await expect(bookingRow).toBeVisible({ timeout: 20000 });
+  await bookingRow.getByRole("button", { name: /Открыть бронь 2026-12-05/ }).click();
   const card = page.getByRole("region", { name: "Детали брони" });
   await expect(card.getByRole("button", { name: "Подтвердить" })).toBeVisible({ timeout: 20000 });
   await card.getByRole("button", { name: "Подтвердить" }).click();

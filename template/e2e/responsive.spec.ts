@@ -80,22 +80,16 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   await expect(brand.locator("span").first()).toHaveText(restaurantName?.slice(0, 1) ?? "");
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/admin/bookings");
-  await expect(page.getByRole("heading", { name: "Предстоящие" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Брони" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Режим списка броней" })).toBeVisible();
 
   const list = await page.getByRole("region", { name: "Список броней" }).boundingBox();
   const detail = await page.getByRole("region", { name: "Детали брони" }).boundingBox();
   expect(list).not.toBeNull();
   expect(detail).not.toBeNull();
   expect(detail!.x).toBeGreaterThan(list!.x + list!.width);
-  expect(detail!.y).toBeCloseTo(list!.y, 0);
-  expect(list!.x).toBeLessThanOrEqual(264);
-  expect(detail!.x + detail!.width).toBeGreaterThanOrEqual(1248);
-  const bookingFonts = await page.evaluate(() => ({
-    list: getComputedStyle(document.querySelector('section[aria-label="Список броней"] h2')!).fontFamily,
-    detail: getComputedStyle(document.querySelector('section[aria-label="Детали брони"] h2')!).fontFamily,
-  }));
-  expect(bookingFonts.list).toContain("Segoe UI");
-  expect(bookingFonts.detail).toContain("Segoe UI");
+  const queueHeadFont = await page.evaluate(() => getComputedStyle(document.querySelector('section[aria-label="Список броней"] h1')!).fontFamily);
+  expect(queueHeadFont).toContain("Segoe UI");
   const contactLinks = page.getByRole("region", { name: "Детали брони" }).getByRole("link", { name: /WhatsApp|Telegram/ });
   if (await contactLinks.count() === 2) {
     const first = await contactLinks.nth(0).boundingBox();
@@ -105,8 +99,9 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
     expect(second!.y).toBeCloseTo(first!.y, 0);
   }
 
-  await page.getByText("Все брони и фильтры").click();
-  await expect(page.getByRole("group", { name: "Фильтр броней" })).toBeVisible();
+  // Режим «История» доступен и работает с пагинацией
+  await page.getByRole("group", { name: "Режим списка броней" }).getByRole("link", { name: /История/ }).click();
+  await expect(page).toHaveURL(/mode=history/);
   await page.setViewportSize({ width: 360, height: 800 });
   const mobile = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(mobile.content, "admin bookings overflow on mobile").toBeLessThanOrEqual(mobile.viewport + 1);

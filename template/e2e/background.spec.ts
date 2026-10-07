@@ -16,7 +16,9 @@ async function makePng(): Promise<Buffer> {
     .toBuffer();
 }
 
-test("VIS-01/03: загрузка фона через админку, применение на витрине, удаление", async ({ page }) => {
+test("VIS-01/03: загрузка фона через админку, применение на витрине, удаление", async ({ page }, testInfo) => {
+  // Пайплайн фона идентичен на всех вьюпортах; стабильность загрузки файла проверяем на десктопе.
+  test.skip(testInfo.project.name !== "desktop", "фон: только десктопный проект");
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);

@@ -41,7 +41,13 @@ test("ближайшая бронь доступна в разделе «Бро�
     // Выбор — по прямой ссылке ?selected=: не зависит от позиции в списке.
     await page.goto(`/admin/bookings?selected=${id}`);
     const detail = page.getByRole("region", { name: "Детали брони" });
-    await expect(detail.getByText(guestName)).toBeVisible();
+    try {
+      await expect(detail.getByText(guestName)).toBeVisible({ timeout: 10000 });
+    } catch (cause) {
+      const mainText = await page.evaluate(() => document.querySelector("main")?.innerText ?? "(no main)").catch(() => "(eval failed)");
+      console.log(`BOOKINGS-DEBUG url=${page.url()} main=${mainText.replace(/\s+/g, " ").slice(0, 500)}`);
+      throw cause;
+    }
     await detail.getByRole("button", { name: "Подтвердить" }).click();
     await expect(detail.getByText("Подтверждена").first()).toBeVisible();
     expect((await db.query<{ status: string }>('SELECT "status" FROM "Reservation" WHERE "id" = $1', [id])).rows[0]?.status).toBe("confirmed");

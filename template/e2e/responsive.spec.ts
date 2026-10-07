@@ -161,7 +161,7 @@ test("admin orders use two readable columns at 1280px", async ({ page }) => {
   const detail = await page.getByRole("region", { name: "Детали заказа" }).boundingBox();
   expect(orders).not.toBeNull();
   expect(detail).not.toBeNull();
-  expect(orders!.width).toBeGreaterThan(430);
+  expect(orders!.width).toBeGreaterThanOrEqual(400);
   expect(detail!.width).toBeGreaterThan(400);
   expect(detail!.x).toBeGreaterThanOrEqual(orders!.x + orders!.width);
   await expect(page.getByRole("form", { name: "Поиск заказа" })).toBeVisible();

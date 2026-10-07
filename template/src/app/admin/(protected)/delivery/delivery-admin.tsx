@@ -62,7 +62,7 @@ export function DeliveryAdmin({ options }: { options: DeliveryOption[] }) {
                   exceptions: option.exceptions,
                 })
               }
-              className="min-h-11 px-4 rounded-full border border-foreground/20 text-sm"
+              className="min-h-11 px-4 rounded-md border border-foreground/20 text-sm"
             >
               Править
             </button>
@@ -71,7 +71,7 @@ export function DeliveryAdmin({ options }: { options: DeliveryOption[] }) {
               onClick={() => {
                 if (confirm(`Удалить «${option.name}»?`)) startTransition(() => deleteDeliveryOption(option.id));
               }}
-              className="min-h-11 px-4 rounded-full border border-red-300 text-red-600 text-sm"
+              className="min-h-11 px-4 rounded-md border border-red-300 text-red-600 text-sm"
             >
               Удалить
             </button>
@@ -153,7 +153,7 @@ function EditForm({
                   days: form.days.includes(i) ? form.days.filter((d) => d !== i) : [...form.days, i].sort(),
                 })
               }
-              className={`min-w-11 min-h-11 rounded-full text-sm ${form.days.includes(i) ? "bg-accent text-white" : "bg-card border border-foreground/15"}`}
+              className={`min-w-11 min-h-11 rounded-md text-sm ${form.days.includes(i) ? "bg-accent text-white" : "bg-card border border-foreground/15"}`}
             >
               {name}
             </button>
@@ -210,11 +210,11 @@ function EditForm({
         <button
           disabled={pending || !form.name}
           onClick={() => onSave(form)}
-          className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
+          className="min-h-11 px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50"
         >
           Сохранить
         </button>
-        <button onClick={onCancel} className="min-h-11 px-4 rounded-full border border-foreground/20 text-sm">
+        <button onClick={onCancel} className="min-h-11 px-4 rounded-md border border-foreground/20 text-sm">
           Отмена
         </button>
       </div>

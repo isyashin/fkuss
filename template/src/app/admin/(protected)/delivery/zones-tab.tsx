@@ -137,7 +137,7 @@ export function ZonesTab({
             type="button"
             onClick={save}
             disabled={pending}
-            className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
+            className="min-h-11 px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50"
           >
             {pending ? "Сохраняю…" : "Сохранить"}
           </button>
@@ -171,7 +171,7 @@ export function ZonesTab({
           }}
         />
         {(busy.drawing || busy.editing) && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-black/70 text-white text-sm px-4 py-2 rounded-full pointer-events-none">
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-black/70 text-white text-sm px-4 py-2 rounded-md pointer-events-none">
             {busy.drawing
               ? "Рисование: клик — точка, «Готово» или двойной клик — завершить"
               : "Перетаскивайте зону и точки границы; «Готово» — закончить"}
@@ -183,7 +183,7 @@ export function ZonesTab({
         type="button"
         onClick={addZone}
         disabled={busy.drawing || busy.editing}
-        className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
+        className="min-h-11 px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50"
       >
         + Добавить зону
       </button>
@@ -209,7 +209,7 @@ export function ZonesTab({
           );
           const dot = (
             <span
-              className="w-4 h-4 rounded-full shrink-0"
+              className="w-4 h-4 rounded-md shrink-0"
               style={{ backgroundColor: color.stroke }}
               aria-hidden="true"
             />
@@ -295,7 +295,7 @@ export function ZonesTab({
                           onClick={() =>
                             busy.drawing ? setStopDrawToken((t) => t + 1) : setStopEditToken((t) => t + 1)
                           }
-                          className="min-h-11 px-4 rounded-full bg-accent text-white text-sm font-medium"
+                          className="min-h-11 px-4 rounded-md bg-accent text-white text-sm font-medium"
                         >
                           Готово
                         </button>
@@ -304,7 +304,7 @@ export function ZonesTab({
                         <button
                           type="button"
                           onClick={() => setDrawToken((t) => t + 1)}
-                          className="min-h-11 px-4 rounded-full border border-foreground/20 text-sm"
+                          className="min-h-11 px-4 rounded-md border border-foreground/20 text-sm"
                         >
                           Нарисовать
                         </button>

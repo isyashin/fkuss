@@ -387,5 +387,9 @@
     max-height: 55vh; overflow: auto;
   }
   .topbar .footBadge { margin-left: 0; }
+  /* Полноэкранная деталь заказа: мобильная навигация скрыта, прокрутка только внутри детали */
+  .shell:has([data-order-detail-open]) { height: 100dvh; overflow: hidden; }
+  .shell:has([data-order-detail-open]) .topbar,
+  .shell:has([data-order-detail-open]) .bottomNav { display: none; }
 }
 

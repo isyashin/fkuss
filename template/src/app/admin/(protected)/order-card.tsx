@@ -46,11 +46,18 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
   });
 
   return <div className={styles.detailInner}>
-    <button type="button" className={styles.backButton} onClick={onBack}>← К заказам</button>
+    <div className={styles.orderDetailBar}>
+      <button type="button" className={styles.backButton} onClick={onBack} aria-label="Назад к заказам">←</button>
+      <strong tabIndex={-1}>{editing ? `Состав заказа № ${order.number}` : `Заказ № ${order.number}`}</strong>
+    </div>
     <div className={styles.detailHeader}>
       <div className={styles.detailTitle}><h2>Заказ № {order.number}</h2><StatusPill tone={statusTone(order.status)}>{orderStatusLabel(order.status)}</StatusPill></div>
       <p className={styles.muted}>{order.type === "delivery" ? "Доставка" : "Самовывоз"} · {formatAdminDate(order.createdAt, timeZone)}</p>
-      {next && <div className={styles.detailActions}>
+      {(() => {
+        const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+        return <p className={styles.orderMobileSummary}><strong>{rub(order.total)}</strong><span>{itemCount} {itemCount === 1 ? "блюдо" : itemCount >= 2 && itemCount <= 4 ? "блюда" : "блюд"}{order.desiredTime ? ` · к ${order.desiredTime}` : ""}</span></p>;
+      })()}
+      {next && !editing && <div className={styles.detailActions}>
         <button type="button" className={styles.primaryAction} disabled={pending} onClick={() => run(next.status)}>{next.label}</button>
         {cancel && <button type="button" className={styles.cancelAction} disabled={pending} onClick={() => setConfirmCancel(true)}>Отменить заказ</button>}
       </div>}
@@ -98,6 +105,8 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
         {editBlocked && <p className={styles.muted}>{editBlocked}</p>}
       </>}
     </section>
+    {cancel && !editing && <button type="button" className={styles.orderMobileCancel} disabled={pending} onClick={() => setConfirmCancel(true)}>Отменить заказ</button>}
+    {next && !editing && <div className={styles.orderMobileAction}><button type="button" className={styles.primaryAction} disabled={pending} onClick={() => run(next.status)}>{next.label}</button></div>}
     {error && <p className={styles.error} role="alert">{error}</p>}
     <ConfirmDialog
       request={confirmCancel ? {

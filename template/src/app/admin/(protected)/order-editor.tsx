@@ -101,6 +101,7 @@ export function OrderEditor({ order, catalog, deliveryOptions, deliveryZones, on
       : deliveryZones.map((zone) => <option key={zone.name} value={`zone:${zone.name}`}>{zone.name}</option>)}</select></div>}
     {error && <p className={styles.error} role="alert">{error}</p>}
     <div className={styles.footer}><button type="button" onClick={onClose} disabled={pending}>Отменить правки</button><button type="submit" disabled={pending || lines.length === 0}>{pending ? "Сохраняем…" : "Сохранить состав"}</button></div>
+    <div className={styles.mobileFooter}><button type="submit" disabled={pending || lines.length === 0}>{pending ? "Сохраняем…" : "Сохранить состав"}</button></div>
     {pickerOpen && <div className={styles.modalBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setPickerOpen(false); }}><div className={styles.picker} role="dialog" aria-modal="true" aria-label="Добавить блюдо в заказ">
       <div className={styles.pickerHead}><h3>Добавить блюдо</h3><button type="button" onClick={() => setPickerOpen(false)} aria-label="Закрыть окно"><AdminIcon name="close"/></button></div>
       <input className={styles.pickerSearch} type="search" value={pickerQuery} onChange={(event) => setPickerQuery(event.target.value)} placeholder="Поиск по меню" aria-label="Поиск по меню"/>

@@ -36,6 +36,7 @@
 .menuSavebar > span { color: var(--rd-savebar-text, #81512c); font-size: 12px; font-weight: 620; }
 .menuSavebar > div { display: flex; gap: 8px; }
 .menuDelete { justify-self: start; margin: 16px 0 0 -9px; }
+.menuDetailInner { }
 
 @media (max-width: 970px) {
   .menuLayout { grid-template-columns: minmax(300px, 350px) minmax(0, 1fr); }
@@ -47,6 +48,11 @@
 @media (max-width: 760px) {
   .menuTools { padding: 0 20px 16px; }
   .menuRow { padding: 13px 20px 13px 17px; }
-  .menuSavebar { margin: 26px -20px -110px; padding: 12px 20px; }
+  /* Сохранение — над нижней навигацией, кнопки во всю ширину (макет) */
+  .menuSavebar { position: fixed; right: 0; bottom: 64px; left: 0; margin: 0; padding: 10px 20px; box-shadow: 0 -5px 22px #20272310; }
+  .menuSavebar > span { display: none; }
+  .menuSavebar > div { width: 100%; }
+  .menuSavebar > div button { flex: 1; }
+  .menuDetailInner { padding-bottom: 150px; }
   .menuPriceRow { grid-template-columns: 1fr; }
 }

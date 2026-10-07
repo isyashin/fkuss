@@ -145,7 +145,7 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
           <DishEditor key={selected.id} dish={selected} categories={menuFiltered} menus={menus}
             onBack={() => setMobileDetail(false)} onDeleted={() => { setSelectedId(null); router.refresh(); }} />
         ) : (
-          <div className={ui.detailInner}><p className={ui.empty}>Выберите блюдо.</p></div>
+          <div className={`${ui.detailInner} ${styles.menuDetailInner}`}><p className={ui.empty}>Выберите блюдо.</p></div>
         )}
         {error && <p className={ui.error} role="alert">{error}</p>}
       </section>
@@ -204,7 +204,7 @@ function DishEditor({ dish, categories, menus, onBack, onDeleted }: { dish: Dish
   });
 
   return (
-    <div className={ui.detailInner}>
+    <div className={`${ui.detailInner} ${styles.menuDetailInner}`}>
       <button type="button" className={ui.backButton} onClick={onBack}>← К меню</button>
       <div className={ui.detailHeader}>
         <div className={ui.detailTitle}><h2>{dish.name}</h2></div>
@@ -321,7 +321,7 @@ function NewDishEditor({ categories, menus, defaultCategoryId, onClose, onCreate
   const dirty = form.name.trim().length > 0;
 
   return (
-    <div className={ui.detailInner}>
+    <div className={`${ui.detailInner} ${styles.menuDetailInner}`}>
       <button type="button" className={ui.backButton} onClick={onClose}>← К меню</button>
       <div className={ui.detailHeader}>
         <div className={ui.detailTitle}><h2>Новое блюдо</h2></div>

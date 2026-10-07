@@ -63,6 +63,7 @@
     .search::placeholder, .field input::placeholder, .field textarea::placeholder { color: #9aa39a; }
     .queue-tools select { padding-right: 27px; }
     .queue-list { padding-bottom: 24px; }
+    .orders-mobile-list, .order-detail-bar, .order-mobile-summary, .order-mobile-action, .order-mobile-cancel { display: none; }
     .queue-row { width: 100%; min-height: 103px; display: grid; gap: 6px; padding: 18px 27px 18px 24px; border: 0; border-bottom: 1px solid var(--line); border-left: 3px solid transparent; background: transparent; color: var(--ink); text-align: left; }
     .queue-row:hover { background: #eef1ec; }
     .queue-row[aria-current="true"] { border-left-color: var(--accent); background: #fff; }
@@ -249,6 +250,53 @@
       .menu-savebar div { width: 100%; }
       .menu-savebar div button { flex: 1; }
       .toast { right: 12px; bottom: 78px; left: 12px; max-width: none; }
+      body.order-detail-open { overflow: hidden; }
+      body.order-detail-open .mobile-top, body.order-detail-open .mobile-bottom { display: none; }
+      #screen-orders .queue-pane { background: #f6f7f3; }
+      #screen-orders .queue-head { padding-bottom: 17px; }
+      #screen-orders .queue-tools { padding-bottom: 10px; }
+      #screen-orders .orders-desktop-list { display: none; }
+      #screen-orders .orders-mobile-list { display: block; padding: 0 14px 24px; }
+      .order-group { margin-top: 16px; }
+      .order-group-toggle { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px; border: 0; background: transparent; color: var(--ink); text-align: left; font-size: 17px; font-weight: 670; }
+      .order-group-count { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; font-weight: 550; }
+      .order-group-count::after { content: ""; width: 8px; height: 8px; margin-right: 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); }
+      .order-group-toggle[aria-expanded="true"] .order-group-count::after { transform: rotate(225deg) translateY(-2px); }
+      .order-mobile-card { overflow: hidden; margin: 6px 0 10px; border: 1px solid #dde3da; border-radius: 10px; background: #fff; }
+      .order-mobile-card[data-tone="new"] { border-color: #d9ad9c; }
+      .order-card-open { width: 100%; min-height: 94px; display: grid; gap: 7px; padding: 15px 16px; border: 0; background: transparent; color: var(--ink); text-align: left; }
+      .order-card-open:active { background: #f8f3ef; }
+      .order-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .order-card-top strong { font-size: 18px; letter-spacing: -.025em; }
+      .order-card-top time { color: var(--muted); font-size: 13px; }
+      .order-card-meta { color: #46554a; font-size: 14px; }
+      .order-card-route { color: var(--muted); font-size: 13px; }
+      .order-card-action { width: calc(100% - 24px); min-height: 48px; margin: 0 12px 12px; border: 1px solid var(--accent); border-radius: 7px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 680; }
+      .order-card-action:active { background: var(--accent-dark); }
+      #screen-orders.mobile-detail .detail-pane { position: fixed; inset: 0; z-index: 30; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
+      #screen-orders.mobile-detail .order-detail-bar { position: sticky; top: 0; z-index: 2; min-height: 62px; display: flex; align-items: center; gap: 7px; padding: 0 16px; border-bottom: 1px solid var(--line); background: #fff; }
+      .order-detail-bar .back-button { width: 44px; height: 44px; flex: none; justify-content: center; margin: 0; padding: 0; color: var(--accent); font-size: 27px; font-weight: 400; }
+      .order-detail-bar strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 680; }
+      #orders-detail .detail-inner { padding: 19px 18px calc(114px + env(safe-area-inset-bottom)); }
+      #orders-detail .detail-head { padding-bottom: 20px; }
+      #orders-detail .detail-title h2 { display: none; }
+      #orders-detail .detail-title .status { font-size: 12px; }
+      #orders-detail .detail-subtitle { margin-top: 13px; font-size: 13px; }
+      #orders-detail .order-mobile-summary { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 5px 12px; margin: 15px 0 0; }
+      .order-mobile-summary strong { font-size: 23px; letter-spacing: -.035em; }
+      .order-mobile-summary span { color: var(--muted); font-size: 13px; }
+      #orders-detail .detail-head .detail-actions, #orders-detail .order-editor-actions { display: none; }
+      #orders-detail .detail-section { padding: 20px 0; }
+      #orders-detail .section-title h3 { font-size: 16px; }
+      #orders-detail .fact span { font-size: 12.5px; }
+      #orders-detail .fact strong, #orders-detail .item-row strong, #orders-detail .item-row b { font-size: 15px; }
+      #orders-detail .item-row strong { overflow-wrap: anywhere; }
+      #orders-detail .item-row small, #orders-detail .sum-line { font-size: 13px; }
+      #orders-detail .sum-line.total { font-size: 18px; }
+      #orders-detail .order-mobile-cancel { display: inline-flex; min-height: 44px; align-items: center; margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--red); font-size: 13px; font-weight: 630; }
+      #orders-detail .order-mobile-action { position: fixed; right: 0; bottom: 0; left: 0; z-index: 3; display: block; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: #fff; }
+      .order-mobile-action .primary-button { width: 100%; min-height: 52px; font-size: 15px; }
+      body.order-detail-open .toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
     }
     @media (max-width: 420px) {
       .queue-tools { grid-template-columns: minmax(0,1fr) 113px; }
@@ -382,6 +430,9 @@
       let menuInitial = "";
       let menuImageObjectUrl = null;
       let selectedOrder = "o1";
+      let orderListScrollY = 0;
+      let orderReturnFilter = "current";
+      const collapsedOrderGroups = new Set();
       let selectedBooking = "b1";
       let orderEditing = false;
       let orderDraft = null;
@@ -401,7 +452,7 @@
         const counts = { orders: orders.filter((order) => order.status === "new").length, bookings: bookings.filter((booking) => booking.status === "new").length };
         $$('[data-count]').forEach((badge) => { const count = counts[badge.dataset.count]; badge.textContent = count || ""; badge.hidden = !count; });
       }
-      function showView(next) {
+      function showView(next, updateUrl = true) {
         if (next !== view && orderEditing && JSON.stringify(orderDraft) !== JSON.stringify(orders.find((order) => order.id === selectedOrder)?.items)) {
           ask("Отменить правки?", "Изменения состава заказа не сохранятся.", () => { orderEditing = false; orderDraft = null; showView(next); }, "Не сохранять");
           return;
@@ -413,7 +464,8 @@
         if (next !== view && view === "menu") menuCreating = false;
         view = next;
         orderEditing = false;
-        history.replaceState(null, "", `#${next}`);
+        document.body.classList.remove("order-detail-open");
+        if (updateUrl) history.replaceState(null, "", `#${next}`);
         $$('[data-view]').forEach((button) => { if (button.dataset.view === next) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current"); });
         $$('.screen').forEach((screen) => { screen.hidden = screen.id !== `screen-${next}`; screen.classList.remove("mobile-detail"); });
         document.title = `${{ orders: "Заказы", bookings: "Брони", menu: "Меню" }[next]} — рабочая админка`;
@@ -455,14 +507,33 @@
           return !needle || [String(order.number), order.customer, order.phone].some((part) => part.toLocaleLowerCase("ru-RU").includes(needle));
         }).sort((a,b) => orderFilter === "history" ? Number(b.number) - Number(a.number) : (a.status === "new" ? 0 : 1) - (b.status === "new" ? 0 : 1) || Number(a.number) - Number(b.number));
       }
+      const dishWord = (count) => { const form = new Intl.PluralRules("ru-RU").select(count); return form === "one" ? "блюдо" : form === "few" ? "блюда" : "блюд"; };
+      function renderMobileOrderGroups(visible) {
+        const groups = orderFilter === "history"
+          ? [["done", "Выполнены", (order) => ["delivered", "issued"].includes(order.status)], ["cancelled", "Отменённые", (order) => order.status === "cancelled"]]
+          : [["new", "Новые", (order) => order.status === "new"], ["accepted", "Приняты", (order) => order.status === "accepted"], ["cooking", "Готовятся", (order) => order.status === "cooking"], ["ready", "Ждут выдачи", (order) => order.status === "ready"], ["courier", "Переданы курьеру", (order) => order.status === "handed_to_courier"]];
+        return groups.map(([key, label, matches]) => {
+          const items = visible.filter(matches);
+          if (!items.length) return "";
+          const collapsed = collapsedOrderGroups.has(key);
+          return `<section class="order-group" aria-label="${label}"><button class="order-group-toggle" type="button" data-order-group="${key}" aria-expanded="${!collapsed}" aria-controls="order-group-${key}"><span>${label}</span><span class="order-group-count">${items.length}</span></button><div id="order-group-${key}" ${collapsed ? "hidden" : ""}>${items.map((order) => {
+            const count = order.items.reduce((sum, item) => sum + item.quantity, 0);
+            const next = orderNext(order);
+            const quickAction = next && ["new", "ready"].includes(order.status);
+            return `<article class="order-mobile-card" data-tone="${statusTone(order.status)}"><button class="order-card-open" type="button" data-order-id="${order.id}" aria-current="${order.id === selectedOrder}" aria-label="Открыть заказ № ${order.number}, ${money(orderTotal(order))}, ${count} ${dishWord(count)}, ${order.type === "delivery" ? "доставка" : "самовывоз"} к ${esc(order.desired)}"><span class="order-card-top"><strong>№ ${order.number}</strong><time>${esc(order.time)}</time></span><span class="order-card-meta">${money(orderTotal(order))} · ${count} ${dishWord(count)}</span><span class="order-card-route">${order.type === "delivery" ? "Доставка" : "Самовывоз"} · к ${esc(order.desired)}</span></button>${quickAction ? `<button class="order-card-action" type="button" data-order-quick-id="${order.id}">${nextLabels[next]}</button>` : ""}</article>`;
+          }).join("")}</div></section>`;
+        }).join("");
+      }
       function renderOrders() {
         updateBadges();
         $("#orders-current-count").textContent = orders.filter((order) => !["delivered", "issued", "cancelled"].includes(order.status)).length;
         $("#orders-new-count").textContent = orders.filter((order) => order.status === "new").length;
         $$('[data-order-filter]').forEach((tab) => { const active = tab.dataset.orderFilter === orderFilter; tab.setAttribute("aria-selected", String(active)); tab.tabIndex = active ? 0 : -1; });
         const visible = visibleOrders();
-        if (!visible.some((order) => order.id === selectedOrder)) { selectedOrder = visible[0]?.id ?? null; orderEditing = false; $("#screen-orders").classList.remove("mobile-detail"); }
-        $("#orders-list").innerHTML = visible.length ? visible.map((order) => `<button class="queue-row" type="button" data-order-id="${order.id}" aria-current="${order.id === selectedOrder}"><span class="row-top"><span><strong>№ ${order.number}</strong><time>${esc(order.time)}</time></span><span class="status" data-tone="${statusTone(order.status)}">${orderLabels[order.status]}</span></span><span class="row-person">${esc(order.customer)}</span><span class="row-bottom"><span>${order.type === "delivery" ? "Доставка" : "Самовывоз"} · к ${esc(order.desired)}</span><b>${money(orderTotal(order))}</b></span></button>`).join("") : '<p class="empty">Заказов по этим условиям нет.</p>';
+        if (!visible.some((order) => order.id === selectedOrder)) { selectedOrder = visible[0]?.id ?? null; orderEditing = false; closeOrderDetail(); }
+        const empty = '<p class="empty">Заказов по этим условиям нет.</p>';
+        const desktopRows = visible.map((order) => `<button class="queue-row" type="button" data-order-id="${order.id}" aria-current="${order.id === selectedOrder}"><span class="row-top"><span><strong>№ ${order.number}</strong><time>${esc(order.time)}</time></span><span class="status" data-tone="${statusTone(order.status)}">${orderLabels[order.status]}</span></span><span class="row-person">${esc(order.customer)}</span><span class="row-bottom"><span>${order.type === "delivery" ? "Доставка" : "Самовывоз"} · к ${esc(order.desired)}</span><b>${money(orderTotal(order))}</b></span></button>`).join("");
+        $("#orders-list").innerHTML = `<div class="orders-desktop-list">${visible.length ? desktopRows : empty}</div><div class="orders-mobile-list">${visible.length ? renderMobileOrderGroups(visible) : empty}</div>`;
         renderOrderDetail();
       }
       function orderNext(order) { const chain = orderChains[order.type]; const index = chain.indexOf(order.status); return index >= 0 && index < chain.length - 1 ? chain[index + 1] : null; }
@@ -474,9 +545,10 @@
         const next = orderNext(order);
         const canEdit = ["new", "accepted", "cooking", "ready", "handed_to_courier"].includes(order.status) && order.paymentMethod === "cash" && !order.paid;
         const canCancel = !!next;
-        $("#orders-detail").innerHTML = `<div class="detail-inner">
-          <button class="back-button" type="button" data-action="back-order">← К заказам</button>
+        const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+        $("#orders-detail").innerHTML = `<div class="order-detail-bar"><button class="back-button" type="button" data-action="back-order" aria-label="Назад к заказам">←</button><strong id="order-detail-heading" tabindex="-1">Заказ № ${order.number}</strong></div><div class="detail-inner">
           <div class="detail-head"><div class="detail-title"><h2>Заказ № ${order.number}</h2><span class="status" data-tone="${statusTone(order.status)}">${orderLabels[order.status]}</span></div><p class="detail-subtitle">${order.type === "delivery" ? "Доставка" : "Самовывоз"} · сегодня, ${esc(order.time)}</p>
+            <p class="order-mobile-summary"><strong>${money(orderTotal(order))}</strong><span>${itemCount} ${dishWord(itemCount)} · к ${esc(order.desired)}</span></p>
             ${next ? `<div class="detail-actions"><button class="primary-button" type="button" data-action="advance-order">${nextLabels[next]}</button>${canCancel ? '<button class="text-button danger" type="button" data-action="cancel-order">Отменить</button>' : ""}</div>` : ""}
           </div>
           <section class="detail-section"><h3 class="contact-name">${esc(order.customer)}</h3><div class="contact-actions"><a href="tel:${esc(order.phone)}">Позвонить · ${esc(order.phone)}</a></div></section>
@@ -484,29 +556,76 @@
           <section class="detail-section"><div class="section-title"><h3>Состав</h3>${canEdit ? '<button class="text-button" type="button" data-action="edit-order">Изменить</button>' : ""}</div>${order.items.map((item) => `<div class="item-row"><strong>${esc(item.name)}</strong><small>${item.quantity} × ${money(item.unit)}</small><b>${money(item.unit * item.quantity)}</b></div>`).join("")}
             <div class="sum-lines"><div class="sum-line"><span>Блюда</span><b>${money(orderItemsTotal(order))}</b></div>${order.type === "delivery" ? `<div class="sum-line"><span>Доставка</span><b>${money(order.delivery)}</b></div>` : ""}${order.bonus ? `<div class="sum-line"><span>Бонусы</span><b>−${money(order.bonus)}</b></div>` : ""}<div class="sum-line total"><span>Итого</span><b>${money(orderTotal(order))}</b></div></div>
           </section>
-        </div>`;
+          ${canCancel ? '<button class="order-mobile-cancel" type="button" data-action="cancel-order">Отменить заказ</button>' : ""}
+        </div>${next ? `<div class="order-mobile-action"><button class="primary-button" type="button" data-action="advance-order">${nextLabels[next]}</button></div>` : ""}`;
       }
       function renderOrderEditor(order) {
         setOrderQueueLocked(true);
-        $("#orders-detail").innerHTML = `<div class="detail-inner"><button class="back-button" type="button" data-action="close-order-edit">← К заказу</button><div class="detail-head"><div class="detail-title"><h2>Состав заказа № ${order.number}</h2></div><p class="detail-subtitle">Изменения сохраняются только в этом заказе.</p></div>
+        $("#orders-detail").innerHTML = `<div class="order-detail-bar"><button class="back-button" type="button" data-action="close-order-edit" aria-label="Назад к заказу">←</button><strong id="order-detail-heading" tabindex="-1">Состав заказа № ${order.number}</strong></div><div class="detail-inner"><div class="detail-head"><div class="detail-title"><h2>Состав заказа № ${order.number}</h2></div><p class="detail-subtitle">Изменения сохраняются только в этом заказе.</p></div>
           <section class="detail-section">${orderDraft.map((item, index) => `<div class="edit-line"><div><strong>${esc(item.name)}</strong><small>${money(item.unit)} за шт.</small></div><div class="quantity"><button type="button" data-action="qty" data-index="${index}" data-delta="-1" aria-label="Уменьшить количество: ${esc(item.name)}" ${item.quantity <= 1 ? "disabled" : ""}>−</button><span>${item.quantity}</span><button type="button" data-action="qty" data-index="${index}" data-delta="1" aria-label="Увеличить количество: ${esc(item.name)}" ${item.quantity >= 99 ? "disabled" : ""}>+</button></div><button class="text-button danger" type="button" data-action="remove-item" data-index="${index}">Убрать</button></div>`).join("")}
             <div class="add-line"><select id="order-add-dish" aria-label="Добавить блюдо"><option value="">Выберите блюдо</option>${dishes.filter((dish) => dish.manualAvailable && dish.sourceAvailable).map((dish) => `<option value="${dish.id}">${esc(dish.name)} · ${money(dish.price)}</option>`).join("")}</select><button class="secondary-button" type="button" data-action="add-order-item">Добавить</button></div>
             <div class="preview-total"><span>Блюда предварительно</span><strong>${money(orderDraft.reduce((sum, item) => sum + item.unit * item.quantity, 0))}</strong></div><p class="form-note">Доставка и бонусы будут учтены после сохранения.</p>
-          </section><div class="detail-actions"><button class="primary-button" type="button" data-action="save-order-edit">Сохранить состав</button><button class="secondary-button" type="button" data-action="close-order-edit">Отмена</button></div></div>`;
+          </section><div class="detail-actions order-editor-actions"><button class="primary-button" type="button" data-action="save-order-edit">Сохранить состав</button><button class="secondary-button" type="button" data-action="close-order-edit">Отмена</button></div></div><div class="order-mobile-action"><button class="primary-button" type="button" data-action="save-order-edit">Сохранить состав</button></div>`;
       }
-      function setOrderQueueLocked(locked) { $("#order-search").disabled = locked; $("#order-type").disabled = locked; $$('[data-order-filter], #orders-list .queue-row').forEach((button) => { button.disabled = locked; }); }
+      function closeOrderDetail(updateUrl = true, focusList = true, restoreFilter = false) {
+        const screen = $("#screen-orders");
+        const wasOpen = screen.classList.contains("mobile-detail");
+        screen.classList.remove("mobile-detail");
+        document.body.classList.remove("order-detail-open");
+        if (updateUrl && location.hash.startsWith("#orders/")) history.replaceState(null, "", "#orders");
+        if (wasOpen && restoreFilter && orderFilter !== orderReturnFilter) { orderFilter = orderReturnFilter; renderOrders(); }
+        if (wasOpen) requestAnimationFrame(() => {
+          window.scrollTo(0, orderListScrollY);
+          if (focusList) ($(`.orders-mobile-list [data-order-id="${selectedOrder}"]`) ?? $("#order-search")).focus({ preventScroll: true });
+        });
+      }
+      function openOrderDetail(id, pushEntry = true) {
+        const mobile = window.matchMedia("(max-width: 760px)").matches;
+        if (mobile && !$("#screen-orders").classList.contains("mobile-detail")) { orderListScrollY = window.scrollY; orderReturnFilter = orderFilter; }
+        selectedOrder = id;
+        orderEditing = false;
+        if (mobile) {
+          $("#screen-orders").classList.add("mobile-detail");
+          document.body.classList.add("order-detail-open");
+          if (pushEntry) history.pushState({ orderId: id }, "", `#orders/${id}`);
+        }
+        renderOrders();
+        if (mobile) {
+          $("#orders-detail").scrollTop = 0;
+          $("#order-detail-heading")?.focus({ preventScroll: true });
+        }
+      }
+      function advanceOrder(order) {
+        const next = orderNext(order);
+        if (!next) return;
+        order.status = next;
+        if ($("#screen-orders").classList.contains("mobile-detail")) {
+          if (["delivered", "issued"].includes(next)) orderFilter = "history";
+          else if (orderFilter === "new") orderFilter = "current";
+        }
+        toast(`Заказ № ${order.number}: ${orderLabels[next].toLocaleLowerCase("ru-RU")}`);
+        renderOrders();
+      }
+      function setOrderQueueLocked(locked) { $("#order-search").disabled = locked; $("#order-type").disabled = locked; $$('[data-order-filter], #orders-list [data-order-id], #orders-list [data-order-quick-id]').forEach((button) => { button.disabled = locked; }); }
       $$('[data-order-filter]').forEach((tab) => tab.addEventListener("click", () => { orderFilter = tab.dataset.orderFilter; renderOrders(); }));
       $("#order-search").addEventListener("input", renderOrders);
       $("#order-type").addEventListener("change", renderOrders);
-      $("#orders-list").addEventListener("click", (event) => { const button = event.target.closest('[data-order-id]'); if (!button) return; selectedOrder = button.dataset.orderId; orderEditing = false; $("#screen-orders").classList.add("mobile-detail"); renderOrders(); window.scrollTo(0,0); });
+      $("#orders-list").addEventListener("click", (event) => {
+        const group = event.target.closest('[data-order-group]');
+        if (group) { const key = group.dataset.orderGroup; if (collapsedOrderGroups.has(key)) collapsedOrderGroups.delete(key); else collapsedOrderGroups.add(key); renderOrders(); $(`[data-order-group="${key}"]`)?.focus({ preventScroll: true }); return; }
+        const quick = event.target.closest('[data-order-quick-id]');
+        if (quick) { const order = orders.find((item) => item.id === quick.dataset.orderQuickId); if (order) advanceOrder(order); return; }
+        const button = event.target.closest('[data-order-id]');
+        if (button) openOrderDetail(button.dataset.orderId);
+      });
       $("#orders-detail").addEventListener("click", (event) => {
         const button = event.target.closest('[data-action]'); if (!button) return;
         const action = button.dataset.action;
         const order = orders.find((item) => item.id === selectedOrder); if (!order) return;
-        if (action === "back-order") { $("#screen-orders").classList.remove("mobile-detail"); window.scrollTo(0,0); }
-        if (action === "advance-order") { const next = orderNext(order); if (!next) return; order.status = next; toast(`Заказ № ${order.number}: ${orderLabels[next].toLocaleLowerCase("ru-RU")}`); renderOrders(); }
-        if (action === "cancel-order") ask("Отменить заказ?", `Заказ № ${order.number} перейдёт в историю.`, () => { order.status = "cancelled"; toast(`Заказ № ${order.number} отменён`); renderOrders(); });
-        if (action === "edit-order") { orderDraft = order.items.map((item) => ({ ...item })); orderEditing = true; renderOrderDetail(); }
+        if (action === "back-order") { if (history.state?.orderId === selectedOrder && location.hash === `#orders/${selectedOrder}`) history.back(); else closeOrderDetail(true, true, true); }
+        if (action === "advance-order") advanceOrder(order);
+        if (action === "cancel-order") ask("Отменить заказ?", `Заказ № ${order.number} перейдёт в историю.`, () => { order.status = "cancelled"; if ($("#screen-orders").classList.contains("mobile-detail")) orderFilter = "history"; toast(`Заказ № ${order.number} отменён`); renderOrders(); });
+        if (action === "edit-order") { orderDraft = order.items.map((item) => ({ ...item })); orderEditing = true; renderOrderDetail(); $("#orders-detail").scrollTop = 0; $("#order-detail-heading")?.focus({ preventScroll: true }); }
         if (action === "close-order-edit") { const close = () => { orderEditing = false; orderDraft = null; renderOrderDetail(); }; if (JSON.stringify(orderDraft) !== JSON.stringify(order.items)) ask("Отменить правки?", "Изменения состава заказа не сохранятся.", close, "Не сохранять"); else close(); }
         if (action === "qty") { const item = orderDraft[Number(button.dataset.index)]; item.quantity = Math.max(1, Math.min(99, item.quantity + Number(button.dataset.delta))); renderOrderDetail(); }
         if (action === "remove-item") { orderDraft.splice(Number(button.dataset.index),1); renderOrderDetail(); }
@@ -716,7 +835,34 @@
       $$('[data-action="add-category"]').forEach((button) => button.addEventListener("click", () => { $("#category-name").value = ""; $("#category-dialog").showModal(); $("#category-name").focus(); }));
       $("#category-cancel").addEventListener("click", () => $("#category-dialog").close());
       $("#category-form").addEventListener("submit", (event) => { event.preventDefault(); const name = $("#category-name").value.trim(); if (!name) return; if (categories.some((category) => category.toLocaleLowerCase("ru-RU") === name.toLocaleLowerCase("ru-RU"))) { toast("Такая категория уже есть"); return; } categories.push(name); menuCategory = name; $("#category-dialog").close(); renderMenu(); toast("Категория добавлена в макет"); });
-      showView(["orders", "bookings", "menu"].includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : "orders");
+      function showOrderFromHash(id) {
+        const order = orders.find((item) => item.id === id);
+        if (!order) return false;
+        selectedOrder = id;
+        orderFilter = ["delivered", "issued", "cancelled"].includes(order.status) ? "history" : "current";
+        $("#order-search").value = "";
+        $("#order-type").value = "all";
+        if (view !== "orders") showView("orders", false);
+        openOrderDetail(id, false);
+        return true;
+      }
+      window.addEventListener("popstate", () => {
+        const orderId = window.location.hash.match(/^#orders\/(o\d+)$/)?.[1];
+        if (orderEditing && $("#screen-orders").classList.contains("mobile-detail") && !orderId) {
+          history.pushState({ orderId: selectedOrder }, "", `#orders/${selectedOrder}`);
+          const backToOrder = () => { orderEditing = false; orderDraft = null; renderOrderDetail(); $("#orders-detail").scrollTop = 0; $("#order-detail-heading")?.focus({ preventScroll: true }); };
+          if (JSON.stringify(orderDraft) !== JSON.stringify(orders.find((order) => order.id === selectedOrder)?.items)) ask("Отменить правки?", "Изменения состава заказа не сохранятся.", backToOrder, "Не сохранять");
+          else backToOrder();
+          return;
+        }
+        if (orderId && showOrderFromHash(orderId)) return;
+        closeOrderDetail(false, true, true);
+        const next = window.location.hash.slice(1);
+        if (["orders", "bookings", "menu"].includes(next) && next !== view) showView(next, false);
+      });
+      const initialOrderId = window.location.hash.match(/^#orders\/(o\d+)$/)?.[1];
+      if (initialOrderId && orders.some((order) => order.id === initialOrderId)) { showView("orders", false); showOrderFromHash(initialOrderId); }
+      else showView(["orders", "bookings", "menu"].includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : "orders");
     })();
   </script>
 </body>

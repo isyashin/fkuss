@@ -138,6 +138,14 @@
 /* Контакты гостя: компактная иконка в строке очереди */
 .orderGuest .contactIcon { align-self: start; }
 
+/* Мобильная деталь заказа — слой поверх списка (макет) */
+.orderDetailBar { display: none; }
+.orderMobileSummary { display: none; }
+.orderMobileAction { display: none; }
+.orderMobileCancel { display: none; }
+.orderCardAction { display: none; }
+.ordersMobileList { display: none; }
+
 /* === Средняя ширина === */
 @media (max-width: 970px) {
   .dashboard { grid-template-columns: minmax(300px, 350px) minmax(0, 1fr); }
@@ -145,20 +153,64 @@
 }
 @media (max-width: 760px) {
   .dashboard { display: block; margin: -16px -14px calc(-84px - env(safe-area-inset-bottom)); min-height: 0; }
-  .ordersPanel { position: static; height: auto; min-height: calc(100vh - 120px); overflow: visible; border-right: 0; }
-  .queueHead { padding: 30px 20px 21px; }
+  .ordersPanel { position: static; height: auto; min-height: calc(100vh - 120px); overflow: visible; border-right: 0; background: #f6f7f3; }
+  .queueHead { padding: 30px 20px 17px; }
   .queueHead h1 { font-size: 28px; }
   .filters { padding-inline: 10px; }
-  .queueTools { padding: 16px 20px; grid-template-columns: minmax(0, 1fr); }
+  .queueTools { padding: 16px 20px 10px; grid-template-columns: minmax(0, 1fr) 132px; }
   .orderPreview { padding: 16px 20px 16px 17px; }
+
+  /* Десктопные строки скрыты; список — раскрываемые группы по этапу */
+  .ordersDesktopList { display: none; }
+  .ordersMobileList { display: block; padding: 0 14px 24px; }
+  .orderGroup { margin-top: 16px; }
+  .orderGroupToggle { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px; border: 0; background: transparent; color: var(--admin-text); text-align: left; font: inherit; font-size: 17px; font-weight: 670; cursor: pointer; }
+  .orderGroupCount { display: flex; align-items: center; gap: 12px; color: var(--admin-muted); font-size: 13px; font-weight: 550; }
+  .orderGroupCount::after { content: ""; width: 8px; height: 8px; margin-right: 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); }
+  .orderGroupToggle[aria-expanded="true"] .orderGroupCount::after { transform: rotate(225deg) translateY(-2px); }
+  .orderMobileCard { overflow: hidden; margin: 6px 0 10px; border: 1px solid #dde3da; border-radius: 10px; background: #fff; }
+  .orderMobileCardNew { border-color: #d9ad9c; }
+  .orderCardOpen { width: 100%; min-height: 94px; display: grid; gap: 7px; padding: 15px 16px; border: 0; background: transparent; color: var(--admin-text); text-align: left; font: inherit; cursor: pointer; }
+  .orderCardOpen:active { background: #f8f3ef; }
+  .orderCardTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .orderCardTop strong { font-size: 18px; letter-spacing: -.025em; color: var(--admin-text); }
+  .orderCardTop time { color: var(--admin-muted); font-size: 13px; }
+  .orderCardMeta { color: #46554a; font-size: 14px; }
+  .orderCardRoute { color: var(--admin-muted); font-size: 13px; }
+  .orderCardAction { display: block; width: calc(100% - 24px); min-height: 48px; margin: 0 12px 12px; border: 1px solid var(--admin-accent); border-radius: 7px; background: var(--admin-accent); color: #fff; font: inherit; font-size: 14px; font-weight: 680; cursor: pointer; }
+  .orderCardAction:active { background: var(--admin-accent-hover); }
+
+  /* Деталь заказа — полноэкранный слой со своей шапкой */
   .detailPanel { display: none; }
   .mobileDetail .ordersPanel { display: none; }
-  .mobileDetail .detailPanel { display: block; }
-  .detailInner { padding: 15px 20px 110px; }
-  .backButton { display: inline-flex; align-items: center; min-height: 44px; margin: 0 0 18px -8px; padding: 0 8px; border: 0; background: transparent; color: #526353; font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
-  .detailActions { align-items: stretch; }
-  .facts { gap: 17px; }
+  .mobileDetail .detailPanel { display: block; position: fixed; inset: 0; z-index: 30; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
+  .orderDetailBar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 7px; min-height: 62px; padding: 0 16px; border-bottom: 1px solid var(--admin-line); background: #fff; }
+  .orderDetailBar .backButton { display: grid; place-items: center; width: 44px; height: 44px; flex: none; margin: 0; padding: 0; color: var(--admin-accent); font-size: 27px; font-weight: 400; }
+  .orderDetailBar strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 680; color: var(--admin-text); }
+  .detailInner { padding: 19px 18px calc(114px + env(safe-area-inset-bottom)); }
+  .detailHeader { padding-bottom: 20px; }
+  .detailTitle h2 { display: none; }
+  .detailTitle .chip { font-size: 12px; }
+  .detailHeader > .muted { margin-top: 13px; font-size: 13px; }
+  .orderMobileSummary { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 5px 12px; margin: 15px 0 0; }
+  .orderMobileSummary strong { font-size: 23px; letter-spacing: -.035em; color: var(--admin-text); }
+  .orderMobileSummary span { color: var(--admin-muted); font-size: 13px; }
+  .detailHeader .detailActions { display: none; }
+  .detailSection { padding: 20px 0; }
+  .sectionTitle h3 { font-size: 16px; }
+  .fact > span { font-size: 12.5px; }
+  .fact strong, .lineItem > strong, .lineItem > b { font-size: 15px; }
+  .lineItem > small, .sumLine { font-size: 13px; }
+  .sumLine.total { font-size: 18px; }
+  .orderMobileCancel { display: inline-flex; min-height: 44px; align-items: center; margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--admin-danger, #a3473b); font: inherit; font-size: 13px; font-weight: 630; cursor: pointer; }
+  .orderMobileAction { position: fixed; right: 0; bottom: 0; left: 0; z-index: 3; display: block; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--admin-line); background: #fff; }
+  .orderMobileAction .primaryAction { width: 100%; min-height: 52px; font-size: 15px; }
+  .backButton { display: none; }
   .pagination { padding: 14px 20px 24px; }
+}
+@media (max-width: 420px) {
+  .queueTools { grid-template-columns: minmax(0, 1fr) 113px; }
+  .facts { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 600px) {

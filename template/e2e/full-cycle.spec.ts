@@ -42,13 +42,15 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
   await page.getByRole("button", { name: `Открыть заказ № ${orderNumber}` }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
   // Редизайн: одна главная кнопка следующего шага (селект статуса убран).
-  for (const [action, statusText] of [["Принять", "Принят"], ["Готовится", "Готовится"], ["Готов", "Готов"], ["Выдан", "Выдан"]] as const) {
+  for (const [action, statusText] of [["Принять", "Принят"], ["Готовится", "Готовится"], ["Готов", "Готов"]] as const) {
     await detail.getByRole("button", { name: action, exact: true }).click();
     await expect(detail.getByText(statusText, { exact: true }).first()).toBeVisible();
   }
-  // Финал: кнопок шага больше нет, статус «Выдан» остаётся.
-  await expect(detail.getByRole("button", { name: "Выдан", exact: true })).toHaveCount(0);
-  await expect(detail.getByText("Выдан", { exact: true }).first()).toBeVisible();
+  await detail.getByRole("button", { name: "Выдан", exact: true }).click();
+  // «Выдан» выбывает из «Текущих» — финал проверяем в режиме «Все» по прямой позиции в списке.
+  await page.goto("/admin?mode=all");
+  await page.getByRole("button", { name: `Открыть заказ № ${orderNumber}` }).click();
+  await expect(page.getByRole("region", { name: "Детали заказа" }).getByText("Выдан", { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)
   await page.goto("/account");

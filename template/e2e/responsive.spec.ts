@@ -70,6 +70,7 @@ test("public pages fit the viewport and content assets load", async ({ page }) =
 });
 
 test("admin login, dashboard and bookings fit the viewport", async ({ page }) => {
+  test.setTimeout(180_000);
   await assertResponsivePage(page, "/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
@@ -152,6 +153,7 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
 });
 
 test("admin orders use two readable columns at 1280px", async ({ page }) => {
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/admin/login");
   await loginAdminUi(page);

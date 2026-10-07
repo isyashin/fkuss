@@ -4,7 +4,7 @@ import { loginAdminUi } from "./login-admin";
 // Фавикон с живой индикацией: новая бронь → бейдж со счётом необработанных;
 // открытие колокольчика бейдж НЕ гасит — только обработка брони/заказа.
 // Счётчик считаем относительно начального состояния (БД общая с другими спеками).
-test("фавикон показывает необработанные заказы и брони", async ({ page, request }) => {
+test("фавикон показывает необработанные заказы и брони", async ({ page, request }, testInfo) => {
   test.setTimeout(150_000);
   await page.goto("/admin/login");
   await loginAdminUi(page);
@@ -27,7 +27,7 @@ test("фавикон показывает необработанные зака�
       date: "2026-12-05",
       time: times[0],
       guests: 2,
-      customerName: "E2E Фавикон",
+      customerName: `E2E Фавикон ${testInfo.project.name}`,
       customerPhone: "+79000000077",
       comment: "badge",
     },
@@ -43,13 +43,11 @@ test("фавикон показывает необработанные зака�
   await expect.poll(async () => (await iconHref()).startsWith("data:image/png"), { timeout: 10_000, intervals: [700, 1200] }).toBe(true);
 
   // Обработка брони: подтверждение в разделе «Брони» (редизайн: виджета на дашборде нет); счёт возвращается к n0.
-  // БД общая с другими спеками: среди броней 2026-12-05 есть уже подтверждённые
-  // прогонами других проектов — выбираем именно новую.
+  // БД общая с другими спеками: имя уникально для проекта — берём именно свою бронь.
   await page.goto("/admin/bookings");
-  const bookingRow = page.locator("div", { has: page.getByRole("button", { name: /Открыть бронь 2026-12-05/ }) })
-    .filter({ hasText: "Новая" }).first();
-  await expect(bookingRow).toBeVisible({ timeout: 20000 });
-  await bookingRow.getByRole("button", { name: /Открыть бронь 2026-12-05/ }).click();
+  const bookingItem = page.getByRole("button", { name: new RegExp(`Открыть бронь 2026-12-05 .*, E2E Фавикон ${testInfo.project.name}`) });
+  await expect(bookingItem).toBeVisible({ timeout: 20000 });
+  await bookingItem.click();
   const card = page.getByRole("region", { name: "Детали брони" });
   await expect(card.getByRole("button", { name: "Подтвердить" })).toBeVisible({ timeout: 20000 });
   await card.getByRole("button", { name: "Подтвердить" }).click();

@@ -117,6 +117,13 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
       await expect(mobileNav.locator(`a[href="${href}"] em`)).toHaveText(await sidebarCount.textContent() ?? "");
     }
   }
+});
+
+test("admin menu and settings fit the viewport", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/admin/login");
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
 
   await page.goto("/admin/menu");
   await expect(page.getByRole("heading", { name: "Меню", exact: true })).toBeVisible();
@@ -127,12 +134,19 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   const menuWidth = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(menuWidth.content, "admin menu overflows on mobile").toBeLessThanOrEqual(menuWidth.viewport + 1);
 
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const search = await page.getByRole("textbox", { name: "Поиск блюда" }).boundingBox();
+  expect(search).not.toBeNull();
+  // Поиск занимает колонку очереди (не шире её)
+  expect(search!.width).toBeGreaterThan(250);
+  expect(search!.width).toBeLessThan(360);
+
   // Редизайн: настройки — колонка разделов + один редактор (?section=)
   await page.goto("/admin/settings");
   await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Данные и контакты" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Профиль:/ })).toBeVisible();
-  for (const section of ["theme", "pages", "gallery", "promos", "banquets", "print", "delivery", "payment", "booking", "sound", "pricing", "sync", "guest-contact", "notify", "cabinet"]) {
+  for (const section of ["theme", "pages", "gallery", "promos", "banquets", "print", "delivery", "payment", "booking", "sound", "pricing", "sync", "guest-contact", "notify", "cabinet", "team", "billing"]) {
     await page.goto(`/admin/settings?section=${section}`);
     await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
   }
@@ -166,17 +180,9 @@ test("admin orders use two readable columns at 1280px", async ({ page }) => {
   await page.setViewportSize({ width: 960, height: 900 });
   const width = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(width.content, "admin orders overflow near the two-column breakpoint").toBeLessThanOrEqual(width.viewport + 1);
-
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/admin/menu");
-  const search = await page.getByRole("textbox", { name: "Поиск блюда" }).boundingBox();
-  expect(search).not.toBeNull();
-  // Поиск занимает колонку очереди (не шире её)
-  expect(search!.width).toBeGreaterThan(250);
-  expect(search!.width).toBeLessThan(360);
-  const dishFont = await page.getByRole("button", { name: /Открыть блюдо/ }).first()
+  const queueFont = await page.getByRole("region", { name: "Список заказов" }).getByRole("heading", { name: "Заказы" })
     .evaluate((element) => getComputedStyle(element).fontFamily);
-  expect(dishFont).toContain("Segoe UI");
+  expect(queueFont).toContain("Segoe UI");
 });
 
 test("admin dark theme colors the shell and panels consistently", async ({ page }) => {

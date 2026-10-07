@@ -17,9 +17,9 @@ export function AdminPagination({ base, query, page, pageCount, total }: { base:
       {page < pageCount ? <Link href={href(page + 1)} prefetch={false}>Далее →</Link> : <span aria-disabled="true">Далее →</span>}
     </nav>
     {pageCount > 2 && <form action={base} method="get" className={styles.pageJump}>
-      {query.status !== "all" && <input type="hidden" name="status" value={query.status}/>}
+      {"status" in query && query.status !== "all" && <input type="hidden" name="status" value={query.status}/>}
       {"type" in query && query.type !== "all" && <input type="hidden" name="type" value={query.type}/>}
-      {"mode" in query && query.mode !== "all" && query.mode !== "current" && <input type="hidden" name="mode" value={query.mode}/>}
+      {"mode" in query && query.mode !== "all" && query.mode !== "current" && query.mode !== "upcoming" && <input type="hidden" name="mode" value={query.mode}/>}
       {"q" in query && query.q && <input type="hidden" name="q" value={query.q}/>}
       {query.sort !== "desc" && <input type="hidden" name="sort" value={query.sort}/>}
       <label htmlFor={`${base}-page-number`}>Страница</label>

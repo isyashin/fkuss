@@ -3,7 +3,7 @@ import { ORDER_STATUS_CODES } from "./order-status";
 export const ADMIN_PAGE_SIZE = 25;
 
 export const ORDER_STATUSES = ["all", ...ORDER_STATUS_CODES] as const;
-export const BOOKING_STATUSES = ["all", "new", "confirmed", "rejected", "cancelled"] as const;
+export const BOOKING_MODES = ["upcoming", "new", "history"] as const;
 export const ORDER_TYPES = ["all", "delivery", "pickup"] as const;
 // Режимы очереди заказов (редизайн staff-экрана): группы статусов.
 export const ORDER_MODES = ["all", "current", "new", "history"] as const;
@@ -15,12 +15,12 @@ export const ORDER_MODE_STATUSES: Record<Exclude<OrderModeFilter, "all">, string
 
 export type RawAdminQuery = Record<string, string | string[] | undefined>;
 export type OrderStatusFilter = typeof ORDER_STATUSES[number];
-export type BookingStatusFilter = typeof BOOKING_STATUSES[number];
+export type BookingModeFilter = typeof BOOKING_MODES[number];
 export type OrderTypeFilter = typeof ORDER_TYPES[number];
 export type OrderModeFilter = typeof ORDER_MODES[number];
 export type SortDirection = "asc" | "desc";
 export type OrderListQuery = { status: OrderStatusFilter; type: OrderTypeFilter; sort: SortDirection; page: number; mode: OrderModeFilter; q: string };
-export type BookingListQuery = { status: BookingStatusFilter; sort: SortDirection; page: number };
+export type BookingListQuery = { mode: BookingModeFilter; sort: SortDirection; page: number; q: string };
 
 function scalar(value: string | string[] | undefined): string | undefined {
   return typeof value === "string" ? value : undefined;
@@ -50,9 +50,11 @@ export function parseOrderListQuery(raw: RawAdminQuery): OrderListQuery {
 
 export function parseBookingListQuery(raw: RawAdminQuery): BookingListQuery {
   return {
-    status: oneOf(scalar(raw.status), BOOKING_STATUSES, "all"),
+    // Режимы по макету: «Предстоящие» по умолчанию.
+    mode: oneOf(scalar(raw.mode), BOOKING_MODES, "upcoming"),
     sort: oneOf(scalar(raw.sort), ["asc", "desc"] as const, "desc"),
     page: pageNumber(scalar(raw.page)),
+    q: scalar(raw.q)?.trim().slice(0, 60) ?? "",
   };
 }
 
@@ -74,15 +76,16 @@ export function orderListCounts(groups: readonly OrderGroup[], type: OrderTypeFi
 }
 
 export function bookingListCounts(groups: readonly BookingGroup[]) {
-  return Object.fromEntries(BOOKING_STATUSES.map((key) => [key, groups.reduce((sum, group) => sum + (key === "all" || group.status === key ? group._count._all : 0), 0)])) as Record<BookingStatusFilter, number>;
+  const byStatus = Object.fromEntries((["new", "confirmed", "rejected", "cancelled"] as const).map((key) => [key, groups.reduce((sum, group) => sum + (group.status === key ? group._count._all : 0), 0)]));
+  return byStatus;
 }
 
 export function adminListHref(base: "/admin" | "/admin/bookings", query: OrderListQuery | BookingListQuery): string {
   const params = new URLSearchParams();
-  if (query.status !== "all") params.set("status", query.status);
+  if ("status" in query && query.status !== "all") params.set("status", query.status);
   if ("type" in query && query.type !== "all") params.set("type", query.type);
-  // «Текущие» — режим по умолчанию: в ссылке не дублируем.
-  if ("mode" in query && query.mode !== "all" && query.mode !== "current") params.set("mode", query.mode);
+  // «Текущие»/«Предстоящие» — режимы по умолчанию: в ссылке не дублируем.
+  if ("mode" in query && query.mode !== "all" && query.mode !== "current" && query.mode !== "upcoming") params.set("mode", query.mode);
   if ("q" in query && query.q) params.set("q", query.q);
   if (query.sort !== "desc") params.set("sort", query.sort);
   if (query.page > 1) params.set("page", String(query.page));

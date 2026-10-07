@@ -12,7 +12,8 @@ describe("admin list query", () => {
   it("rejects invalid filters and oversized or ambiguous page values", () => {
     expect(parseOrderListQuery({ status: "new", type: "pickup", sort: "asc", page: "3" })).toEqual({ status: "new", type: "pickup", sort: "asc", page: 3, mode: "current", q: "" });
     expect(parseOrderListQuery({ status: "paid", type: "unknown", sort: "random", page: "999999999999999999999" })).toEqual({ status: "all", type: "all", sort: "desc", page: 1, mode: "current", q: "" });
-    expect(parseBookingListQuery({ status: ["new", "confirmed"], page: "-2" })).toEqual({ status: "all", sort: "desc", page: 1 });
+    expect(parseBookingListQuery({ mode: "history", q: "  Иван ", page: "-2" })).toEqual({ mode: "history", q: "Иван", sort: "desc", page: 1 });
+    expect(parseBookingListQuery({})).toEqual({ mode: "upcoming", q: "", sort: "desc", page: 1 });
   });
 
   it("парсит поисковый запрос и убирает пробелы", () => {
@@ -40,12 +41,14 @@ describe("admin list query", () => {
     expect(parseOrderListQuery({ status: "issued", type: "pickup" }).status).toBe("issued");
   });
 
-  it("preserves booking totals outside the current page", () => {
-    expect(bookingListCounts([{ status: "new", _count: { _all: 71 } }, { status: "confirmed", _count: { _all: 38 } }])).toMatchObject({ all: 109, new: 71, confirmed: 38 });
+  it("counts bookings by status for the queue tabs", () => {
+    expect(bookingListCounts([{ status: "new", _count: { _all: 71 } }, { status: "confirmed", _count: { _all: 38 } }]))
+      .toMatchObject({ new: 71, confirmed: 38 });
   });
 
   it("keeps filters and sort in page links without carrying a stale selection", () => {
     expect(adminListHref("/admin", { status: "new", type: "pickup", sort: "asc", page: 4, mode: "current", q: "" })).toBe("/admin?status=new&type=pickup&sort=asc&page=4");
-    expect(adminListHref("/admin/bookings", { status: "all", sort: "desc", page: 1 })).toBe("/admin/bookings");
+    expect(adminListHref("/admin/bookings", { mode: "history", q: "Иван", sort: "desc", page: 2 })).toBe("/admin/bookings?mode=history&q=%D0%98%D0%B2%D0%B0%D0%BD&page=2");
+    expect(adminListHref("/admin/bookings", { mode: "upcoming", q: "", sort: "desc", page: 1 })).toBe("/admin/bookings");
   });
 });

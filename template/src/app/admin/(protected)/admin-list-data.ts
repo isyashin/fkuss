@@ -2,7 +2,6 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import type { Prisma } from "@/generated/prisma/client";
 import {
   ADMIN_PAGE_SIZE,
-  bookingListCounts,
   orderListCounts,
   pageWindow,
   ORDER_MODE_STATUSES,
@@ -43,17 +42,34 @@ export async function loadOrdersPage(prisma: PrismaClient, query: OrderListQuery
   return { orders, counts: { ...counts, total }, ...window };
 }
 
-export async function loadBookingsPage(prisma: PrismaClient, query: BookingListQuery) {
-  const groups = await prisma.reservation.groupBy({ by: ["status"], _count: { _all: true } });
-  const counts = bookingListCounts(groups);
-  const total = counts[query.status];
+export async function loadBookingsPage(prisma: PrismaClient, query: BookingListQuery, today: string) {
+  // Режимы по макету: Предстоящие (new/confirmed с сегодняшнего дня, в часовом
+  // поясе ресторана), Ожидают (новые предстоящие), История (старые и отклонённые).
+  const modeWhere: Prisma.ReservationWhereInput = query.mode === "upcoming"
+    ? { status: { in: ["new", "confirmed"] }, date: { gte: today } }
+    : query.mode === "new"
+      ? { status: "new", date: { gte: today } }
+      : { OR: [{ status: { in: ["rejected", "cancelled"] } }, { date: { lt: today } }] };
+  const searchWhere: Prisma.ReservationWhereInput = query.q
+    ? { OR: [
+        { customerName: { contains: query.q, mode: "insensitive" } },
+        { customerPhone: { contains: query.q } },
+      ] }
+    : {};
+  const where: Prisma.ReservationWhereInput = Object.keys(searchWhere).length ? { AND: [modeWhere, searchWhere] } : modeWhere;
+  const total = await prisma.reservation.count({ where });
   const window = pageWindow(total, query.page);
-  const where: Prisma.ReservationWhereInput = query.status === "all" ? {} : { status: query.status };
+  const [upcoming, pending, historyCount] = await Promise.all([
+    prisma.reservation.count({ where: { status: { in: ["new", "confirmed"] }, date: { gte: today } } }),
+    prisma.reservation.count({ where: { status: "new", date: { gte: today } } }),
+    prisma.reservation.count({ where: { OR: [{ status: { in: ["rejected", "cancelled"] } }, { date: { lt: today } }] } }),
+  ]);
+  const ascending = query.mode !== "history";
   const bookings = await prisma.reservation.findMany({
     where,
-    orderBy: [{ date: query.sort }, { time: query.sort }, { id: query.sort }],
+    orderBy: [{ date: ascending ? "asc" : "desc" }, { time: ascending ? "asc" : "desc" }, { id: ascending ? "asc" : "desc" }],
     skip: window.skip,
     take: ADMIN_PAGE_SIZE,
   });
-  return { bookings, counts, ...window };
+  return { bookings, counts: { upcoming, pending, history: historyCount }, total, ...window };
 }

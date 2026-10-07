@@ -177,7 +177,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
     <div className={styles.layout}>
       <nav className={styles.sectionsCol} aria-label="Разделы настроек">
         {GROUPS.map((g) => (
-          <div key={g.group}>
+          <div key={g.group} className={styles.groupBlock}>
             <p className={styles.groupLabel}>{g.group}</p>
             {g.items.map((item) => (
               <Link key={item.id} href={`/admin/settings?section=${item.id}`}

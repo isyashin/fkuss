@@ -21,7 +21,7 @@ export function GuestContactActions({ phone, preferredChannel, channels, compact
   }
   return <div className={styles.contactDetails}>
     {primary ? <a className={styles.contactPhone} href={primary.href} target={primary.channel === "phone" ? undefined : "_blank"}
-      rel={primary.channel === "phone" ? undefined : "noopener noreferrer"} aria-label={`${primary.label}: ${phone}`}>{phone}</a>
+      rel={primary.channel === "phone" ? undefined : "noopener noreferrer"} aria-label={`${primary.label}: ${phone}`}>{`Позвонить · ${phone}`}</a>
       : <span className={styles.contactPhone}>{phone || "Не указан"}</span>}
     {links.length > 0 && <div className={styles.contactLinks}>{links.map((link) => <a key={link.channel} href={link.href}
       target={link.channel === "phone" ? undefined : "_blank"} rel={link.channel === "phone" ? undefined : "noopener noreferrer"}

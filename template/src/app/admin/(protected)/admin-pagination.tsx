@@ -19,6 +19,8 @@ export function AdminPagination({ base, query, page, pageCount, total }: { base:
     {pageCount > 2 && <form action={base} method="get" className={styles.pageJump}>
       {query.status !== "all" && <input type="hidden" name="status" value={query.status}/>}
       {"type" in query && query.type !== "all" && <input type="hidden" name="type" value={query.type}/>}
+      {"mode" in query && query.mode !== "all" && query.mode !== "current" && <input type="hidden" name="mode" value={query.mode}/>}
+      {"q" in query && query.q && <input type="hidden" name="q" value={query.q}/>}
       {query.sort !== "desc" && <input type="hidden" name="sort" value={query.sort}/>}
       <label htmlFor={`${base}-page-number`}>Страница</label>
       <input key={page} id={`${base}-page-number`} type="number" name="page" min="1" max={pageCount} defaultValue={page} aria-label="Номер страницы"/>

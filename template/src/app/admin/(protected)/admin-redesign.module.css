@@ -42,7 +42,9 @@
   --admin-muted: var(--rd-muted);
   --admin-accent: var(--rd-accent);
   --admin-accent-soft: rgba(173, 87, 59, 0.12);
+  --admin-accent-hover: var(--rd-accent-hover);
   --admin-green: var(--rd-success);
+  --admin-danger: var(--rd-danger);
   --background: var(--rd-bg);
   --foreground: var(--rd-text);
   --card: var(--rd-surface);

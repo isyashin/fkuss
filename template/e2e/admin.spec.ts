@@ -38,8 +38,8 @@ test("ближайшая бронь доступна в разделе «Бро�
     await page.goto("/admin/login");
     await loginAdminUi(page);
     // Редизайн: брони живут в своём разделе, на дашборде заказов их нет.
-    await page.goto("/admin/bookings");
-    await page.getByRole("button", { name: new RegExp(guestName) }).first().click();
+    // Выбор — по прямой ссылке ?selected=: не зависит от позиции в списке.
+    await page.goto(`/admin/bookings?selected=${id}`);
     const detail = page.getByRole("region", { name: "Детали брони" });
     await expect(detail.getByText(guestName)).toBeVisible();
     await detail.getByRole("button", { name: "Подтвердить" }).click();

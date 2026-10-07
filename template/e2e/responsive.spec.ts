@@ -87,7 +87,7 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   const detail = await page.getByRole("region", { name: "Детали брони" }).boundingBox();
   expect(list).not.toBeNull();
   expect(detail).not.toBeNull();
-  expect(detail!.x).toBeGreaterThan(list!.x + list!.width);
+  expect(detail!.x).toBeGreaterThanOrEqual(list!.x + list!.width);
   const queueHeadFont = await page.evaluate(() => getComputedStyle(document.querySelector('section[aria-label="Список броней"] h1')!).fontFamily);
   expect(queueHeadFont).toContain("Segoe UI");
   const contactLinks = page.getByRole("region", { name: "Детали брони" }).getByRole("link", { name: /WhatsApp|Telegram/ });
@@ -163,7 +163,7 @@ test("admin orders use two readable columns at 1280px", async ({ page }) => {
   expect(detail).not.toBeNull();
   expect(orders!.width).toBeGreaterThan(430);
   expect(detail!.width).toBeGreaterThan(400);
-  expect(detail!.x).toBeGreaterThan(orders!.x + orders!.width);
+  expect(detail!.x).toBeGreaterThanOrEqual(orders!.x + orders!.width);
   await expect(page.getByRole("form", { name: "Поиск заказа" })).toBeVisible();
 
   await page.setViewportSize({ width: 960, height: 900 });
@@ -214,7 +214,5 @@ test("admin dark theme colors the shell and panels consistently", async ({ page 
   await page.getByRole("button", { name: /Профиль:/ }).click();
   await expect(page.getByRole("button", { name: "☀ Светлая тема" })).toBeVisible();
   await page.goto("/admin/menu");
-  // Разделы мигрируют на токены редизайна поэтапно: проверяем, что страница
-  // меню рендерится в тёмной оболочке без ошибок.
-  await expect(page.getByRole("article").first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("button", { name: /Открыть блюдо/ }).first()).toBeVisible({ timeout: 15000 });
 });

@@ -45,6 +45,7 @@ test("фавикон показывает необработанные зака�
   // Обработка брони: подтверждение в разделе «Брони» (редизайн: виджета на дашборде нет); счёт возвращается к n0
   await page.goto("/admin/bookings");
   const bookingItem = page.getByRole("button", { name: /Открыть бронь 2026-12-05/ }).first();
+  await expect(bookingItem).toBeVisible({ timeout: 20000 });
   await bookingItem.click();
   const card = page.getByRole("region", { name: "Детали брони" });
   await expect(card.getByRole("button", { name: "Подтвердить" })).toBeVisible({ timeout: 20000 });

@@ -52,7 +52,7 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
   const issuedOrder = page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) });
   await expect(issuedOrder).toBeVisible({ timeout: 15000 });
   await issuedOrder.click();
-  await expect(page.getByRole("region", { name: "Детали заказа" }).getByText("Выдан", { exact: true }).first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("region", { name: "Детали заказа" }).locator("span[class*=chip]", { hasText: "Выдан" })).toBeVisible({ timeout: 15000 });
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)
   await page.goto("/account");

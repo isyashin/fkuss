@@ -71,7 +71,9 @@ export function AdminNotifications() {
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   // Панель не должна «прилипать» при переходах между разделами.
-  useEffect(() => { setOpen(false); }, [pathname]);
+  // Корректировка состояния во время рендера (react-compiler: не setState в эффекте).
+  const [panelPath, setPanelPath] = useState(pathname);
+  if (panelPath !== pathname) { setPanelPath(pathname); setOpen(false); }
   // sessionStorage — источник истины: серверный снапшот false совпадает с SSR,
   // после гидрации читается реальное значение (без рассинхрона #418).
   const enabled = useSyncExternalStore(subscribeEnabled, readEnabledFlag, () => false);

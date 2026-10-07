@@ -49,7 +49,9 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
   }, []);
   const active = (href: string) => href === "/admin" ? pathname === href : pathname.startsWith(href);
   // Поповеры закрываются при переходе между разделами (не «прилипают» поверх контента).
-  useEffect(() => { setProfileOpen(false); }, [pathname]);
+  // Корректировка состояния во время рендера (react-compiler: не setState в эффекте).
+  const [popPath, setPopPath] = useState(pathname);
+  if (popPath !== pathname) { setPopPath(pathname); setProfileOpen(false); }
   const fullAccess = actor.role === "owner" || unlocked;
   // Сотрудник: заказы, брони, меню + настройки (владельческие разделы — через PIN).
   // По прототипу навигация — ровно четыре пункта; владельческие задачи живут внутри «Настроек».

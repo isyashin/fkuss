@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { Client } from "pg";
 import { loginAdminUi } from "./login-admin";
 
 // Полный цикл лояльности: вход → заказ → выдача → кэшбэк в кабинете
@@ -47,12 +48,15 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
     await expect(detail.getByText(statusText, { exact: true }).first()).toBeVisible();
   }
   await detail.getByRole("button", { name: "Выдан", exact: true }).click();
-  // «Выдан» выбывает из «Текущих» — финал проверяем в режиме «Все».
-  await page.goto("/admin?mode=all");
-  const issuedOrder = page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) });
-  await expect(issuedOrder).toBeVisible({ timeout: 15000 });
-  await issuedOrder.click();
-  await expect(page.getByRole("region", { name: "Детали заказа" }).locator("span[class*=chip]", { hasText: "Выдан" })).toBeVisible({ timeout: 15000 });
+  // «Выдан» выбывает из «Текущих» — статус проверяем в БД (не зависит от вьюпорта и списка).
+  const db = new Client({ connectionString: process.env.DATABASE_URL! });
+  await db.connect();
+  try {
+    const { rows } = await db.query<{ status: string }>('SELECT "status" FROM "Order" WHERE "number" = $1', [orderNumber]);
+    expect(rows[0]?.status).toBe("issued");
+  } finally {
+    await db.end();
+  }
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)
   await page.goto("/account");

@@ -43,11 +43,18 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
   await page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
   // Редизайн: одна главная кнопка следующего шага (селект статуса убран).
-  for (const [action, statusText] of [["Принять", "Принят"], ["Готовится", "Готовится"], ["Готов", "Готов"]] as const) {
-    await detail.getByRole("button", { name: action, exact: true }).click();
-    await expect(detail.getByText(statusText, { exact: true }).first()).toBeVisible();
+  // После каждого клика ждём кнопку СЛЕДУЮЩЕГО шага — признак, что сервер применил
+  // переход и деталь обновилась (иначе клики гонятся с обработкой на сервере).
+  const steps: [string, string | null][] = [["Принять", "Готовится"], ["Готовится", "Готов"], ["Готов", "Выдан"], ["Выдан", null]];
+  for (const [action, nextAction] of steps) {
+    const stepButton = detail.getByRole("button", { name: action, exact: true });
+    await stepButton.click();
+    if (nextAction) {
+      await expect(detail.getByRole("button", { name: nextAction, exact: true })).toBeVisible({ timeout: 15000 });
+    } else {
+      await expect(stepButton).toHaveCount(0, { timeout: 15000 });
+    }
   }
-  await detail.getByRole("button", { name: "Выдан", exact: true }).click();
   // «Выдан» выбывает из «Текущих» — статус проверяем в БД (не зависит от вьюпорта и списка).
   const db = new Client({ connectionString: process.env.DATABASE_URL! });
   await db.connect();

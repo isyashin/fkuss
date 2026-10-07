@@ -10,7 +10,7 @@ async function createStaff(page: Page) {
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
-  await page.goto("/admin/team");
+  await page.goto("/admin/settings?section=team");
   const createForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Добавить сотрудника" }) });
   await createForm.getByLabel("Логин").fill(STAFF.login);
   await createForm.getByLabel("Имя").fill(STAFF.name);
@@ -62,7 +62,7 @@ test("сотрудник: меню доступно, настройки откр
   // Владельческий раздел по прямой ссылке — на экран PIN
   // (networkidle: не уходить со страницы посреди refresh после сохранения блюда)
   await page.waitForLoadState("networkidle").catch(() => {});
-  await page.goto("/admin/team");
+  await page.goto("/admin/settings?section=team");
   await expect(page).toHaveURL(/\/admin\/settings\?pin=1$/);
   await expect(page.getByRole("heading", { name: "Введите PIN" })).toBeVisible();
 
@@ -78,7 +78,7 @@ test("сотрудник: меню доступно, настройки откр
   await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible({ timeout: 15000 });
 
   // Уровень владельца: «Сотрудники» открывается
-  await page.goto("/admin/team");
+  await page.goto("/admin/settings?section=team");
   await expect(page.getByRole("heading", { name: "Сотрудники" })).toBeVisible({ timeout: 15000 });
 
   // Загрузка фото сотрудником — только раздел dishes, остальные 403

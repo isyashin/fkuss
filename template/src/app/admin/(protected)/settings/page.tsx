@@ -23,6 +23,9 @@ import { ThemeEditor } from "./sections/theme-editor";
 import { DeliveryEditor } from "./sections/delivery-editor";
 import { PaymentLoyaltyEditor, PricingEditor, BookingEditor } from "./sections/editors";
 import { GuestContactEditor, NotifyChannelsEditor } from "./sections/guest-contact-editors";
+import { TeamAdmin } from "../team/team-admin";
+import { BillingView } from "../billing/billing-view";
+import { fetchMyBilling } from "@/lib/platform";
 import { PinGate } from "./pin-gate";
 import styles from "./settings-redesign.module.css";
 
@@ -30,11 +33,11 @@ export const dynamic = "force-dynamic";
 
 const GROUPS: { group: string; items: { id: string; title: string }[] }[] = [
   { group: "Ресторан", items: [{ id: "restaurant", title: "Данные и контакты" }, { id: "hours", title: "Часы работы" }] },
-  { group: "Сайт", items: [{ id: "theme", title: "Оформление" }, { id: "pages", title: "Страницы" }, { id: "gallery", title: "Фотографии" }] },
-  { group: "Разное", items: [{ id: "promos", title: "Акции" }, { id: "banquets", title: "Банкеты" }, { id: "print", title: "Печатные материалы" }] },
-  { group: "Заказы и брони", items: [{ id: "delivery", title: "Доставка и самовывоз" }, { id: "payment", title: "Оплата и бонусы" }, { id: "booking", title: "Бронирование" }, { id: "sound", title: "Звук уведомлений" }] },
+  { group: "Сайт", items: [{ id: "theme", title: "Оформление" }, { id: "pages", title: "Страницы" }, { id: "gallery", title: "Фотографии" }, { id: "promos", title: "Акции" }, { id: "banquets", title: "Банкеты" }, { id: "print", title: "Печатные материалы" }] },
+  { group: "Заказы и брони", items: [{ id: "delivery", title: "Доставка и самовывоз" }, { id: "payment", title: "Оплата и бонусы" }, { id: "booking", title: "Бронирование" }] },
   { group: "Меню", items: [{ id: "pricing", title: "Правила цен" }, { id: "sync", title: "Импорт из Яндекс.Еды" }] },
-  { group: "Связь", items: [{ id: "guest-contact", title: "Связь с гостем" }, { id: "notify", title: "Каналы уведомлений" }, { id: "cabinet", title: "Личный кабинет гостя" }] },
+  { group: "Связь", items: [{ id: "guest-contact", title: "Связь с гостем" }, { id: "notify", title: "Уведомления" }, { id: "cabinet", title: "Личный кабинет гостя" }, { id: "sound", title: "Звук уведомлений" }] },
+  { group: "Доступ и подписка", items: [{ id: "team", title: "Сотрудники" }, { id: "billing", title: "Подписка" }] },
 ];
 const VALID = new Set(GROUPS.flatMap((g) => g.items.map((i) => i.id)));
 
@@ -76,6 +79,19 @@ async function SectionSync({ settings }: { settings: Awaited<ReturnType<typeof g
   const menuGroups = await getPrisma().menuGroup.findMany({ orderBy: { position: "asc" } });
   return <div className={styles.legacyCard}><h2>Импорт из Яндекс.Еды</h2><p className={styles.editorHint}>Источники меню и расписание обновлений</p>
     <SyncAdmin settings={settings} syncState={(syncState?.value ?? {}) as Record<string, unknown>} menus={menuGroups.map((m) => ({ id: m.id, name: m.name }))} /></div>;
+}
+
+async function SectionTeam() {
+  const users = await getPrisma().adminUser.findMany({ orderBy: { createdAt: "asc" },
+    select: { id: true, login: true, name: true, role: true, active: true, updatedAt: true } });
+  return <div className={styles.legacyCard}><h2>Сотрудники</h2><p className={styles.editorHint}>Личные учётные записи и права в админке этого ресторана.</p>
+    <TeamAdmin users={users} /></div>;
+}
+
+async function SectionBilling() {
+  const billing = await fetchMyBilling();
+  return <div className={styles.legacyCard}><h2>Подписка</h2><p className={styles.editorHint}>Баланс и тариф ресторана.</p>
+    <BillingView billing={billing} /></div>;
 }
 
 async function SectionPrint() {
@@ -151,6 +167,8 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
         return <div className={styles.editorCard}><GuestCabinetSettings initial={normalizeGuestCabinet(settings)} /></div>;
       case "sound":
         return <div className={styles.editorCard}><SoundSettings initial={publicAdminSound(sound)} /></div>;
+      case "team": return <SectionTeam />;
+      case "billing": return <SectionBilling />;
       default: return <SectionRestaurant />;
     }
   })();

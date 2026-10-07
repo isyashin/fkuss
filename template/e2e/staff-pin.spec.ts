@@ -65,7 +65,8 @@ test("сотрудник: меню доступно, настройки откр
   const original = await weightInput.inputValue();
   await weightInput.fill(original === "300 г" ? "301 г" : "300 г");
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
-  await expect(page.getByText("Изменений нет")).toBeVisible({ timeout: 15000 });
+  // Сохранено: кнопка снова неактивна (на мобильном статус savebar скрыт по макету)
+  await expect(page.getByRole("button", { name: "Сохранить", exact: true })).toBeDisabled({ timeout: 15000 });
 
   // Владельческий раздел по прямой ссылке — на экран PIN
   // (networkidle: не уходить со страницы посреди refresh после сохранения блюда)

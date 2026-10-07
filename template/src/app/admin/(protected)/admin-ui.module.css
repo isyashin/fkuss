@@ -180,10 +180,12 @@
   .orderCardAction { display: block; width: calc(100% - 24px); min-height: 48px; margin: 0 12px 12px; border: 1px solid var(--admin-accent); border-radius: 7px; background: var(--admin-accent); color: #fff; font: inherit; font-size: 14px; font-weight: 680; cursor: pointer; }
   .orderCardAction:active { background: var(--admin-accent-hover); }
 
-  /* Деталь заказа — полноэкранный слой со своей шапкой */
+  /* Деталь заказа — полноэкранный слой со своей шапкой;
+     у броней/меню деталь остаётся в потоке с видимой нижней навигацией */
   .detailPanel { display: none; }
   .mobileDetail .ordersPanel { display: none; }
-  .mobileDetail .detailPanel { display: block; position: fixed; inset: 0; z-index: 30; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
+  .mobileDetail .detailPanel { display: block; }
+  .mobileDetail[data-order-detail-open] .detailPanel { position: fixed; inset: 0; z-index: 30; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
   .orderDetailBar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 7px; min-height: 62px; padding: 0 16px; border-bottom: 1px solid var(--admin-line); background: #fff; }
   .orderDetailBar .backButton { display: grid; place-items: center; width: 44px; height: 44px; flex: none; margin: 0; padding: 0; color: var(--admin-accent); font-size: 27px; font-weight: 400; }
   .orderDetailBar strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 680; color: var(--admin-text); }

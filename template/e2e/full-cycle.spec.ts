@@ -39,7 +39,7 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
 
-  await page.getByRole("button", { name: `Открыть заказ № ${orderNumber}` }).click();
+  await page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
   // Редизайн: одна главная кнопка следующего шага (селект статуса убран).
   for (const [action, statusText] of [["Принять", "Принят"], ["Готовится", "Готовится"], ["Готов", "Готов"]] as const) {
@@ -47,9 +47,9 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
     await expect(detail.getByText(statusText, { exact: true }).first()).toBeVisible();
   }
   await detail.getByRole("button", { name: "Выдан", exact: true }).click();
-  // «Выдан» выбывает из «Текущих» — финал проверяем в режиме «Все» по прямой позиции в списке.
+  // «Выдан» выбывает из «Текущих» — финал проверяем в режиме «Все».
   await page.goto("/admin?mode=all");
-  await page.getByRole("button", { name: `Открыть заказ № ${orderNumber}` }).click();
+  await page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) }).click();
   await expect(page.getByRole("region", { name: "Детали заказа" }).getByText("Выдан", { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)

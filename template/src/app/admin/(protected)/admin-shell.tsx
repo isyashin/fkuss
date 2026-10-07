@@ -48,6 +48,8 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
     return () => window.removeEventListener("restaurant-admin-sidebar-toggle", noop);
   }, []);
   const active = (href: string) => href === "/admin" ? pathname === href : pathname.startsWith(href);
+  // Поповеры закрываются при переходе между разделами (не «прилипают» поверх контента).
+  useEffect(() => { setProfileOpen(false); }, [pathname]);
   const fullAccess = actor.role === "owner" || unlocked;
   // Сотрудник: заказы, брони, меню + настройки (владельческие разделы — через PIN).
   // По прототипу навигация — ровно четыре пункта; владельческие задачи живут внутри «Настроек».

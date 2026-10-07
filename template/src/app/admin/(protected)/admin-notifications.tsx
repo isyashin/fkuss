@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { hasRecentAdminEvent, playAdminSound, primeAdminAudio } from "@/lib/admin-audio";
 import { setFaviconBadge, clearFaviconBadge } from "@/lib/favicon-badge";
@@ -66,9 +66,12 @@ function tabId(): string {
 
 export function AdminNotifications() {
   const router = useRouter();
+  const pathname = usePathname();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
+  // Панель не должна «прилипать» при переходах между разделами.
+  useEffect(() => { setOpen(false); }, [pathname]);
   // sessionStorage — источник истины: серверный снапшот false совпадает с SSR,
   // после гидрации читается реальное значение (без рассинхрона #418).
   const enabled = useSyncExternalStore(subscribeEnabled, readEnabledFlag, () => false);

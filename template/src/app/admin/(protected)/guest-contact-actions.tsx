@@ -23,7 +23,7 @@ export function GuestContactActions({ phone, preferredChannel, channels, compact
     {primary ? <a className={styles.contactPhone} href={primary.href} target={primary.channel === "phone" ? undefined : "_blank"}
       rel={primary.channel === "phone" ? undefined : "noopener noreferrer"} aria-label={`${primary.label}: ${phone}`}>{`Позвонить · ${phone}`}</a>
       : <span className={styles.contactPhone}>{phone || "Не указан"}</span>}
-    {links.length > 0 && <div className={styles.contactLinks}>{links.map((link) => <a key={link.channel} href={link.href}
+    {links.length > 0 && <div className={styles.contactLinks}>{links.filter((link) => link.channel !== "phone").map((link) => <a key={link.channel} href={link.href}
       target={link.channel === "phone" ? undefined : "_blank"} rel={link.channel === "phone" ? undefined : "noopener noreferrer"}
       title={link.channel === "telegram" ? "Ссылка сработает, если гость разрешил поиск по номеру в Telegram" : undefined}>
       {link.label}

@@ -64,6 +64,13 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
         { key: "cooking", label: "Готовятся", match: (order) => order.status === "cooking" },
         { key: "ready", label: "Ждут выдачи", match: (order) => order.status === "ready" },
         { key: "courier", label: "Переданы курьеру", match: (order) => order.status === "handed_to_courier" },
+        // Режим «Все» (прямая ссылка): финальные статусы тоже показываем.
+        ...(query.mode === "all"
+          ? [
+              { key: "done", label: "Выполнены", match: (order: OrderWithItems) => ["delivered", "issued"].includes(order.status) },
+              { key: "cancelled", label: "Отменённые", match: (order: OrderWithItems) => order.status === "cancelled" },
+            ]
+          : []),
       ];
 
   return <div className={`${styles.dashboard} ${mobileDetail ? styles.mobileDetail : ""}`} data-order-detail-open={mobileDetail ? "" : undefined}>

@@ -19,7 +19,7 @@ export type BookingStatusFilter = typeof BOOKING_STATUSES[number];
 export type OrderTypeFilter = typeof ORDER_TYPES[number];
 export type OrderModeFilter = typeof ORDER_MODES[number];
 export type SortDirection = "asc" | "desc";
-export type OrderListQuery = { status: OrderStatusFilter; type: OrderTypeFilter; sort: SortDirection; page: number; mode: OrderModeFilter };
+export type OrderListQuery = { status: OrderStatusFilter; type: OrderTypeFilter; sort: SortDirection; page: number; mode: OrderModeFilter; q: string };
 export type BookingListQuery = { status: BookingStatusFilter; sort: SortDirection; page: number };
 
 function scalar(value: string | string[] | undefined): string | undefined {
@@ -42,7 +42,9 @@ export function parseOrderListQuery(raw: RawAdminQuery): OrderListQuery {
     type: oneOf(scalar(raw.type), ORDER_TYPES, "all"),
     sort: oneOf(scalar(raw.sort), ["asc", "desc"] as const, "desc"),
     page: pageNumber(scalar(raw.page)),
-    mode: oneOf(scalar(raw.mode), ORDER_MODES, "all"),
+    // По умолчанию — рабочая очередь «Текущие» (редизайн дашборда заказов).
+    mode: oneOf(scalar(raw.mode), ORDER_MODES, "current"),
+    q: scalar(raw.q)?.trim().slice(0, 60) ?? "",
   };
 }
 
@@ -79,7 +81,9 @@ export function adminListHref(base: "/admin" | "/admin/bookings", query: OrderLi
   const params = new URLSearchParams();
   if (query.status !== "all") params.set("status", query.status);
   if ("type" in query && query.type !== "all") params.set("type", query.type);
-  if ("mode" in query && query.mode !== "all") params.set("mode", query.mode);
+  // «Текущие» — режим по умолчанию: в ссылке не дублируем.
+  if ("mode" in query && query.mode !== "all" && query.mode !== "current") params.set("mode", query.mode);
+  if ("q" in query && query.q) params.set("q", query.q);
   if (query.sort !== "desc") params.set("sort", query.sort);
   if (query.page > 1) params.set("page", String(query.page));
   const search = params.toString();

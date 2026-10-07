@@ -10,9 +10,15 @@ import {
 
 describe("admin list query", () => {
   it("rejects invalid filters and oversized or ambiguous page values", () => {
-    expect(parseOrderListQuery({ status: "new", type: "pickup", sort: "asc", page: "3" })).toEqual({ status: "new", type: "pickup", sort: "asc", page: 3, mode: "all" });
-    expect(parseOrderListQuery({ status: "paid", type: "unknown", sort: "random", page: "999999999999999999999" })).toEqual({ status: "all", type: "all", sort: "desc", page: 1, mode: "all" });
+    expect(parseOrderListQuery({ status: "new", type: "pickup", sort: "asc", page: "3" })).toEqual({ status: "new", type: "pickup", sort: "asc", page: 3, mode: "current", q: "" });
+    expect(parseOrderListQuery({ status: "paid", type: "unknown", sort: "random", page: "999999999999999999999" })).toEqual({ status: "all", type: "all", sort: "desc", page: 1, mode: "current", q: "" });
     expect(parseBookingListQuery({ status: ["new", "confirmed"], page: "-2" })).toEqual({ status: "all", sort: "desc", page: 1 });
+  });
+
+  it("парсит поисковый запрос и убирает пробелы", () => {
+    expect(parseOrderListQuery({ q: "  7999  " })).toMatchObject({ q: "7999" });
+    expect(parseOrderListQuery({})).toMatchObject({ q: "" });
+    expect(adminListHref("/admin", { status: "all", type: "all", sort: "desc", page: 1, mode: "current", q: "Иван" })).toBe("/admin?q=%D0%98%D0%B2%D0%B0%D0%BD");
   });
 
   it("clamps an out-of-range page to the last real page", () => {
@@ -39,7 +45,7 @@ describe("admin list query", () => {
   });
 
   it("keeps filters and sort in page links without carrying a stale selection", () => {
-    expect(adminListHref("/admin", { status: "new", type: "pickup", sort: "asc", page: 4 })).toBe("/admin?status=new&type=pickup&sort=asc&page=4");
+    expect(adminListHref("/admin", { status: "new", type: "pickup", sort: "asc", page: 4, mode: "current", q: "" })).toBe("/admin?status=new&type=pickup&sort=asc&page=4");
     expect(adminListHref("/admin/bookings", { status: "all", sort: "desc", page: 1 })).toBe("/admin/bookings");
   });
 });

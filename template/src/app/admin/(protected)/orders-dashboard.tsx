@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { Order, OrderItem, Reservation } from "@/generated/prisma/client";
+import type { Order, OrderItem } from "@/generated/prisma/client";
 import { orderStatusLabel } from "@/lib/order-status";
-import { adminListHref, orderListCounts, ORDER_MODES, ORDER_STATUSES, ORDER_TYPES, type OrderListQuery } from "@/lib/admin-list-query";
+import { adminListHref, orderListCounts, ORDER_MODES, ORDER_TYPES, type OrderListQuery } from "@/lib/admin-list-query";
 import { OrderCard } from "./order-card";
 import { AdminPagination } from "./admin-pagination";
 import { AdminIcon } from "./admin-icon";
@@ -12,10 +12,11 @@ import type { CatalogCategory, DeliveryOptionChoice, DeliveryZoneChoice } from "
 import styles from "./admin-ui.module.css";
 import { GuestContactActions } from "./guest-contact-actions";
 import type { GuestChannels } from "@/lib/guest-contact";
-import { PendingBookings } from "./pending-bookings";
 
 type OrderWithItems = Order & { items: OrderItem[] };
 const typeNames = { all: "Все типы", delivery: "Доставка", pickup: "Самовывоз" };
+// Рабочие очереди по макету: «Текущие», «Новые», «История» (без «Все»).
+const QUEUE_MODES = ORDER_MODES.filter((mode) => mode !== "all");
 const rub = (value: number) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
 function orderTime(date: Date, timeZone: string) {
   return new Intl.DateTimeFormat("ru-RU", { timeZone, hour: "2-digit", minute: "2-digit" }).format(date);
@@ -25,10 +26,10 @@ function statusTone(status: string) {
     : status === "delivered" || status === "issued" ? styles.done : styles.working;
 }
 
-export function OrdersDashboard({ orders, counts, query, page, pageCount, catalog, deliveryOptions, deliveryZones, guestContact, upcomingBookings, timeZone }: {
+export function OrdersDashboard({ orders, counts, query, page, pageCount, catalog, deliveryOptions, deliveryZones, guestContact, timeZone }: {
   orders: OrderWithItems[]; counts: ReturnType<typeof orderListCounts>; query: OrderListQuery; page: number; pageCount: number;
   catalog: CatalogCategory[]; deliveryOptions: DeliveryOptionChoice[]; deliveryZones: DeliveryZoneChoice[];
-  guestContact: GuestChannels; upcomingBookings: Reservation[]; canManageMenu: boolean; timeZone: string;
+  guestContact: GuestChannels; canManageMenu: boolean; timeZone: string;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = orders.find((order) => order.id === selectedId) ?? orders[0];
@@ -42,12 +43,17 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
           <Link className={styles.sortButton} prefetch={false} href={href({ ...query, sort: query.sort === "desc" ? "asc" : "desc", page: 1 })}>По времени · {query.sort === "desc" ? "сначала новые" : "сначала старые"} <span>⌄</span></Link>
         </div>
       </div>
+      <form className={styles.search} role="search" action="/admin" method="get" key={`${query.mode}|${query.type}|${query.sort}|${query.q}`}>
+        {query.mode !== "all" && <input type="hidden" name="mode" value={query.mode} />}
+        {query.type !== "all" && <input type="hidden" name="type" value={query.type} />}
+        {query.sort !== "desc" && <input type="hidden" name="sort" value={query.sort} />}
+        <input className={styles.searchInput} type="search" name="q" defaultValue={query.q} placeholder="Номер, имя или телефон" maxLength={60} aria-label="Поиск заказа" />
+        <button type="submit" className={styles.searchButton}>Найти</button>
+        {query.q && <Link className={styles.searchReset} href={href({ ...query, q: "", page: 1 })}>Сбросить</Link>}
+      </form>
       <div className={styles.filters} role="group" aria-label="Режим очереди заказов">
-        {ORDER_MODES.map((mode) => <Link key={mode} prefetch={false} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{mode === "all" ? "Все" : mode === "current" ? "Текущие" : mode === "new" ? "Новые" : "История"} <span className={styles.count}>{counts.byMode[mode]}</span></Link>)}
+        {QUEUE_MODES.map((mode) => <Link key={mode} prefetch={false} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{mode === "current" ? "Текущие" : mode === "new" ? "Новые" : "История"} <span className={styles.count}>{counts.byMode[mode]}</span></Link>)}
       </div>
-      {query.mode === "all" && (
-        <div className={styles.filters} role="group" aria-label="Фильтр заказов">{ORDER_STATUSES.map((status) => <Link key={status} prefetch={false} href={href({ ...query, status, page: 1 })} aria-current={query.status === status ? "page" : undefined}>{status === "all" ? "Все" : orderStatusLabel(status)} <span className={styles.count}>{counts.byStatus[status]}</span></Link>)}</div>
-      )}
       <div className={styles.list}>{orders.length ? orders.map((order) => <div className={`${styles.orderPreview} ${order.type === "delivery" ? styles.deliveryPreview : styles.pickupPreview} ${selected?.id === order.id ? styles.selectedPreview : ""}`} key={order.id}>
         <button type="button" className={styles.orderOpen} aria-label={`Открыть заказ № ${order.number}`} aria-pressed={selected?.id === order.id} onClick={() => setSelectedId(order.id)}/>
         <div className={styles.orderLead}><span className={`${styles.orderType} ${order.type === "delivery" ? styles.deliveryType : styles.pickupType}`}>{order.type === "delivery" ? "Доставка" : "Самовывоз"}</span><span className={styles.orderMeta}><strong>№ {order.number}</strong><small>{orderTime(order.createdAt, timeZone)}</small></span></div>
@@ -58,6 +64,5 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       <AdminPagination base="/admin" query={query} page={page} pageCount={pageCount} total={counts.total}/>
     </section>
     <section className={`${styles.panel} ${styles.detailPanel}`} aria-label="Детали заказа">{selected ? <OrderCard key={`${selected.id}:${selected.updatedAt.toISOString()}`} order={selected} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} guestContact={guestContact} timeZone={timeZone}/> : <p className={styles.empty}>Выберите заказ из списка.</p>}</section>
-    <PendingBookings bookings={upcomingBookings} guestContact={guestContact}/>
   </div>;
 }

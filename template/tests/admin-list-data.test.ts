@@ -13,10 +13,32 @@ describe("admin database page requests", () => {
       findMany: async (args: Record<string, unknown>) => { request = args; return [{ id: "last-page" }]; },
     } } as unknown as PrismaClient;
 
-    const result = await loadOrdersPage(prisma, { status: "new", type: "delivery", sort: "asc", page: 3, mode: "all" });
+    const result = await loadOrdersPage(prisma, { status: "new", type: "delivery", sort: "asc", page: 3, mode: "all", q: "" });
     expect(result).toMatchObject({ page: 3, pageCount: 3, counts: { total: 62, byStatus: { all: 62, new: 62 }, byType: { all: 70, delivery: 62, pickup: 8 } } });
     expect(result.orders).toHaveLength(1);
     expect(request).toMatchObject({ where: { status: "new", type: "delivery" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], skip: 50, take: 25, include: { items: true } });
+  });
+
+  it("ищет заказы по имени, телефону и точному номеру", async () => {
+    let request: Record<string, unknown> = {};
+    const prisma = { order: {
+      groupBy: async () => [],
+      findMany: async (args: Record<string, unknown>) => { request = args; return []; },
+    } } as unknown as PrismaClient;
+
+    await loadOrdersPage(prisma, { status: "all", type: "all", sort: "desc", page: 1, mode: "all", q: "7999" });
+    expect(request.where).toEqual({ OR: [
+      { customerName: { contains: "7999", mode: "insensitive" } },
+      { customerPhone: { contains: "7999" } },
+      { number: { equals: 7999 } },
+    ] });
+
+    // Не-цифровой запрос не ищет по числовому номеру.
+    await loadOrdersPage(prisma, { status: "all", type: "all", sort: "desc", page: 1, mode: "all", q: "Иван" });
+    expect(request.where).toEqual({ OR: [
+      { customerName: { contains: "Иван", mode: "insensitive" } },
+      { customerPhone: { contains: "Иван" } },
+    ] });
   });
 
   it("clamps booking pages after filtering and never requests unbounded history", async () => {

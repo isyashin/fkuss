@@ -94,8 +94,8 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
     list: getComputedStyle(document.querySelector('section[aria-label="Список броней"] h2')!).fontFamily,
     detail: getComputedStyle(document.querySelector('section[aria-label="Детали брони"] h2')!).fontFamily,
   }));
-  expect(bookingFonts.list).toContain("Arial");
-  expect(bookingFonts.detail).toContain("Arial");
+  expect(bookingFonts.list).toContain("Segoe UI");
+  expect(bookingFonts.detail).toContain("Segoe UI");
   const contactLinks = page.getByRole("region", { name: "Детали брони" }).getByRole("link", { name: /WhatsApp|Telegram/ });
   if (await contactLinks.count() === 2) {
     const first = await contactLinks.nth(0).boundingBox();
@@ -161,23 +161,21 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   expect(settingsWidth.content, `admin settings overflow on mobile: ${settingsWidth.offenders.join(", ")}`).toBeLessThanOrEqual(settingsWidth.viewport + 1);
 });
 
-test("admin orders use two readable columns with bookings below at 1280px", async ({ page }) => {
+test("admin orders use two readable columns at 1280px", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
 
+  // Редизайн: дашборд заказов — очередь и деталь; брони отдельным разделом.
   const orders = await page.getByRole("region", { name: "Список заказов" }).boundingBox();
   const detail = await page.getByRole("region", { name: "Детали заказа" }).boundingBox();
-  const bookings = await page.getByRole("region", { name: "Ближайшие брони" }).boundingBox();
   expect(orders).not.toBeNull();
   expect(detail).not.toBeNull();
-  expect(bookings).not.toBeNull();
   expect(orders!.width).toBeGreaterThan(430);
   expect(detail!.width).toBeGreaterThan(400);
   expect(detail!.x).toBeGreaterThan(orders!.x + orders!.width);
-  expect(bookings!.y).toBeGreaterThanOrEqual(Math.max(orders!.y + orders!.height, detail!.y + detail!.height) - 1);
-  expect(bookings!.x).toBeCloseTo(orders!.x, 0);
+  await expect(page.getByRole("form", { name: "Поиск заказа" })).toBeVisible();
 
   await page.setViewportSize({ width: 960, height: 900 });
   const width = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
@@ -190,6 +188,7 @@ test("admin orders use two readable columns with bookings below at 1280px", asyn
   expect(search!.width).toBeGreaterThan(800);
   const dishFont = await page.getByRole("article").first().getByRole("heading", { level: 3 })
     .evaluate((element) => ({ family: getComputedStyle(element).fontFamily, weight: getComputedStyle(element).fontWeight }));
+  // Меню ещё на старой типографике; миграция — отдельным этапом редизайна.
   expect(dishFont.family).toContain("Arial");
   expect(dishFont.weight).toBe("400");
 });

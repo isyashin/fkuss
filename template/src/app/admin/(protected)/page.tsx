@@ -5,7 +5,6 @@ import { loadOrdersPage } from "./admin-list-data";
 import { OrdersDashboard } from "./orders-dashboard";
 import { getSiteSettings, contentAssetUrl } from "@/lib/site";
 import { visibleGuestChannels } from "@/lib/guest-contact";
-import { loadUpcomingBookings } from "@/lib/admin-bookings-service";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +22,6 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
     prisma.deliveryOption.findMany({ where: { enabled: true }, orderBy: { position: "asc" }, select: { id: true, name: true } }),
     getSiteSettings(),
   ]);
-  const upcomingBookings = await loadUpcomingBookings(prisma, settings.timezone);
   const catalog = categories.map((category) => ({ id: category.id, name: category.name, dishes: category.dishes.map((dish) => ({
     id: dish.id, name: dish.name, price: dish.price, image: dish.image ? contentAssetUrl(dish.image) : "", weight: dish.weight,
     modifiers: dish.modifiers.filter((modifier) => modifier.groupId === null).map((modifier) => ({ id: modifier.id, name: modifier.name, price: modifier.price })),
@@ -33,5 +31,5 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
 
   return <OrdersDashboard {...listing} query={{ ...query, page: listing.page }} catalog={catalog}
     deliveryOptions={options} deliveryZones={settings.delivery.zones.map((zone) => ({ name: zone.name }))}
-    guestContact={visibleGuestChannels(settings)} upcomingBookings={upcomingBookings} canManageMenu={actor.role === "owner"} timeZone={settings.timezone}/>;
+    guestContact={visibleGuestChannels(settings)} canManageMenu={actor.role === "owner"} timeZone={settings.timezone}/>;
 }

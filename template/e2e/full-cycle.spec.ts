@@ -41,13 +41,13 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
 
   await page.getByRole("button", { name: `Открыть заказ № ${orderNumber}` }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
-  const status = detail.getByLabel("Статус заказа");
-  for (const [value, label] of [["accepted", "Принят"], ["cooking", "Готовится"], ["ready", "Готов"], ["issued", "Выдан"]] as const) {
-    await status.selectOption(value);
-    await expect(status).toHaveValue(value);
-    await expect(detail.getByText(label, { exact: true }).first()).toBeVisible();
+  // Редизайн: одна главная кнопка следующего шага (селект статуса убран).
+  for (const [action, statusText] of [["Принять", "Принят"], ["Готовится", "Готовится"], ["Готов", "Готов"], ["Выдан", "Выдан"]] as const) {
+    await detail.getByRole("button", { name: action, exact: true }).click();
+    await expect(detail.getByText(statusText, { exact: true }).first()).toBeVisible();
   }
-  await expect(status.locator("option")).toHaveCount(1);
+  // Финал: кнопок шага больше нет, статус «Выдан» остаётся.
+  await expect(detail.getByRole("button", { name: "Выдан", exact: true })).toHaveCount(0);
   await expect(detail.getByText("Выдан", { exact: true }).first()).toBeVisible();
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)

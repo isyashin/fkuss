@@ -11,11 +11,22 @@ import {
 } from "@/lib/admin-list-query";
 
 export async function loadOrdersPage(prisma: PrismaClient, query: OrderListQuery) {
-  const groups = await prisma.order.groupBy({ by: ["status", "type"], _count: { _all: true } });
+  // Поиск по номеру, имени и телефону — только в рамках текущего тенанта (Prisma tenant-изоляция).
+  const searchWhere: Prisma.OrderWhereInput = query.q
+    ? {
+        OR: [
+          { customerName: { contains: query.q, mode: "insensitive" } },
+          { customerPhone: { contains: query.q } },
+          ...( /^\d+$/.test(query.q) ? [{ number: { equals: Number(query.q) } }] : []),
+        ],
+      }
+    : {};
+  const groups = await prisma.order.groupBy({ by: ["status", "type"], where: searchWhere, _count: { _all: true } });
   const counts = orderListCounts(groups, query.type, query.status);
   const total = query.mode !== "all" ? counts.byMode[query.mode] : counts.total;
   const window = pageWindow(total, query.page);
   const where: Prisma.OrderWhereInput = {
+    ...searchWhere,
     ...(query.mode !== "all"
       ? { status: { in: ORDER_MODE_STATUSES[query.mode] } }
       : query.status !== "all" ? { status: query.status } : {}),

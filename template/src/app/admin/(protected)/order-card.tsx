@@ -27,7 +27,6 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [tab, setTab] = useState<"items" | "info">("items");
   const editBlocked = orderEditBlockReason(order);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
@@ -51,8 +50,8 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
 
   return <>
     <div className={styles.detailHeader}><div><span className={styles.eyebrow}>Детали заказа</span><div className={styles.detailTitle}><h2>Заказ № {order.number}</h2><span className={`${styles.badge} ${statusTone(order.status)}`}>{orderStatusLabel(order.status)}</span></div><p className={styles.muted}>{formatAdminDate(order.createdAt, timeZone)}</p></div></div>
-    <div className={styles.tabs} role="tablist" aria-label="Детали заказа"><button type="button" role="tab" aria-selected={tab === "items"} onClick={() => setTab("items")}>Состав заказа</button><button type="button" role="tab" aria-selected={tab === "info"} onClick={() => setTab("info")}>Информация</button></div>
-    {tab === "items" && (editing && !editBlocked ? <OrderEditor order={order} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} onClose={() => setEditing(false)}/> : <>
+    {info}
+    {editing && !editBlocked ? <OrderEditor order={order} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} onClose={() => setEditing(false)}/> : <>
       <div className={styles.lineItems}>{order.items.map((item) => {
         const dish = dishes.get(item.dishId);
         const modifiers = (item.modifiers as { name?: string }[] | null) ?? [];
@@ -73,8 +72,7 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
       <div className={styles.summaryLine}><span>Итого</span><strong>{rub(order.total)}</strong></div>
       {!editBlocked && <button type="button" className={styles.addButton} onClick={() => setEditing(true)}>Изменить состав</button>}
       {editBlocked && <p className={styles.muted}>{editBlocked}</p>}
-    </>)}
-    {tab === "items" && <label className={styles.statusEditor}><span>Статус заказа</span><select value={order.status} disabled={pending || editing} onChange={(event) => run(event.target.value)}><option value={order.status}>{orderStatusLabel(order.status)}</option>{actions.map((action) => <option key={action.status} value={action.status}>{action.label}</option>)}</select>{editing && <small>Сначала сохраните изменения состава.</small>}</label>}
+    </>}
     {(() => {
       // Редизайн: одна главная кнопка следующего шага; отмена — отдельно и со стилем опасного действия.
       const forward = actions.filter((action) => action.status !== "cancelled");
@@ -86,7 +84,6 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
         {cancel && <div className={styles.actions}><button type="button" className={styles.cancelAction} disabled={pending} onClick={() => { if (window.confirm(`Отменить заказ № ${order.number}?`)) run(cancel.status); }}>Отменить заказ</button></div>}
       </>;
     })()}
-    {info}
     {error && <p className={styles.error} role="alert">{error}</p>}
   </>;
 }

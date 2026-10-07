@@ -64,6 +64,8 @@
   color: var(--rd-text);
   font-family: var(--rd-font);
 }
+/* Глобальные стили витрины задают заголовкам Georgia — в админке весь текст sans. */
+.shell :global(h1), .shell :global(h2), .shell :global(h3) { font-family: var(--rd-font); }
 .shell[data-theme="dark"] {
   --rd-text: #e6eae5;
   --rd-muted: #9aa79d;

@@ -189,25 +189,29 @@
   .orderDetailBar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 7px; min-height: 62px; padding: 0 16px; border-bottom: 1px solid var(--admin-line); background: #fff; }
   .orderDetailBar .backButton { display: grid; place-items: center; width: 44px; height: 44px; flex: none; margin: 0; padding: 0; color: var(--admin-accent); font-size: 27px; font-weight: 400; }
   .orderDetailBar strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 680; color: var(--admin-text); }
-  .detailInner { padding: 19px 18px calc(114px + env(safe-area-inset-bottom)); }
-  .detailHeader { padding-bottom: 20px; }
-  .detailTitle h2 { display: none; }
-  .detailTitle .chip { font-size: 12px; }
-  .detailHeader > .muted { margin-top: 13px; font-size: 13px; }
+  /* Кнопка возврата броней/меню (у заказов — своя шапка со стрелкой) */
+  .mobileDetail .backButton { display: inline-flex; align-items: center; min-height: 44px; margin: 0 0 18px -8px; padding: 0 8px; border: 0; background: transparent; color: #526353; font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+  /* Правила ниже — только полноэкранная деталь ЗАКАЗА ([data-order-detail-open]) */
+  .mobileDetail[data-order-detail-open] .detailInner { padding: 19px 18px calc(114px + env(safe-area-inset-bottom)); }
+  .mobileDetail[data-order-detail-open] .detailHeader { padding-bottom: 20px; }
+  .mobileDetail[data-order-detail-open] .detailTitle h2 { display: none; }
+  .mobileDetail[data-order-detail-open] .detailTitle .chip { font-size: 12px; }
+  .mobileDetail[data-order-detail-open] .detailHeader > .muted { margin-top: 13px; font-size: 13px; }
+  .mobileDetail[data-order-detail-open] .detailHeader .detailActions { display: none; }
+  .mobileDetail[data-order-detail-open] .detailSection { padding: 20px 0; }
+  .mobileDetail[data-order-detail-open] .fact > span { font-size: 12.5px; }
+  .mobileDetail[data-order-detail-open] .fact strong { font-size: 15px; }
+  .mobileDetail[data-order-detail-open] .lineItem > strong { font-size: 15px; }
+  .mobileDetail[data-order-detail-open] .lineItem > small { font-size: 13px; }
+  .mobileDetail[data-order-detail-open] .lineItem > b { font-size: 15px; }
+  .mobileDetail[data-order-detail-open] .sumLine { font-size: 13px; }
+  .mobileDetail[data-order-detail-open] .sumLine.total { font-size: 18px; }
   .orderMobileSummary { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 5px 12px; margin: 15px 0 0; }
   .orderMobileSummary strong { font-size: 23px; letter-spacing: -.035em; color: var(--admin-text); }
   .orderMobileSummary span { color: var(--admin-muted); font-size: 13px; }
-  .detailHeader .detailActions { display: none; }
-  .detailSection { padding: 20px 0; }
-  .sectionTitle h3 { font-size: 16px; }
-  .fact > span { font-size: 12.5px; }
-  .fact strong, .lineItem > strong, .lineItem > b { font-size: 15px; }
-  .lineItem > small, .sumLine { font-size: 13px; }
-  .sumLine.total { font-size: 18px; }
   .orderMobileCancel { display: inline-flex; min-height: 44px; align-items: center; margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--admin-danger, #a3473b); font: inherit; font-size: 13px; font-weight: 630; cursor: pointer; }
   .orderMobileAction { position: fixed; right: 0; bottom: 0; left: 0; z-index: 3; display: block; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--admin-line); background: #fff; }
   .orderMobileAction .primaryAction { width: 100%; min-height: 52px; font-size: 15px; }
-  .backButton { display: none; }
   .pagination { padding: 14px 20px 24px; }
 }
 @media (max-width: 420px) {

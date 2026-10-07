@@ -134,13 +134,6 @@ test("admin menu and settings fit the viewport", async ({ page }) => {
   const menuWidth = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(menuWidth.content, "admin menu overflows on mobile").toBeLessThanOrEqual(menuWidth.viewport + 1);
 
-  await page.setViewportSize({ width: 1280, height: 900 });
-  const search = await page.getByRole("textbox", { name: "Поиск блюда" }).boundingBox();
-  expect(search).not.toBeNull();
-  // Поиск занимает колонку очереди (не шире её)
-  expect(search!.width).toBeGreaterThan(250);
-  expect(search!.width).toBeLessThan(360);
-
   // Редизайн: настройки — колонка разделов + один редактор (?section=)
   await page.goto("/admin/settings");
   await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();

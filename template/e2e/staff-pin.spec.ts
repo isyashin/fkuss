@@ -1,6 +1,15 @@
 import { test, expect, type Page } from "@playwright/test";
 import { loginAdminUi } from "./login-admin";
 
+// router.refresh() админки прерывает goto (RSC-стриминг) — повторяем переход один раз.
+async function gotoStable(page: Page, path: string) {
+  await page.goto(path, { waitUntil: "commit" }).catch(async () => {
+    await page.waitForLoadState("load").catch(() => {});
+    await page.goto(path, { waitUntil: "commit" });
+  });
+  await page.waitForLoadState("networkidle").catch(() => {});
+}
+
 // Сотрудник: меню редактирует без ограничений, «Настройки» — через PIN владельца
 // (экранная панель + клавиатура). PIN устанавливаем через site-key API тенанта.
 
@@ -10,7 +19,7 @@ async function createStaff(page: Page) {
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
-  await page.goto("/admin/settings?section=team");
+  await gotoStable(page, "/admin/settings?section=team");
   const createForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Добавить сотрудника" }) });
   await createForm.getByLabel("Логин").fill(STAFF.login);
   await createForm.getByLabel("Имя").fill(STAFF.name);
@@ -49,7 +58,7 @@ test("сотрудник: меню доступно, настройки откр
   await expect(page.getByRole("link", { name: "Настройки" })).toBeVisible();
 
   // Меню редактируется: открываем первое блюдо, меняем вес и сохраняем
-  await page.goto("/admin/menu");
+  await gotoStable(page, "/admin/menu");
   await expect(page.getByRole("heading", { name: "Меню" })).toBeVisible();
   await page.getByRole("button", { name: /Открыть блюдо/ }).first().click();
   const weightInput = page.getByLabel("Вес / объём");
@@ -61,7 +70,7 @@ test("сотрудник: меню доступно, настройки откр
   // Владельческий раздел по прямой ссылке — на экран PIN
   // (networkidle: не уходить со страницы посреди refresh после сохранения блюда)
   await page.waitForLoadState("networkidle").catch(() => {});
-  await page.goto("/admin/team");
+  await gotoStable(page, "/admin/team");
   await expect(page).toHaveURL(/\/admin\/settings\?pin=1$/);
   await expect(page.getByRole("heading", { name: "Введите PIN" })).toBeVisible();
 
@@ -77,7 +86,7 @@ test("сотрудник: меню доступно, настройки откр
   await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible({ timeout: 15000 });
 
   // Уровень владельца: «Сотрудники» открывается
-  await page.goto("/admin/settings?section=team");
+  await gotoStable(page, "/admin/settings?section=team");
   await expect(page.getByRole("heading", { name: "Сотрудники" })).toBeVisible({ timeout: 15000 });
 
   // Загрузка фото сотрудником — только раздел dishes, остальные 403

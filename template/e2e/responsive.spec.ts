@@ -119,7 +119,7 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
 
   await page.goto("/admin/menu");
   await expect(page.getByRole("heading", { name: "Меню", exact: true })).toBeVisible();
-  await expect(page.getByRole("group", { name: "Категория меню" })).toBeVisible();
+  await expect(page.getByLabel("Категория меню")).toBeVisible();
   // Очередь блюдов: строка открывает редактор справа
   await page.getByRole("button", { name: /Открыть блюдо/ }).first().click();
   await expect(page.getByLabel("Описание")).toBeVisible();

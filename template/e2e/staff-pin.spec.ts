@@ -61,7 +61,7 @@ test("сотрудник: меню доступно, настройки откр
   // Владельческий раздел по прямой ссылке — на экран PIN
   // (networkidle: не уходить со страницы посреди refresh после сохранения блюда)
   await page.waitForLoadState("networkidle").catch(() => {});
-  await page.goto("/admin/settings?section=team");
+  await page.goto("/admin/team");
   await expect(page).toHaveURL(/\/admin\/settings\?pin=1$/);
   await expect(page.getByRole("heading", { name: "Введите PIN" })).toBeVisible();
 

@@ -25,7 +25,8 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
   guestContact: Parameters<typeof BookingCard>[0]["guestContact"]; timeZone: string; today: string; initialSelectedId?: string | null; selectedBooking?: Reservation | null;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
-  const [mobileDetail, setMobileDetail] = useState(false);
+  // Прямая ссылка ?selected= на телефоне сразу открывает деталь вместо списка.
+  const [mobileDetail, setMobileDetail] = useState(() => Boolean(initialSelectedId));
   const router = useRouter();
   const selected = (selectedId ? bookings.find((booking) => booking.id === selectedId) ?? (selectedBooking?.id === selectedId ? selectedBooking : null) : null) ?? bookings[0] ?? null;
   const href = (next: BookingListQuery) => adminListHref("/admin/bookings", next);

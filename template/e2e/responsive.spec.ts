@@ -1,8 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
 import { loginAdminUi } from "./login-admin";
 
-async function assertResponsivePage(page: Page, path: string) {
-  const brokenAssets: string[] = [];
+// router.refresh() админки прерывает goto (RSC-стриминг) — повторяем переход один раз.
+async function gotoStable(page: Page, path: string) {
+  await page.goto(path, { waitUntil: "commit" }).catch(async () => {
+    await page.waitForLoadState("load").catch(() => {});
+    await page.goto(path, { waitUntil: "commit" });
+  });
+  await page.waitForLoadState("networkidle").catch(() => {});
+}
+
+async function assertResponsivePage(page: Page, path: string) {  const brokenAssets: string[] = [];
   const onResponse = (response: { url: () => string; status: () => number }) => {
     const pathname = new URL(response.url()).pathname;
     if (pathname.startsWith("/content-asset/") && response.status() >= 400) {
@@ -125,7 +133,7 @@ test("admin menu and settings fit the viewport", async ({ page }) => {
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
 
-  await page.goto("/admin/menu");
+  await gotoStable(page, "/admin/menu");
   await expect(page.getByRole("heading", { name: "Меню", exact: true })).toBeVisible();
   await expect(page.getByLabel("Категория меню")).toBeVisible();
   // Очередь блюдов и редактор видны (интерактивное редактирование покрывает staff-pin).
@@ -135,15 +143,15 @@ test("admin menu and settings fit the viewport", async ({ page }) => {
   expect(menuWidth.content, "admin menu overflows on mobile").toBeLessThanOrEqual(menuWidth.viewport + 1);
 
   // Редизайн: настройки — колонка разделов + один редактор (?section=)
-  await page.goto("/admin/settings");
+  await gotoStable(page, "/admin/settings");
   await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Данные и контакты" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Профиль:/ })).toBeVisible();
   for (const section of ["theme", "pages", "gallery", "promos", "banquets", "print", "delivery", "payment", "booking", "sound", "pricing", "sync", "guest-contact", "notify", "cabinet", "team", "billing"]) {
-    await page.goto(`/admin/settings?section=${section}`);
+    await gotoStable(page, `/admin/settings?section=${section}`);
     await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
   }
-  await page.goto("/admin/settings?section=delivery");
+  await gotoStable(page, "/admin/settings?section=delivery");
   const settingsWidth = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
     content: document.documentElement.scrollWidth,

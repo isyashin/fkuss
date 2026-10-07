@@ -16,13 +16,6 @@ const primary = [
   { href: "/admin/menu", label: "Меню", icon: "menu" },
   { href: "/admin/settings", label: "Настройки", icon: "settings" },
 ] as const;
-const secondary = [
-  { href: "/admin/promos", label: "Акции" }, { href: "/admin/gallery", label: "Галерея" },
-  { href: "/admin/banquets", label: "Банкеты" }, { href: "/admin/pages", label: "Страницы" },
-  { href: "/admin/restaurant", label: "Ресторан" }, { href: "/admin/sync", label: "Синхронизация" },
-  { href: "/admin/delivery", label: "Доставка" }, { href: "/admin/print-materials", label: "Печать" },
-  { href: "/admin/billing", label: "Подписка" }, { href: "/admin/team", label: "Сотрудники" },
-] as const;
 
 function subscribeTheme(callback: () => void) {
   window.addEventListener("storage", callback);
@@ -57,10 +50,10 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
   const active = (href: string) => href === "/admin" ? pathname === href : pathname.startsWith(href);
   const fullAccess = actor.role === "owner" || unlocked;
   // Сотрудник: заказы, брони, меню + настройки (владельческие разделы — через PIN).
+  // По прототипу навигация — ровно четыре пункта; владельческие задачи живут внутри «Настроек».
   const visiblePrimary = fullAccess
     ? primary
     : primary.filter((item) => ["/admin", "/admin/bookings", "/admin/menu", "/admin/settings"].includes(item.href));
-  const visibleSecondary = fullAccess ? secondary : [];
   const initials = actor.name.trim().split(/\s+/).slice(0, 2).map((part) => part.slice(0, 1).toLocaleUpperCase("ru-RU")).join("") || "А";
 
   const navLinks = (navStyles: "rail" | "bottom") => visiblePrimary.map((item) => {
@@ -102,12 +95,11 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
             <div className={styles.profilePopover}>
               <strong>{actor.name}</strong>
               <small>{actor.role === "owner" ? "Владелец" : "Сотрудник"}</small>
-              {visibleSecondary.length > 0 && (
-                <nav aria-label="Другие разделы">{visibleSecondary.map((item) => <Link key={item.href} href={item.href} onClick={() => setProfileOpen(false)}>{item.label}</Link>)}</nav>
-              )}
-              <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
-              <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
-              <form action={logoutAction}><button type="submit">Выйти</button></form>
+              <nav aria-label="Профиль">
+                <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
+                <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
+                <form action={logoutAction}><button type="submit">Выйти</button></form>
+              </nav>
             </div>
           )}
         </div>
@@ -127,12 +119,11 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
             <div className={styles.profilePopover}>
               <strong>{actor.name}</strong>
               <small>{actor.role === "owner" ? "Владелец" : "Сотрудник"}</small>
-              {visibleSecondary.length > 0 && (
-                <nav aria-label="Другие разделы">{visibleSecondary.map((item) => <Link key={item.href} href={item.href} onClick={() => setProfileOpen(false)}>{item.label}</Link>)}</nav>
-              )}
-              <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
-              <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
-              <form action={logoutAction}><button type="submit">Выйти</button></form>
+              <nav aria-label="Профиль">
+                <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
+                <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
+                <form action={logoutAction}><button type="submit">Выйти</button></form>
+              </nav>
             </div>
           )}
         </div>

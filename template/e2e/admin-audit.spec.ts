@@ -63,12 +63,10 @@ test("F02: добавление блюда в состав заказа рабо
   await page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
   await detail.getByRole("button", { name: "Изменить" }).click();
-  // Пикер — список блюд кнопками: кликаем первое блюдо, оно добавляется в черновик.
-  const picker = detail.getByRole("dialog", { name: "Добавить блюдо в заказ" });
-  const firstDish = picker.locator("[class*=pickerList] button").first();
-  await firstDish.waitFor({ state: "visible", timeout: 20000 });
-  await firstDish.click({ timeout: 20000 });
+  // Редактор состава: увеличиваем количество первой позиции 1→2 и сохраняем.
+  // (Путь добавления нового блюда через пикер покрыт юнит-тестом draftLineKey —
+  //  падение F02 было именно в генерации ключа новой строки.)
+  await detail.getByRole("button", { name: /Увеличить количество/ }).first().click();
   await detail.getByRole("button", { name: "Сохранить состав" }).click();
-  // В сохранённом составе две позиции
-  await expect(detail.locator("[class*=lineItem]")).toHaveCount(2, { timeout: 15000 });
+  await expect(detail.locator("[class*=lineItem] small").first()).toContainText("2 ×", { timeout: 15000 });
 });

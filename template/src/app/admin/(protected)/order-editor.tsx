@@ -9,19 +9,13 @@ import { adminDraftItemsTotal, adminDraftLineUnit } from "@/lib/admin-draft-prev
 import { saveOrderItems } from "./actions";
 import { AdminIcon } from "./admin-icon";
 import { useDirtyGuard } from "./admin-dirty";
+import { draftLineKey } from "@/lib/order/draft-line-key";
 import type { CatalogCategory, CatalogDish, DeliveryOptionChoice, DeliveryZoneChoice } from "./order-editor-types";
 import styles from "./order-editor.module.css";
 
 type DraftLine =
   | { kind: "existing"; key: string; itemId: string; quantity: number; item: OrderItem }
   | { kind: "new"; key: string; dishId: string; quantity: number; modifierIds: string[] };
-
-/** Ключ строки черновика: randomUUID недоступен вне secure context (HTTP-стенды). */
-function draftLineKey(): string {
-  const bytes = new Uint8Array(12);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
 
 const rub = (value: number) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
 

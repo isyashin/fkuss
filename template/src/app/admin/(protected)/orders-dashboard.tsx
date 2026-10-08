@@ -81,10 +81,14 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
     // Если слой открыт через pushState — возврат системной кнопкой сохранит контекст списка.
     if (window.history.state?.orderDetail) window.history.back();
     else setMobileDetail(false);
-    setTimeout(() => {
-      window.scrollTo(0, savedScrollRef.current.win);
-      if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
-    }, 400);
+    // D05: позиция восстанавливается несколькими попытками — фоновый опрос может
+    // перезаписать скролл уже после первого восстановления.
+    for (const delay of [80, 250, 500, 900]) {
+      setTimeout(() => {
+        window.scrollTo(0, savedScrollRef.current.win);
+        if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
+      }, delay);
+    }
   };
   const toggleGroup = (key: string) => setCollapsedGroups((current) => {
     const next = new Set(current);

@@ -31,10 +31,16 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
   // D05: позиция списка сохраняется при открытии брони и восстанавливается по возврату.
   const paneRef = useRef<HTMLElement | null>(null);
   const savedScrollRef = useRef({ win: 0, pane: 0 });
-  const restoreListScroll = () => setTimeout(() => {
-    window.scrollTo(0, savedScrollRef.current.win);
-    if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
-  }, 400);
+  // D05: позиция восстанавливается несколькими попытками — фоновый опрос может
+  // перезаписать скролл уже после первого восстановления.
+  const restoreListScroll = () => {
+    for (const delay of [80, 250, 500, 900]) {
+      setTimeout(() => {
+        window.scrollTo(0, savedScrollRef.current.win);
+        if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
+      }, delay);
+    }
+  };
   const selected = (selectedId ? bookings.find((booking) => booking.id === selectedId) ?? (selectedBooking?.id === selectedId ? selectedBooking : null) : null) ?? bookings[0] ?? null;
   const href = (next: BookingListQuery) => adminListHref("/admin/bookings", next);
   // Выбор держим в URL (?selected=), чтобы он переживал router.refresh().

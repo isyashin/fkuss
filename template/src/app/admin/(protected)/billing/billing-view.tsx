@@ -13,7 +13,12 @@ type Billing = Awaited<ReturnType<typeof fetchMyBilling>>;
 /** Подписка и баланс — секция настроек (standalone-страница удалена редизайном). */
 export function BillingView({ billing }: { billing: Billing }) {
   if (!billing) {
-    return <p className={styles.empty}>Платформа не подключена к этому сайту (нет SITE_KEY/PLATFORM_URL).</p>;
+    return (
+      <p className={styles.empty}>
+        Подписка пока недоступна: этот сайт ещё не подключён к платформе владельца.
+        Обратитесь к администратору платформы — после подключения здесь появятся тариф, баланс и счета.
+      </p>
+    );
   }
 
   return (

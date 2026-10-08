@@ -7,7 +7,7 @@
  * за тело/вершины. Тумблер geo-режима и настройка «вне зон» — в шапке.
  */
 import { useRef, useState, useTransition } from "react";
-import { saveSettings } from "../settings/actions";
+import { useSettingsSave } from "../settings/use-settings-save";
 import { tariffLines } from "@/lib/order/pricing";
 import { defaultZonePolygon } from "@/lib/delivery/geo";
 import type { ContentSettings } from "@/lib/content-schema";
@@ -31,7 +31,9 @@ export function ZonesTab({
     settings.delivery.geo ?? { enabled: false, outside: "block", outsidePrice: 0 },
   );
   const [savedSnapshot, setSavedSnapshot] = useState(() =>
-    JSON.stringify([settings.delivery.zones, settings.delivery.geo]),
+    // F21: снапшот строится из тех же значений, что и начальное состояние —
+    // иначе форма «грязная» сразу после открытия (geo undefined vs дефолт).
+    JSON.stringify([settings.delivery.zones, settings.delivery.geo ?? { enabled: false, outside: "block", outsidePrice: 0 }]),
   );
   const [selected, setSelected] = useState<number | null>(null);
   const [drawToken, setDrawToken] = useState(0);
@@ -40,6 +42,7 @@ export function ZonesTab({
   const [busy, setBusy] = useState({ drawing: false, editing: false });
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState({ text: "", error: false });
+  const { save: saveWithRev, control: revControl } = useSettingsSave();
   const mapApiRef = useRef<{ getCenter: () => [number, number] } | null>(null);
 
   const inputCls = "min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
@@ -80,7 +83,7 @@ export function ZonesTab({
           ...settings,
           delivery: { ...settings.delivery, zones, geo },
         };
-        await saveSettings(next);
+        const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
         setSavedSnapshot(JSON.stringify([zones, geo]));
         setFeedback({ text: "Сохранено", error: false });
       } catch (cause) {
@@ -325,6 +328,6 @@ export function ZonesTab({
           );
         })}
       </div>
-    </div>
+    {revControl}</div>
   );
 }

@@ -142,14 +142,15 @@ test("admin menu and settings fit the viewport", async ({ page }) => {
   const menuWidth = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
   expect(menuWidth.content, "admin menu overflows on mobile").toBeLessThanOrEqual(menuWidth.viewport + 1);
 
-  // Редизайн: настройки — колонка разделов + один редактор (?section=)
+  // Редизайн: настройки — колонка разделов + один редактор (?section=).
+  // На телефоне колонка скрыта — есть переключатель разделов (макет).
   await gotoStable(page, "/admin/settings");
-  await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
+  await expect(page.getByLabel("Раздел настроек")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Данные и контакты" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Профиль:/ })).toBeVisible();
   for (const section of ["theme", "pages", "gallery", "promos", "banquets", "print", "delivery", "payment", "booking", "sound", "pricing", "sync", "guest-contact", "notify", "cabinet", "team", "billing"]) {
     await gotoStable(page, `/admin/settings?section=${section}`);
-    await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
+    await expect(page.getByLabel("Раздел настроек")).toHaveValue(section);
   }
   await gotoStable(page, "/admin/settings?section=delivery");
   const settingsWidth = await page.evaluate(() => ({

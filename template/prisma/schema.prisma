@@ -269,6 +269,7 @@ model Promo {
   title      String
   text       String  @default("")
   image      String  @default("")
+  enabled    Boolean @default(true)
   activeFrom String?
   activeTo   String?
   position   Int     @default(0)

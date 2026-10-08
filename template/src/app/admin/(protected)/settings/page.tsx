@@ -26,6 +26,10 @@ import { GuestContactEditor, NotifyChannelsEditor } from "./sections/guest-conta
 import { TeamAdmin } from "../team/team-admin";
 import { BillingView } from "../billing/billing-view";
 import { fetchMyBilling } from "@/lib/platform";
+import { readSettingsRev } from "@/lib/admin-settings-version";
+import { SettingsRevProvider } from "./use-settings-save";
+import { SettingsNavGuard } from "./nav-guard";
+import { SectionPicker } from "./section-picker";
 import { PinGate } from "./pin-gate";
 import styles from "./settings-redesign.module.css";
 
@@ -42,15 +46,16 @@ const GROUPS: { group: string; items: { id: string; title: string }[] }[] = [
 const VALID = new Set(GROUPS.flatMap((g) => g.items.map((i) => i.id)));
 
 /* Серверные обёртки секций: данные грузятся только для активной секции. */
-async function SectionRestaurant() {
+async function SectionRestaurant({ focus }: { focus?: "contacts" | "hours" }) {
   const restaurant = await getSiteRestaurant();
+  const hours = focus === "hours";
   return <div className={styles.legacyCard}>
-    <h2>Данные и контакты</h2>
-    <p className={styles.editorHint}>Название, телефон, email, адрес, соцсети и логотип. Часы работы — ниже в карточке ресторана.</p>
+    <h2>{hours ? "Часы работы" : "Данные и контакты"}</h2>
+    <p className={styles.editorHint}>{hours ? "Расписание ресторана по дням и особые дни. Контакты и логотип — в разделе «Данные и контакты»." : "Название, телефон, email, адрес, соцсети и логотип ресторана."}</p>
     <RestaurantAdmin initial={{
       name: restaurant.name, phone: restaurant.phone, email: restaurant.email,
       address: restaurant.address, socials: restaurant.socials, schedule: resolveSchedule(restaurant),
-    }} logoUrl={restaurant.logo ? contentAssetUrl(restaurant.logo) : ""} />
+    }} logoUrl={restaurant.logo ? contentAssetUrl(restaurant.logo) : ""} focus={hours ? "hours" : "contacts"} />
   </div>;
 }
 
@@ -143,13 +148,15 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
 
   const { section } = await searchParams;
   const active = section && VALID.has(section) ? section : "restaurant";
-  const [settings, theme, sound] = await Promise.all([getSiteSettings(), getSiteTheme(), readAdminSound(getPrisma())]);
+  const [settings, theme, sound, rawSettings] = await Promise.all([getSiteSettings(), getSiteTheme(), readAdminSound(getPrisma()), getPrisma().settings.findUnique({ where: { key: "settings" } })]);
+  const settingsRev = readSettingsRev(rawSettings?.value ?? null);
 
   const editor = (() => {
     switch (active) {
       case "restaurant":
+        return <SectionRestaurant focus="contacts" />;
       case "hours":
-        return <SectionRestaurant />;
+        return <SectionRestaurant focus="hours" />;
       case "theme": return <ThemeEditor theme={theme} />;
       case "pages": return <SectionPages />;
       case "gallery": return <SectionGallery />;
@@ -174,8 +181,11 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
   })();
 
   return (
-    <div className={styles.layout}>
-      <nav className={styles.sectionsCol} aria-label="Разделы настроек">
+    <SettingsRevProvider rev={settingsRev}>
+      <div className={styles.layout}>
+        <SectionPicker groups={GROUPS} active={active} />
+        <SettingsNavGuard>
+          <nav className={styles.sectionsCol} aria-label="Разделы настроек">
         {GROUPS.map((g) => (
           <div key={g.group} className={styles.groupBlock}>
             <p className={styles.groupLabel}>{g.group}</p>
@@ -188,8 +198,10 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
             ))}
           </div>
         ))}
-      </nav>
+        </nav>
+        </SettingsNavGuard>
       <div className={styles.editor}>{editor}</div>
-    </div>
+      </div>
+    </SettingsRevProvider>
   );
 }

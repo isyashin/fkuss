@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { saveSyncSettings, runSyncNow } from "./actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import { formatAdminDate } from "@/lib/admin-date";
+import { isSyncLockStale } from "@/lib/yandex-eda/sync-lock";
 import styles from "./sync-admin.module.css";
 
 export function SyncAdmin({
@@ -26,7 +27,11 @@ export function SyncAdmin({
   const lastError = typeof syncState.lastError === "string" ? syncState.lastError : null;
   const lastSuccess = typeof syncState.lastSuccess === "string" ? syncState.lastSuccess : null;
   const lastAttempt = typeof syncState.lastAttempt === "string" ? syncState.lastAttempt : null;
-  const running = syncState.running === true;
+  const runningRaw = syncState.running === true;
+  // F05: блокировку, которую не отпустил упавший процесс, считаем зависшей —
+  // показываем состояние «прервано» и снова разрешаем ручной запуск.
+  const stuck = runningRaw && isSyncLockStale(syncState, new Date());
+  const running = runningRaw && !stuck;
   // Единый формат дат на сервере и в браузере, в часовом поясе ресторана.
   const timeZone = (settings as { timezone?: string }).timezone ?? "Europe/Moscow";
   const attemptText = lastAttempt ? formatAdminDate(new Date(lastAttempt), timeZone) : "—";
@@ -141,6 +146,11 @@ export function SyncAdmin({
         <div className={styles.status}>
           <p>Последняя попытка: {attemptText} · Последний успех: {successText}</p>
           {running && <p>Синхронизация выполняется…</p>}
+          {stuck && (
+            <p role="alert">
+              Последняя попытка прервана (сервер не ответил). Параметры сохранены — запустите синхронизацию снова.
+            </p>
+          )}
           {lastError && !running && <p role="alert">Ошибка: {lastError}</p>}
           {result && <p role="status">{result}</p>}
         </div>

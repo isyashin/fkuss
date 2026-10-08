@@ -159,6 +159,9 @@ function EditForm({
             </button>
           ))}
         </div>
+        {form.days.length === 0 && (
+          <p className="mt-1 text-sm text-red-600">Не выбран ни один день — гости не увидят этот вариант доставки.</p>
+        )}
       </div>
 
       {form.mode === "scheduled" && (

@@ -27,14 +27,20 @@ export async function saveAllAdminSettings(input: AdminSettingsInput): Promise<v
   for (const path of ["/admin/settings", "/admin/menu", "/", "/menu", "/booking"]) revalidatePath(path);
 }
 
-export async function saveSettings(settings: ContentSettings): Promise<void> {
+export async function saveSettings(settings: ContentSettings, expectedRev?: number | null, force = false): Promise<void> {
   await guard();
   const parsed = validateSettingsMutation(settings);
   const prisma = getPrisma();
+  // F04: версионирование — параллельная вкладка с устаревшими данными не молча
+  // перезаписывает чужие правки; конфликт решает диалог «Обновить/Перезаписать».
+  const { assertSettingsRev } = await import("@/lib/admin-settings-version");
+  const row = await prisma.settings.findUnique({ where: { key: "settings" } });
+  const nextRev = assertSettingsRev(row?.value ?? null, expectedRev ?? null, force);
+  const value = JSON.parse(JSON.stringify({ ...parsed, _rev: nextRev }));
   await prisma.settings.upsert({
     where: { key: "settings" },
-    create: { key: "settings", value: JSON.parse(JSON.stringify(parsed)) },
-    update: { value: JSON.parse(JSON.stringify(parsed)) },
+    create: { key: "settings", value },
+    update: { value },
   });
   revalidatePath("/admin/settings");
   revalidatePath("/menu");

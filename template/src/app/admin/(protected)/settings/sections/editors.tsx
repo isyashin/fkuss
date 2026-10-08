@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useSettingsSave } from "../use-settings-save";
 import { saveAllAdminSettings, saveSettings } from "../actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { ThemeConfig } from "@/lib/content";
@@ -14,6 +15,7 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
   const [saved, setSaved] = useState({ payment: settings.payment, loyalty: settings.loyalty });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const { save: saveWithRev, control: revControl } = useSettingsSave();
   const dirty = JSON.stringify(payment) !== JSON.stringify(saved.payment) || JSON.stringify(loyalty) !== JSON.stringify(saved.loyalty);
 
   function save() {
@@ -60,7 +62,7 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
     </div>}
     {status && !dirty && <p className={rd.saved} role="status">{status.text}</p>}
-  </section>;
+  {revControl}</section>;
 }
 
 /** Правила цен: общий режим цен меню. */
@@ -70,6 +72,7 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
   const [saved, setSaved] = useState({ mode: settings.pricing.globalMode, percent: settings.pricing.globalPercent });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const { save: saveWithRev, control: revControl } = useSettingsSave();
   const dirty = mode !== saved.mode || percent !== saved.percent;
 
   function save() {
@@ -112,7 +115,7 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
     </div>}
     {status && !dirty && <p className={rd.saved} role="status">{status.text}</p>}
-  </section>;
+  {revControl}</section>;
 }
 
 /** Параметры бронирования. */
@@ -121,6 +124,7 @@ export function BookingEditor({ settings }: { settings: ContentSettings }) {
   const [saved, setSaved] = useState(settings.booking);
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const { save: saveWithRev, control: revControl } = useSettingsSave();
   const dirty = JSON.stringify(booking) !== JSON.stringify(saved);
 
   function save() {
@@ -128,7 +132,7 @@ export function BookingEditor({ settings }: { settings: ContentSettings }) {
       setStatus(null);
       try {
         const next: ContentSettings = { ...settings, booking };
-        await saveSettings(next);
+        const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
         setSaved(booking);
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
@@ -161,5 +165,5 @@ export function BookingEditor({ settings }: { settings: ContentSettings }) {
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
     </div>}
     {status && !dirty && <p className={rd.saved} role="status">{status.text}</p>}
-  </section>;
+  {revControl}</section>;
 }

@@ -9,6 +9,7 @@ import { setOrderStatus } from "./actions";
 import { OrderEditor } from "./order-editor";
 import { StatusPill } from "./status-pill";
 import { ConfirmDialog } from "./confirm-dialog";
+import { confirmDiscard } from "./admin-dirty";
 import type { CatalogCategory, DeliveryOptionChoice, DeliveryZoneChoice } from "./order-editor-types";
 import styles from "./admin-ui.module.css";
 import { GuestContactActions } from "./guest-contact-actions";
@@ -47,7 +48,14 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
 
   return <div className={styles.detailInner}>
     <div className={styles.orderDetailBar}>
-      <button type="button" className={styles.backButton} onClick={onBack} aria-label="Назад к заказам">←</button>
+      <button type="button" className={styles.backButton} aria-label="Назад к заказам" onClick={() => {
+        // F06/F07: возврат из режима правки спрашивает про черновик и сбрасывает его.
+        void confirmDiscard("Изменения состава заказа не сохранятся.").then((proceed) => {
+          if (!proceed) return;
+          setEditing(false);
+          onBack();
+        });
+      }}>←</button>
       <strong tabIndex={-1}>{editing ? `Состав заказа № ${order.number}` : `Заказ № ${order.number}`}</strong>
     </div>
     <div className={styles.detailHeader}>

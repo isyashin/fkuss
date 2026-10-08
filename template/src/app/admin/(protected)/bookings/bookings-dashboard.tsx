@@ -56,13 +56,30 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
   return <div className={`${styles.dashboard} ${styles.bookingsDashboard} ${mobileDetail ? styles.mobileDetail : ""}`}>
     <section className={styles.ordersPanel} aria-label="Список броней">
       <div className={styles.queueHead}><h1>Брони</h1></div>
-      <div className={styles.filters} role="group" aria-label="Режим списка броней">
-        {BOOKING_MODES.map((mode) => <Link key={mode} prefetch={false} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{modeNames[mode]} <span className={styles.count}>{counts[mode === "new" ? "pending" : mode]}</span></Link>)}
+      <div
+        className={styles.filters}
+        role="tablist"
+        aria-label="Режим списка броней"
+        onKeyDown={(event) => {
+          const tabs = [...event.currentTarget.querySelectorAll<HTMLAnchorElement>('[role="tab"]')];
+          const current = tabs.indexOf(document.activeElement as HTMLAnchorElement);
+          if (current < 0) return;
+          const next = event.key === "ArrowRight" ? (current + 1) % tabs.length
+            : event.key === "ArrowLeft" ? (current - 1 + tabs.length) % tabs.length
+            : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
+          if (next < 0) return;
+          event.preventDefault();
+          tabs[next].focus();
+          tabs[next].click();
+        }}
+      >
+        {BOOKING_MODES.map((mode) => <Link key={mode} prefetch={false} role="tab" tabIndex={query.mode === mode ? 0 : -1} aria-selected={query.mode === mode} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{modeNames[mode]} <span className={styles.count}>{counts[mode === "new" ? "pending" : mode]}</span></Link>)}
       </div>
       <form className={`${styles.queueTools} ${styles.queueToolsSingle}`} role="search" action="/admin/bookings" method="get" key={`${query.mode}|${query.sort}|${query.q}`}>
         {query.mode !== "upcoming" && <input type="hidden" name="mode" value={query.mode} />}
         {query.sort !== "desc" && <input type="hidden" name="sort" value={query.sort} />}
         <input className={styles.searchInput} type="search" name="q" defaultValue={query.q} placeholder="Имя или телефон" maxLength={60} aria-label="Поиск брони" />
+        <button type="submit" className={styles.searchButton}>Найти</button>
         {query.q && <Link className={styles.searchReset} href={href({ ...query, q: "", page: 1 })}>Сбросить поиск</Link>}
       </form>
       <div className={styles.list}>{bookings.length ? bookings.map((booking, index) => {

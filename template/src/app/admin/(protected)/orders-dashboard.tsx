@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Order, OrderItem } from "@/generated/prisma/client";
 import { orderActionsFor, orderStatusLabel } from "@/lib/order-status";
@@ -10,6 +10,7 @@ import { OrderCard } from "./order-card";
 import { AdminPagination } from "./admin-pagination";
 import { StatusPill } from "./status-pill";
 import { setOrderStatus } from "./actions";
+import { confirmDiscard } from "./admin-dirty";
 import type { CatalogCategory, DeliveryOptionChoice, DeliveryZoneChoice } from "./order-editor-types";
 import styles from "./admin-ui.module.css";
 import type { GuestChannels } from "@/lib/guest-contact";
@@ -30,13 +31,15 @@ function statusTone(status: string): "new" | "success" | "danger" | "warn" {
 }
 const dishWord = (count: number) => { const form = new Intl.PluralRules("ru-RU").select(count); return form === "one" ? "блюдо" : form === "few" ? "блюда" : "блюд"; };
 
-export function OrdersDashboard({ orders, counts, query, page, pageCount, catalog, deliveryOptions, deliveryZones, guestContact, timeZone }: {
+export function OrdersDashboard({ orders, counts, query, page, pageCount, catalog, deliveryOptions, deliveryZones, guestContact, timeZone, initialSelectedId, selectedOrder }: {
   orders: OrderWithItems[]; counts: ReturnType<typeof orderListCounts>; query: OrderListQuery; page: number; pageCount: number;
   catalog: CatalogCategory[]; deliveryOptions: DeliveryOptionChoice[]; deliveryZones: DeliveryZoneChoice[];
   guestContact: GuestChannels; canManageMenu: boolean; timeZone: string;
+  initialSelectedId?: string | null; selectedOrder?: OrderWithItems | null;
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mobileDetail, setMobileDetail] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
+  // F10: прямая ссылка ?selected= на телефоне сразу открывает деталь вместо списка.
+  const [mobileDetail, setMobileDetail] = useState(() => Boolean(initialSelectedId));
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [formKey, setFormKey] = useState(0);
   const router = useRouter();
@@ -45,8 +48,35 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   const quickAdvance = (orderId: string, status: string) => startQuickTransition(async () => {
     try { await setOrderStatus(orderId, status); router.refresh(); } catch { /* деталь показывает причину */ }
   });
-  const selected = orders.find((order) => order.id === selectedId) ?? orders[0];
+  // Выбор в URL переживает reload; системная Back закрывает полноэкранный слой.
+  useEffect(() => {
+    const onPopState = () => setMobileDetail(false);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+  const selected = (selectedId ? orders.find((order) => order.id === selectedId) ?? (selectedOrder?.id === selectedId ? selectedOrder : null) : null) ?? orders[0] ?? null;
   const href = (next: OrderListQuery) => adminListHref("/admin", next);
+  // Открытие заказа с защитой черновика: при правке состава спрашиваем про потерю.
+  const openOrder = (id: string) => {
+    void confirmDiscard("Изменения состава заказа не сохранятся.").then((proceed) => {
+      if (!proceed) return;
+      setSelectedId(id);
+      setMobileDetail(true);
+      const isMobile = window.matchMedia("(max-width: 760px)").matches;
+      if (isMobile) {
+        const base = href(query);
+        window.history.pushState({ orderDetail: id }, "", `${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`);
+      } else {
+        const base = href(query);
+        router.replace(`${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`, { scroll: false });
+      }
+    });
+  };
+  const closeDetail = () => {
+    // Если слой открыт через pushState — возврат системной кнопкой сохранит контекст списка.
+    if (window.history.state?.orderDetail) window.history.back();
+    else setMobileDetail(false);
+  };
   const toggleGroup = (key: string) => setCollapsedGroups((current) => {
     const next = new Set(current);
     if (next.has(key)) next.delete(key); else next.add(key);
@@ -76,13 +106,31 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   return <div className={`${styles.dashboard} ${mobileDetail ? styles.mobileDetail : ""}`} data-order-detail-open={mobileDetail ? "" : undefined}>
     <section className={styles.ordersPanel} aria-label="Список заказов">
       <div className={styles.queueHead}><h1>Заказы</h1></div>
-      <div className={styles.filters} role="group" aria-label="Режим очереди заказов">
-        {QUEUE_MODES.map((mode) => <Link key={mode} prefetch={false} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{mode === "current" ? "Текущие" : mode === "new" ? "Новые" : "История"} <span className={styles.count}>{counts.byMode[mode]}</span></Link>)}
+      {/* F19: вкладки с клавиатурной навигацией (стрелки, Home, End) */}
+      <div
+        className={styles.filters}
+        role="tablist"
+        aria-label="Режим очереди заказов"
+        onKeyDown={(event) => {
+          const tabs = [...event.currentTarget.querySelectorAll<HTMLAnchorElement>('[role="tab"]')];
+          const current = tabs.indexOf(document.activeElement as HTMLAnchorElement);
+          if (current < 0) return;
+          const next = event.key === "ArrowRight" ? (current + 1) % tabs.length
+            : event.key === "ArrowLeft" ? (current - 1 + tabs.length) % tabs.length
+            : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
+          if (next < 0) return;
+          event.preventDefault();
+          tabs[next].focus();
+          tabs[next].click();
+        }}
+      >
+        {QUEUE_MODES.map((mode) => <Link key={mode} prefetch={false} role="tab" tabIndex={query.mode === mode ? 0 : -1} aria-selected={query.mode === mode} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{mode === "current" ? "Текущие" : mode === "new" ? "Новые" : "История"} <span className={styles.count}>{counts.byMode[mode]}</span></Link>)}
       </div>
       <form key={`${formKey}|${query.mode}|${query.sort}|${query.q}`} className={styles.queueTools} role="search" action="/admin" method="get" onSubmit={() => setFormKey((key) => key + 1)}>
         {query.mode !== "all" && query.mode !== "current" && <input type="hidden" name="mode" value={query.mode} />}
         {query.sort !== "desc" && <input type="hidden" name="sort" value={query.sort} />}
         <input className={styles.searchInput} type="search" name="q" defaultValue={query.q} placeholder="№, имя или телефон" maxLength={60} aria-label="Поиск заказа" />
+        <button type="submit" className={styles.searchButton}>Найти</button>
         <select name="type" defaultValue={query.type} aria-label="Тип заказа" onChange={(event) => event.currentTarget.form?.requestSubmit()}>
           {ORDER_TYPES.map((type) => <option key={type} value={type}>{typeNames[type]}</option>)}
         </select>
@@ -91,7 +139,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       <div className={styles.list}>
         <div className={styles.ordersDesktopList}>
           {orders.length ? orders.map((order) => <div className={`${styles.orderPreview} ${selected?.id === order.id ? styles.selectedPreview : ""}`} key={order.id}>
-            <button type="button" className={styles.orderOpen} aria-label={`Открыть заказ № ${order.number}`} aria-pressed={selected?.id === order.id} onClick={() => { setSelectedId(order.id); setMobileDetail(true); }}/>
+            <button type="button" className={styles.orderOpen} aria-label={`Открыть заказ № ${order.number}`} aria-pressed={selected?.id === order.id} onClick={() => openOrder(order.id)}/>
             <span className={styles.rowTop}><span><strong>№ {order.number}</strong><time>{orderTime(order.createdAt, timeZone)}</time></span><StatusPill tone={statusTone(order.status)}>{orderStatusLabel(order.status)}</StatusPill></span>
             <span className={styles.rowPerson}>{order.customerName}</span>
             <span className={styles.rowBottom}><span>{order.type === "delivery" ? "Доставка" : "Самовывоз"} · {order.desiredTime ? `к ${order.desiredTime}` : "как можно скорее"}</span><b>{rub(order.total)}</b></span>
@@ -116,7 +164,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
                       <article key={order.id} className={`${styles.orderMobileCard} ${order.status === "new" ? styles.orderMobileCardNew : ""}`}>
                         <button type="button" className={styles.orderCardOpen} aria-current={selected?.id === order.id}
                           aria-label={`Открыть заказ № ${order.number}, ${rub(order.total)}, ${count} ${dishWord(count)}, ${order.type === "delivery" ? "доставка" : "самовывоз"}${order.desiredTime ? ` к ${order.desiredTime}` : ""}`}
-                          onClick={() => { setSelectedId(order.id); setMobileDetail(true); }}>
+                          onClick={() => openOrder(order.id)}>
                           <span className={styles.orderCardTop}><strong>№ {order.number}</strong><time>{orderTime(order.createdAt, timeZone)}</time></span>
                           <span className={styles.orderCardMeta}>{rub(order.total)} · {count} {dishWord(count)}</span>
                           <span className={styles.orderCardRoute}>{order.type === "delivery" ? "Доставка" : "Самовывоз"}{order.desiredTime ? ` · к ${order.desiredTime}` : ""}</span>
@@ -133,6 +181,6 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       </div>
       <AdminPagination base="/admin" query={query} page={page} pageCount={pageCount} total={counts.total}/>
     </section>
-    <section className={styles.detailPanel} aria-label="Детали заказа">{selected ? <OrderCard key={`${selected.id}:${selected.updatedAt.toISOString()}`} order={selected} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} guestContact={guestContact} timeZone={timeZone} onBack={() => setMobileDetail(false)}/> : <div className={styles.detailInner}><p className={styles.empty}>Выберите заказ.</p></div>}</section>
+    <section className={styles.detailPanel} aria-label="Детали заказа">{selected ? <OrderCard key={`${selected.id}:${selected.updatedAt.toISOString()}`} order={selected} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} guestContact={guestContact} timeZone={timeZone} onBack={closeDetail}/> : <div className={styles.detailInner}><p className={styles.empty}>Выберите заказ.</p></div>}</section>
   </div>;
 }

@@ -7,6 +7,7 @@ import { dishImageUrl } from "@/lib/assets";
 import type { Category, Dish } from "@/generated/prisma/client";
 import ui from "../admin-ui.module.css";
 import rd from "../admin-redesign.module.css";
+import { useDirtyGuard, confirmDiscard } from "../admin-dirty";
 import { StatusPill } from "../status-pill";
 import { ConfirmDialog } from "../confirm-dialog";
 import styles from "./menu-admin.module.css";
@@ -79,10 +80,13 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
   const selected = allDishes.find((dish) => dish.id === selectedId) ?? null;
 
   const select = (id: string | null, create = false) => {
-    setSelectedId(id);
-    setCreating(create);
-    setMobileDetail(true);
-    setError("");
+    void confirmDiscard("Изменения блюда не сохранены и будут потеряны.").then((proceed) => {
+      if (!proceed) return;
+      setSelectedId(id);
+      setCreating(create);
+      setMobileDetail(true);
+      setError("");
+    });
   };
 
   return (
@@ -90,7 +94,7 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
       <section className={ui.ordersPanel} aria-label="Список блюд">
         <div className={ui.queueHead}>
           <h1>Меню</h1>
-          <button type="button" className={rd.btnPrimary} onClick={() => select(null, true)}>+ Блюдо</button>
+          <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} onClick={() => select(null, true)}>+ Блюдо</button>
         </div>
         <div className={styles.menuTools}>
           <input className={ui.searchInput} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти блюдо" aria-label="Поиск блюда" />
@@ -143,7 +147,7 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
             onClose={() => setCreating(false)} onCreated={(id) => { setCreating(false); setSelectedId(id); router.refresh(); }} />
         ) : selected ? (
           <DishEditor key={selected.id} dish={selected} categories={menuFiltered} menus={menus}
-            onBack={() => setMobileDetail(false)} onDeleted={() => { setSelectedId(null); router.refresh(); }} />
+            onBack={() => setMobileDetail(false)} onDeleted={() => { setSelectedId(null); setMobileDetail(false); router.refresh(); }} />
         ) : (
           <div className={`${ui.detailInner} ${styles.menuDetailInner}`}><p className={ui.empty}>Выберите блюдо.</p></div>
         )}
@@ -191,6 +195,8 @@ function DishEditor({ dish, categories, menus, onBack, onDeleted }: { dish: Dish
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const dirty = JSON.stringify(form) !== JSON.stringify(saved);
+  // F06: уход с несохранёнными правками блюда требует подтверждения.
+  useDirtyGuard(dirty);
 
   const save = () => startTransition(async () => {
     setError("");
@@ -205,7 +211,11 @@ function DishEditor({ dish, categories, menus, onBack, onDeleted }: { dish: Dish
 
   return (
     <div className={`${ui.detailInner} ${styles.menuDetailInner}`}>
-      <button type="button" className={ui.backButton} onClick={onBack}>← К меню</button>
+      <button type="button" className={ui.backButton} onClick={() => {
+        void confirmDiscard("Изменения блюда не сохранены и будут потеряны.").then((proceed) => {
+          if (proceed) { setForm(saved); onBack(); }
+        });
+      }}>← К меню</button>
       <div className={ui.detailHeader}>
         <div className={ui.detailTitle}><h2>{dish.name}</h2></div>
         <p className={ui.muted}>{categories.find((category) => category.id === dish.categoryId)?.name ?? "Без категории"} · на витрине {rub(dish.price)}</p>
@@ -319,10 +329,13 @@ function NewDishEditor({ categories, menus, defaultCategoryId, onClose, onCreate
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const dirty = form.name.trim().length > 0;
+  useDirtyGuard(dirty);
 
   return (
     <div className={`${ui.detailInner} ${styles.menuDetailInner}`}>
-      <button type="button" className={ui.backButton} onClick={onClose}>← К меню</button>
+      <button type="button" className={ui.backButton} onClick={() => {
+        void confirmDiscard("Новое блюдо не сохранено и будет потеряно.").then((proceed) => { if (proceed) onClose(); });
+      }}>← К меню</button>
       <div className={ui.detailHeader}>
         <div className={ui.detailTitle}><h2>Новое блюдо</h2></div>
         <p className={ui.muted}>Обязательны название и цена. Фото можно добавить сразу или позже.</p>

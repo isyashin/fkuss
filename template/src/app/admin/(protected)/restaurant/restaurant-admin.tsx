@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useEffect, useRef } from "react";
 import { saveRestaurant, afterLogoUpload } from "./actions";
 import type { WeeklySchedule, DaySchedule, DayException } from "@/lib/hours";
 import { contentAssetUrl } from "@/lib/assets";
@@ -27,11 +28,16 @@ interface FormState {
   schedule: WeeklySchedule;
 }
 
-export function RestaurantAdmin({ initial, logoUrl = "" }: { initial: FormState; logoUrl?: string }) {
+export function RestaurantAdmin({ initial, logoUrl = "", focus = "contacts" }: { initial: FormState; logoUrl?: string; focus?: "contacts" | "hours" }) {
   const [form, setForm] = useState<FormState>(initial);
   const [currentLogo, setCurrentLogo] = useState(logoUrl);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
+  const hoursRef = useRef<HTMLHeadingElement>(null);
+  // F12: ссылка «Часы работы» открывает ту же форму, но сразу показывает расписание.
+  useEffect(() => {
+    if (focus === "hours") hoursRef.current?.scrollIntoView({ block: "start", behavior: "instant" as ScrollBehavior });
+  }, [focus]);
 
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
 
@@ -110,7 +116,7 @@ export function RestaurantAdmin({ initial, logoUrl = "" }: { initial: FormState;
       </section>
 
       <section>
-        <h3 className={styles.subhead}>Часы работы</h3>
+        <h3 className={styles.subhead} ref={hoursRef as never}>Часы работы</h3>
         <div className={styles.hoursList}>
           {DAYS.map(({ key, label }) => {
             const day = (form.schedule.days as Record<string, DaySchedule>)[key] ?? DEFAULT_DAY;

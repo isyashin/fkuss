@@ -3,8 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { logoutAction } from "./admin-shell-actions";
+import { setDirtyAsk } from "./admin-dirty";
+import { ConfirmDialog, type ConfirmRequest } from "./confirm-dialog";
 import type { AdminActor } from "@/lib/admin-users";
 import { AdminNotifications } from "./admin-notifications";
 import { AdminIcon } from "./admin-icon";
@@ -37,6 +39,21 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
   const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [dirtyDialog, setDirtyDialog] = useState<ConfirmRequest | null>(null);
+  const dirtyResolverRef = useRef<((proceed: boolean) => void) | null>(null);
+  // F06: единый диалог подтверждения потери правок для всех «грязных» форм.
+  useEffect(() => {
+    setDirtyAsk((message) => new Promise<boolean>((resolve) => {
+      dirtyResolverRef.current = resolve;
+      setDirtyDialog({
+        title: "Потерять правки?",
+        text: message,
+        acceptLabel: "Потерять правки",
+        onAccept: () => { const resolve = dirtyResolverRef.current; dirtyResolverRef.current = null; resolve?.(true); },
+      });
+    }));
+    return () => setDirtyAsk(null);
+  }, []);
   const dark = useSyncExternalStore(subscribeTheme, readTheme, () => false);
   const changeTheme = () => { localStorage.setItem("restaurant-admin-theme", dark ? "light" : "dark"); window.dispatchEvent(new Event("restaurant-admin-theme-change")); };
   // Ручное сворачивание панели в новом дизайне отсутствует (ширина задаётся
@@ -136,5 +153,13 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
     </div>
 
     <nav className={styles.bottomNav} aria-label="Мобильная навигация">{navLinks("bottom")}</nav>
+    <ConfirmDialog
+      request={dirtyDialog}
+      onClose={() => {
+        dirtyResolverRef.current?.(false);
+        dirtyResolverRef.current = null;
+        setDirtyDialog(null);
+      }}
+    />
   </div>;
 }

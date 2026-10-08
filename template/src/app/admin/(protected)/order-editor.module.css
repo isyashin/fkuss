@@ -60,9 +60,10 @@
 .mobileFooter { display: none; }
 @media (max-width: 760px) {
   .footer { display: none; }
-  .mobileFooter { position: fixed; right: 0; bottom: 0; left: 0; z-index: 3; display: block; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--admin-line); background: #fff; }
-  .mobileFooter button { width: 100%; min-height: 52px; border: 1px solid var(--admin-accent); border-radius: 6px; background: var(--admin-accent); color: #fff; font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
+  .mobileFooter { position: fixed; right: 0; bottom: 0; left: 0; z-index: 3; display: flex; gap: 8px; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--admin-line); background: #fff; }
   .mobileFooter button:disabled { opacity: .55; cursor: not-allowed; }
+  .mobileCancel { flex: 0 0 auto; min-height: 52px; padding: 0 15px; border: 1px solid var(--rd-btn-line, #cbd1ca); border-radius: 6px; background: var(--admin-surface); color: var(--rd-btn-text, #344039); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+  .mobileSubmit { flex: 1; min-height: 52px; border: 1px solid var(--admin-accent); border-radius: 6px; background: var(--admin-accent); color: #fff; font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
 }
 @media (max-width: 600px) {
   .line { grid-template-columns: minmax(0, 1fr) auto; }

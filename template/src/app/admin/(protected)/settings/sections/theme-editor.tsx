@@ -58,37 +58,42 @@ export function ThemeEditor({ theme }: { theme: ThemeConfig }) {
       <label className={rd.field}><span>Фирменный цвет</span>
         <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} style={{ width: 64, height: 44 }} />
       </label>
-      <label className={rd.field}><span>Положение фона</span>
-        <select className={rd.input} value={bg.position} onChange={(e) => setBg({ ...bg, position: e.target.value as Bg["position"] })}>
-          <option value="center">По центру</option><option value="top">Сверху</option><option value="bottom">Снизу</option>
-        </select>
-      </label>
-      <label className={rd.field}><span>Затемнение: {bg.dimPercent}%</span>
-        <input type="range" min={0} max={100} value={bg.dimPercent} onChange={(e) => setBg({ ...bg, dimPercent: Number(e.target.value) })} style={{ marginTop: 12 }} />
-      </label>
     </div>
     <div className={styles.toggleList}>
       <label className={styles.toggleRow}><input type="checkbox" checked={bg.enabled} onChange={(e) => setBg({ ...bg, enabled: e.target.checked })} />Фон включён</label>
+    </div>
+    {/* F16: поля фона недоступны вместе с подписью, пока фон выключен */}
+    <fieldset disabled={!bg.enabled} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: "grid", gap: 16 }}>
+      <div className={styles.formGrid}>
+        <label className={rd.field}><span>Положение фона</span>
+          <select className={rd.input} value={bg.position} onChange={(e) => setBg({ ...bg, position: e.target.value as Bg["position"] })}>
+            <option value="center">По центру</option><option value="top">Сверху</option><option value="bottom">Снизу</option>
+          </select>
+        </label>
+        <label className={rd.field}><span>Затемнение: {bg.dimPercent}%</span>
+          <input type="range" min={0} max={100} value={bg.dimPercent} onChange={(e) => setBg({ ...bg, dimPercent: Number(e.target.value) })} style={{ marginTop: 12 }} />
+        </label>
+      </div>
       <label className={styles.toggleRow}><input type="checkbox" checked={bg.disableOnMobile} onChange={(e) => setBg({ ...bg, disableOnMobile: e.target.checked })} />Отключить фон на мобильных</label>
-    </div>
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-      <label className={rd.btn}>{bg.image ? "Заменить изображение" : "Загрузить изображение"}
-        <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          const fd = new FormData();
-          fd.append("file", file);
-          fd.append("section", "background");
-          fd.append("name", `bg-${Date.now().toString(36)}`);
-          const response = await fetch("/api/admin/upload", { method: "POST", body: fd });
-          const data = await response.json();
-          if (response.ok) setBg({ ...bg, image: data.path });
-          else setStatus({ text: data.error ?? "Ошибка загрузки", error: true });
-        }} />
-      </label>
-      {bg.image && <button type="button" className={`${rd.btn} ${rd.btnDanger}`} onClick={() => setBg({ ...bg, image: "" })}>Удалить</button>}
-      {bg.image && <img src={contentAssetUrl(bg.image)} alt="Фон — превью" style={{ width: 180, height: 64, objectFit: "cover", borderRadius: 10, border: "1px solid var(--rd-line)" }} />}
-    </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <label className={rd.btn}>{bg.image ? "Заменить изображение" : "Загрузить изображение"}
+          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("section", "background");
+            fd.append("name", `bg-${Date.now().toString(36)}`);
+            const response = await fetch("/api/admin/upload", { method: "POST", body: fd });
+            const data = await response.json();
+            if (response.ok) setBg({ ...bg, image: data.path });
+            else setStatus({ text: data.error ?? "Ошибка загрузки", error: true });
+          }} />
+        </label>
+        {bg.image && <button type="button" className={`${rd.btn} ${rd.btnDanger}`} onClick={() => setBg({ ...bg, image: "" })}>Удалить</button>}
+        {bg.image && <img src={contentAssetUrl(bg.image)} alt="Фон — превью" style={{ width: 180, height: 64, objectFit: "cover", borderRadius: 10, border: "1px solid var(--rd-line)" }} />}
+      </div>
+    </fieldset>
     {dirty && <div className={styles.saveBar}>
       <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}

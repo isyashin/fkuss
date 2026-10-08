@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useSettingsSave } from "../use-settings-save";
 import { saveSettings } from "../actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import rd from "../../admin-redesign.module.css";
@@ -21,6 +22,7 @@ export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
   const [saved, setSaved] = useState({ delivery: settings.delivery, timezone: settings.timezone });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const { save: saveWithRev, control: revControl } = useSettingsSave();
   const dirty = JSON.stringify(delivery) !== JSON.stringify(saved.delivery) || timezone !== saved.timezone;
 
   function save() {
@@ -28,7 +30,7 @@ export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
       setStatus(null);
       try {
         const next: ContentSettings = { ...settings, delivery, timezone };
-        await saveSettings(next);
+        const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
         setSaved({ delivery, timezone });
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
@@ -59,5 +61,5 @@ export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
     </div>}
     {status && !dirty && <p className={rd.saved} role="status">{status.text}</p>}
-  </section>;
+  {revControl}</section>;
 }

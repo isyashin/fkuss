@@ -25,7 +25,10 @@
 .searchInput:focus-visible { border-color: var(--admin-accent); box-shadow: 0 0 0 3px var(--rd-focus-ring, #ad573b1f); outline: 0; }
 .queueTools select { min-width: 0; min-height: 44px; padding: 10px 27px 10px 12px; border: 1px solid var(--rd-field-line, #cdd3cc); border-radius: 6px; background: var(--admin-surface); color: var(--admin-text); font: inherit; font-size: 13px; }
 .searchReset { grid-column: 1 / -1; min-height: 32px; display: inline-flex; align-items: center; color: var(--admin-accent); font-size: 12px; font-weight: 700; text-decoration: none; }
-.queueToolsSingle { grid-template-columns: minmax(0, 1fr); }
+.queueToolsSingle { grid-template-columns: minmax(0, 1fr) auto; }
+.queueToolsSingle .searchReset { grid-column: 1 / -1; }
+.searchButton { min-width: 0; min-height: 44px; padding: 0 15px; border: 1px solid var(--rd-btn-line, #cbd1ca); border-radius: 6px; background: var(--admin-surface); color: var(--rd-btn-text, #344039); cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 650; }
+.searchButton:hover { border-color: #89978c; background: #f7f9f6; }
 
 /* Разделители дней в хронологических списках (брони) */
 .dayDivider { margin: 0; padding: 17px 27px 8px; color: #77847a; font-size: 11px; font-weight: 700; letter-spacing: .045em; text-transform: uppercase; }
@@ -78,7 +81,7 @@
 .textButton:hover { background: var(--rd-bg, #f7f8f5); color: var(--admin-text); }
 .textButton.danger { color: var(--admin-danger, #a3473b); }
 
-.contactName { margin: 0 0 11px; font-size: 19px; font-weight: 610; letter-spacing: -.025em; color: var(--admin-text); }
+.contactName { margin: 0 0 11px; font-size: 19px; font-weight: 610; letter-spacing: -.025em; color: var(--admin-text); overflow-wrap: anywhere; min-width: 0; }
 .contactDetails { min-width: 0; }
 .contactActions { display: flex; flex-wrap: wrap; gap: 8px; }
 .contactDetails > a.contactPhone, .contactActions a, .contactLinks a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 13px; border: 1px solid var(--admin-line); border-radius: 6px; color: #39493d; text-decoration: none; font-size: 12.5px; font-weight: 600; background: var(--admin-surface); }

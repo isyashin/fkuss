@@ -91,7 +91,7 @@
 .legacyCard :global(label) { color: var(--rd-field-text, #3b473f); font-size: 12.5px; font-weight: 600; }
 .legacyCard :global(h3) { font-size: 15px; font-weight: 680; letter-spacing: -0.015em; color: var(--text, #202723); }
 
-/* Сохранение по макету: липкая плашка снизу */
+/* Сохранение по макету: липкая плашка снизу; на телефоне — над нижней навигацией */
 .saveBar {
   position: sticky; bottom: 0; z-index: 5;
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
@@ -107,6 +107,9 @@
 
 .formGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 22px; margin-bottom: 16px; }
 .full { grid-column: 1 / -1; }
+/* Мобильный переключатель разделов (F15) — по макету; виден только на ≤900px */
+.picker { display: none; }
+.pickerSelect { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid var(--rd-field-line, #cdd3cc); border-radius: 6px; background: var(--soft, #f7f8f5); color: var(--text, #202723); font: inherit; font-size: 14px; font-weight: 650; }
 .note { margin: 10px 0 0; font-size: 12.5px; color: var(--muted, #68716a); }
 .note a { color: var(--accent, #ad573b); }
 .toggleList { display: grid; gap: 4px; margin-bottom: 14px; }
@@ -116,17 +119,14 @@
 
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; }
-  .sectionsCol {
-    position: static; height: auto; max-height: none;
-    display: flex; gap: 4px; overflow-x: auto;
-    margin: -16px -14px 0; padding: 8px;
-    border-right: 0; border-bottom: 1px solid var(--line, #e2e4df);
-  }
-  .groupLabel, .sectionLink.current::before { display: none; }
-  .groupBlock { display: contents; margin: 0; }
-  .sectionLink { white-space: nowrap; width: auto; }
-  .editor { margin: 0 -14px; padding: 26px 20px 120px; gap: 30px; }
+  .picker { display: block; margin: -8px 0 4px; }
+  .sectionsCol { display: none; }
+  .editor { margin: 0 -14px; padding: 26px 20px 170px; gap: 30px; }
   .editorCard, .legacyCard { padding-bottom: 30px; }
   .formGrid { grid-template-columns: 1fr; }
   .saveBar { margin: 18px -20px -120px; padding: 11px 20px; box-shadow: 0 -5px 22px #20272310; }
+}
+/* F08: на телефоне панель сохранения — над нижней навигацией (64px) с safe area */
+@media (max-width: 760px) {
+  .saveBar { position: fixed; right: 0; left: 0; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); margin: 0; padding: 11px 20px; z-index: 40; box-shadow: 0 -5px 22px #20272310; }
 }

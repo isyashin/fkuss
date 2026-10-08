@@ -328,7 +328,7 @@
   .navLink.current::before { left: -8px; }
   .navBadge { position: absolute; top: 3px; right: 3px; margin: 0; min-width: 17px; height: 17px; font-size: 10px; }
   .footButton { justify-content: center; padding: 0; }
-  .footButton span { display: none; }
+  .footButton > span:not(.footBadge) { display: none; }
 }
 
 /* === Телефон: верхняя строка 56 px + нижняя навигация 64 px === */

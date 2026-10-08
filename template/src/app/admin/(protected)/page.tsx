@@ -11,8 +11,15 @@ export const dynamic = "force-dynamic";
 export default async function AdminOrdersPage({ searchParams }: { searchParams: Promise<RawAdminQuery> }) {
   const actor = await requireAdminPermission("orders");
   const prisma = getPrisma();
-  const query = parseOrderListQuery(await searchParams);
-  const listing = await loadOrdersPage(prisma, query);
+  const raw = await searchParams;
+  const query = parseOrderListQuery(raw);
+  // F10: выбранный заказ держим в URL (?selected=) — reload и прямая ссылка
+  // восстанавливают деталь вместе с режимом/страницей.
+  const selectedId = typeof raw.selected === "string" && raw.selected.length <= 100 ? raw.selected : null;
+  const [listing, selectedOrder] = await Promise.all([
+    loadOrdersPage(prisma, query),
+    selectedId ? prisma.order.findUnique({ where: { id: selectedId }, include: { items: true } }) : Promise.resolve(null),
+  ]);
   const [categories, options, settings] = await Promise.all([
     prisma.category.findMany({ orderBy: { position: "asc" }, include: {
       dishes: { where: { available: true }, orderBy: { position: "asc" }, include: {
@@ -31,5 +38,6 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
 
   return <OrdersDashboard {...listing} query={{ ...query, page: listing.page }} catalog={catalog}
     deliveryOptions={options} deliveryZones={settings.delivery.zones.map((zone) => ({ name: zone.name }))}
-    guestContact={visibleGuestChannels(settings)} canManageMenu={actor.role === "owner"} timeZone={settings.timezone}/>;
+    guestContact={visibleGuestChannels(settings)} canManageMenu={actor.role === "owner"} timeZone={settings.timezone}
+    initialSelectedId={selectedId} selectedOrder={selectedOrder}/>;
 }

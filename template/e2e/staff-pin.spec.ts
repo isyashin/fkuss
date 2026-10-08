@@ -83,8 +83,10 @@ test("сотрудник: меню доступно, настройки откр
   // Верный PIN — кликами по визуальной панели (1-2-3-4-5) + кнопка подтверждения
   for (const key of ["1", "2", "3", "4", "5"]) await page.getByRole("button", { name: `Цифра ${key}` }).click();
   await page.getByRole("button", { name: "Разблокировать" }).click();
-  // Редизайн: настройки открываются — контент владельца («Сотрудники») на месте
-  await expect(page.getByRole("heading", { name: "Сотрудники" }).first()).toBeVisible({ timeout: 15000 });
+  // Редизайн: настройки открываются колонкой разделов (десктоп) или переключателем (мобильный)
+  await expect(
+    page.getByLabel("Раздел настроек").or(page.getByRole("navigation", { name: "Разделы настроек" })).first(),
+  ).toBeVisible({ timeout: 15000 });
 
   // Уровень владельца: «Сотрудники» открывается
   await gotoStable(page, "/admin/settings?section=team");

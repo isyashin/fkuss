@@ -62,17 +62,9 @@ test("F02: добавление блюда в состав заказа рабо
   await page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
   await detail.getByRole("button", { name: "Изменить" }).click();
-  // Пикер открываем с повтором: фоновый опрос событий может перерендерить деталь
-  // между кликом и появлением диалога.
+  // Пикер — список блюд кнопками: кликаем первое блюдо, оно добавляется в черновик.
   const picker = detail.getByRole("dialog", { name: "Добавить блюдо в заказ" });
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await detail.getByRole("button", { name: /Добавить блюдо/ }).click();
-    const opened = await picker.waitFor({ timeout: 4000 }).then(() => true).catch(() => false);
-    if (opened) break;
-  }
-  await picker.getByRole("combobox").waitFor({ timeout: 15000 });
-  await picker.getByRole("combobox").selectOption({ index: 1 });
-  await picker.getByRole("button", { name: "Добавить", exact: true }).click();
+  await picker.locator("[class*=pickerList] button").first().click();
   await detail.getByRole("button", { name: "Сохранить состав" }).click();
   // В сохранённом составе две позиции
   await expect(detail.locator("[class*=lineItem]")).toHaveCount(2, { timeout: 15000 });

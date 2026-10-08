@@ -187,10 +187,11 @@
   .mobileDetail .detailPanel { display: block; }
   .mobileDetail[data-order-detail-open] .detailPanel { position: fixed; inset: 0; z-index: 30; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
   .orderDetailBar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 7px; min-height: 62px; padding: 0 16px; border-bottom: 1px solid var(--admin-line); background: #fff; }
-  .orderDetailBar .backButton { display: grid; place-items: center; width: 44px; height: 44px; flex: none; margin: 0; padding: 0; color: var(--admin-accent); font-size: 27px; font-weight: 400; }
+  .orderDetailBar .backButton { display: grid; place-items: center; width: 44px; height: 44px; flex: none; margin: 0; padding: 0; border: 0; background: transparent; color: var(--admin-accent); font: inherit; font-size: 28px; font-weight: 500; line-height: 1; cursor: pointer; }
   .orderDetailBar strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 680; color: var(--admin-text); }
-  /* Кнопка возврата броней/меню (у заказов — своя шапка со стрелкой) */
-  .mobileDetail .backButton { display: inline-flex; align-items: center; min-height: 44px; margin: 0 0 18px -8px; padding: 0 8px; border: 0; background: transparent; color: #526353; font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+  /* Кнопка возврата броней/меню — только прямой потомок детали
+     (у заказа своя стрелка внутри .orderDetailBar, она не должна перекрываться) */
+  .mobileDetail .detailInner > .backButton { display: inline-flex; align-items: center; min-height: 44px; margin: 0 0 18px -8px; padding: 0 8px; border: 0; background: transparent; color: #526353; font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
   /* Правила ниже — только полноэкранная деталь ЗАКАЗА ([data-order-detail-open]) */
   .mobileDetail[data-order-detail-open] .detailInner { padding: 19px 18px calc(114px + env(safe-area-inset-bottom)); }
   .mobileDetail[data-order-detail-open] .detailHeader { padding-bottom: 20px; }

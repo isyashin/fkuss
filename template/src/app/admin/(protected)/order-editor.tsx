@@ -25,16 +25,17 @@ function draftLineKey(): string {
 
 const rub = (value: number) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
 
-export function OrderEditor({ order, catalog, deliveryOptions, deliveryZones, onClose }: {
+export function OrderEditor({ order, catalog, deliveryOptions, deliveryZones, onClose, pickerOpen = false, onPickerOpen, onPickerClose }: {
   order: Order & { items: OrderItem[] }; catalog: CatalogCategory[];
   deliveryOptions: DeliveryOptionChoice[]; deliveryZones: DeliveryZoneChoice[]; onClose: () => void;
+  pickerOpen?: boolean; onPickerOpen?: () => void; onPickerClose?: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [lines, setLines] = useState<DraftLine[]>(order.items.map((item) => ({ kind: "existing", key: item.id, itemId: item.id, quantity: item.quantity, item })));
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const [pickerCategory, setPickerCategory] = useState("all");
+  const setPickerOpen = (open: boolean) => { if (open) onPickerOpen?.(); else onPickerClose?.(); };
   const [deliveryChoice, setDeliveryChoice] = useState(
     order.type === "pickup" ? "" : order.deliveryOptionName
       ? (() => { const matches = deliveryOptions.filter((option) => option.name === order.deliveryOptionName); return matches.length === 1 ? `option:${matches[0].id}` : ""; })()

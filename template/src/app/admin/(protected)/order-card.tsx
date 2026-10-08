@@ -35,6 +35,9 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const [confirmCancel, setConfirmCancel] = useState(false);
+  // Пикер выбора блюда живёт на уровне карточки: фоновое обновление данных не
+  // должно ронять открытый диалог (состояние редактора сбрасывается при remount).
+  const [pickerOpen, setPickerOpen] = useState(false);
   const actions = orderActionsFor(order.type, order.status);
   const forward = actions.filter((action) => action.status !== "cancelled");
   const cancel = actions.find((action) => action.status === "cancelled");
@@ -52,6 +55,7 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
         // F06/F07: возврат из режима правки спрашивает про черновик и сбрасывает его.
         void confirmDiscard("Изменения состава заказа не сохранятся.").then((proceed) => {
           if (!proceed) return;
+          setPickerOpen(false);
           setEditing(false);
           onBack();
         });
@@ -85,7 +89,7 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
     </section>
     <section className={styles.detailSection}>
       <div className={styles.sectionTitle}><h3>Состав</h3>{!editBlocked && !editing && <button type="button" className={styles.textButton} onClick={() => setEditing(true)}>Изменить</button>}</div>
-      {editing && !editBlocked ? <OrderEditor order={order} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} onClose={() => setEditing(false)}/> : <>
+      {editing && !editBlocked ? <OrderEditor order={order} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} onClose={() => { setPickerOpen(false); setEditing(false); }} pickerOpen={pickerOpen} onPickerOpen={() => setPickerOpen(true)} onPickerClose={() => setPickerOpen(false)}/> : <>
         <div className={styles.lineItems}>{order.items.map((item) => {
           const dish = dishes.get(item.dishId);
           const modifiers = (item.modifiers as { name?: string }[] | null) ?? [];

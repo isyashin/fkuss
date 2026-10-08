@@ -5,15 +5,16 @@ import { loginAdminUi } from "./login-admin";
 // F01 — поиск заказов серверный (q в URL, пустое состояние), F02 — добавление
 // блюда в состав заказа не падает на HTTP-стенде (crypto.randomUUID).
 
-test("F01: поиск заказов по имени фильтрует список и объясняет пустой результат", async ({ page }) => {
-  // Свой заказ — чтобы поиск по имени был детерминирован на любой БД.
+test("F01: поиск заказов по имени фильтрует список и объясняет пустой результат", async ({ page }, testInfo) => {
+  // Свой заказ с именем, уникальным для проекта (БД общая между проектами).
+  const guestName = `Поисковик ${testInfo.project.name}`;
   await page.goto("/menu");
   await page.getByRole("button", { name: /Хачапури по-аджарски/ }).first().click();
   await page.getByRole("button", { name: /Добавить ·/ }).click();
   await page.getByRole("button", { name: /Корзина · 1/ }).click();
   await page.getByRole("button", { name: /Оформить ·/ }).click();
   await page.getByRole("button", { name: "Самовывоз" }).click();
-  await page.getByLabel("Имя").fill("Поисковик Аудит");
+  await page.getByLabel("Имя").fill(guestName);
   await page.getByLabel("Телефон").fill("+79990005544");
   await page.getByRole("button", { name: /Заказать ·/ }).click();
   await expect(page.getByText(/Заказ №\d+ принят/)).toBeVisible({ timeout: 15000 });
@@ -32,7 +33,7 @@ test("F01: поиск заказов по имени фильтрует спис
 
   // Существующий гость: список фильтруется ровно до одного заказа
   // (getByRole исключает скрытый мобильный список — в DOM две копии кнопок).
-  await page.getByLabel("Поиск заказа").fill("Поисковик Аудит");
+  await page.getByLabel("Поиск заказа").fill(guestName);
   await page.getByRole("button", { name: "Найти" }).click();
   await expect(page).toHaveURL(/q=/);
   await expect(page.getByRole("button", { name: /Открыть заказ №/ })).toHaveCount(1);

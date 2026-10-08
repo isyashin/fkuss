@@ -41,7 +41,6 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   // F10: прямая ссылка ?selected= на телефоне сразу открывает деталь вместо списка.
   const [mobileDetail, setMobileDetail] = useState(() => Boolean(initialSelectedId));
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [formKey, setFormKey] = useState(0);
   const router = useRouter();
   const [quickPending, startQuickTransition] = useTransition();
   // Быстрое действие на карточке — тот же допустимый переход, что кнопка в детали.
@@ -126,7 +125,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       >
         {QUEUE_MODES.map((mode) => <Link key={mode} prefetch={false} role="tab" tabIndex={query.mode === mode ? 0 : -1} aria-selected={query.mode === mode} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{mode === "current" ? "Текущие" : mode === "new" ? "Новые" : "История"} <span className={styles.count}>{counts.byMode[mode]}</span></Link>)}
       </div>
-      <form key={`${formKey}|${query.mode}|${query.sort}|${query.q}`} className={styles.queueTools} role="search" action="/admin" method="get" onSubmit={() => setFormKey((key) => key + 1)}>
+      <form key={`${query.mode}|${query.sort}|${query.q}`} className={styles.queueTools} role="search" action="/admin" method="get">
         {query.mode !== "all" && query.mode !== "current" && <input type="hidden" name="mode" value={query.mode} />}
         {query.sort !== "desc" && <input type="hidden" name="sort" value={query.sort} />}
         <input className={styles.searchInput} type="search" name="q" defaultValue={query.q} placeholder="№, имя или телефон" maxLength={60} aria-label="Поиск заказа" />

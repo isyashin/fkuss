@@ -82,10 +82,10 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
   // D05: позиция списка блюд сохраняется при открытии редактора и восстанавливается по возврату.
   const paneRef = useRef<HTMLElement | null>(null);
   const savedScrollRef = useRef({ win: 0, pane: 0 });
-  const restoreListScroll = () => requestAnimationFrame(() => {
+  const restoreListScroll = () => setTimeout(() => {
     window.scrollTo(0, savedScrollRef.current.win);
     if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
-  });
+  }, 80);
   const select = (id: string | null, create = false) => {
     void confirmDiscard("Изменения блюда не сохранены и будут потеряны.").then((proceed) => {
       if (!proceed) return;

@@ -71,7 +71,7 @@ export function SoundSettings({ initial }: { initial: PublicAdminSound }) {
           const value = Number(event.target.value);
           if (Number.isInteger(value) && value >= MIN_SOUND_REPEATS && value <= MAX_SOUND_REPEATS) saveRepeats(value);
         }}
-        style={{ width: 76 }} aria-label="Повторы сигнала"/>
+        className={styles.repeatsInput} aria-label="Повторы сигнала"/>
       <span className={styles.soundHint}>раз (до обработки заказа или брони)</span>
     </div>
     <p className={styles.soundHint}>MP3, WAV или Ogg до 2 МБ. После удаления своего звука выбирается сигнал 1.</p>

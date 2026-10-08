@@ -133,7 +133,7 @@
 .divider { height: 1px; margin: 18px 0; background: var(--line, #e2e4df); }
 
 @media (max-width: 900px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout { grid-template-columns: 1fr; align-content: start; }
   /* D01: переключатель раздела доступен при прокрутке длинной формы */
   .picker { display: block; position: sticky; top: 0; z-index: 10; height: 67px; box-sizing: border-box; margin: -8px 0 4px; padding: 8px 0; background: var(--surface, #fff); }
   .sectionsCol { display: none; }

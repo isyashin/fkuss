@@ -85,7 +85,7 @@ test("сотрудник: меню доступно, настройки откр
   await page.getByRole("button", { name: "Разблокировать" }).click();
   // Редизайн: настройки открываются колонкой разделов (десктоп) или переключателем (мобильный)
   await expect(
-    page.getByLabel("Раздел настроек").or(page.getByRole("navigation", { name: "Разделы настроек" })).first(),
+    page.getByLabel("Раздел настроек").or(page.getByRole("navigation", { name: "Разделы настроек" })).locator("visible=true").first(),
   ).toBeVisible({ timeout: 15000 });
 
   // Уровень владельца: «Сотрудники» открывается

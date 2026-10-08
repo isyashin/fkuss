@@ -34,7 +34,7 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
   const restoreListScroll = () => setTimeout(() => {
     window.scrollTo(0, savedScrollRef.current.win);
     if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
-  }, 80);
+  }, 400);
   const selected = (selectedId ? bookings.find((booking) => booking.id === selectedId) ?? (selectedBooking?.id === selectedId ? selectedBooking : null) : null) ?? bookings[0] ?? null;
   const href = (next: BookingListQuery) => adminListHref("/admin/bookings", next);
   // Выбор держим в URL (?selected=), чтобы он переживал router.refresh().

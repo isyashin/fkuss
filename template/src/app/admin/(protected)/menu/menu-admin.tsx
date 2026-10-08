@@ -85,7 +85,7 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
   const restoreListScroll = () => setTimeout(() => {
     window.scrollTo(0, savedScrollRef.current.win);
     if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
-  }, 80);
+  }, 400);
   const select = (id: string | null, create = false) => {
     // Сохраняем позицию синхронно — до любых перерендеров и гонок с фоновым обновлением.
     savedScrollRef.current = { win: window.scrollY, pane: paneRef.current?.scrollTop ?? 0 };

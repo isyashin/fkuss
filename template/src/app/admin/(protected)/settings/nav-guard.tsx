@@ -10,6 +10,7 @@ export function SettingsNavGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
   return (
     <div
+      className={styles.guard}
       onClickCapture={(event) => {
         const anchor = (event.target as HTMLElement).closest("a[href]");
         if (!anchor) return;

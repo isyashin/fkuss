@@ -135,14 +135,14 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
         </select>
         {query.q && <Link className={styles.searchReset} href={href({ ...query, q: "", page: 1 })}>Сбросить поиск</Link>}
       </form>
-      <div className={styles.list}>
+      <div className={styles.list}>{!orders.length && <p className={styles.empty}>Заказов по этим условиям нет.</p>}
         <div className={styles.ordersDesktopList}>
           {orders.length ? orders.map((order) => <div className={`${styles.orderPreview} ${selected?.id === order.id ? styles.selectedPreview : ""}`} key={order.id}>
             <button type="button" className={styles.orderOpen} aria-label={`Открыть заказ № ${order.number}`} aria-pressed={selected?.id === order.id} onClick={() => openOrder(order.id)}/>
             <span className={styles.rowTop}><span><strong>№ {order.number}</strong><time>{orderTime(order.createdAt, timeZone)}</time></span><StatusPill tone={statusTone(order.status)}>{orderStatusLabel(order.status)}</StatusPill></span>
             <span className={styles.rowPerson}>{order.customerName}</span>
             <span className={styles.rowBottom}><span>{order.type === "delivery" ? "Доставка" : "Самовывоз"} · {order.desiredTime ? `к ${order.desiredTime}` : "как можно скорее"}</span><b>{rub(order.total)}</b></span>
-          </div>) : <p className={styles.empty}>Заказов по этим условиям нет.</p>}
+          </div>) : null}
         </div>
         <div className={styles.ordersMobileList}>
           {orders.length ? mobileGroups.map((group) => {
@@ -175,7 +175,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
                 </div>
               </section>
             );
-          }) : <p className={styles.empty}>Заказов по этим условиям нет.</p>}
+          }) : null}
         </div>
       </div>
       <AdminPagination base="/admin" query={query} page={page} pageCount={pageCount} total={counts.total}/>

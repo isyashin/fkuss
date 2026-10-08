@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { confirmDiscard } from "../admin-dirty";
+import styles from "./settings-redesign.module.css";
 
 /** Перехват переходов по ссылкам навигации настроек (F06):
     при несохранённых правках спрашиваем, потерять ли их. */

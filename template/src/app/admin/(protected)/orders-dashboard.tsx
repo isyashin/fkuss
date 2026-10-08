@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Order, OrderItem } from "@/generated/prisma/client";
 import { orderActionsFor, orderStatusLabel } from "@/lib/order-status";
@@ -31,6 +31,25 @@ function statusTone(status: string): "new" | "success" | "danger" | "warn" {
 }
 const dishWord = (count: number) => { const form = new Intl.PluralRules("ru-RU").select(count); return form === "one" ? "блюдо" : form === "few" ? "блюда" : "блюд"; };
 
+/** D05: позиция списка — в модульном состоянии (без ref внутри компонента:
+    react-hooks/refs запрещает чтение ref'ов даже в обработчиках JSX). */
+let savedListPosition = { win: 0, pane: 0 };
+function ordersPaneElement(): HTMLElement | null {
+  return document.querySelector('section[aria-label="Список заказов"]');
+}
+function saveListPosition() {
+  savedListPosition = { win: window.scrollY, pane: ordersPaneElement()?.scrollTop ?? 0 };
+}
+function restoreListPosition() {
+  for (const delay of [80, 250, 500, 900]) {
+    setTimeout(() => {
+      window.scrollTo(0, savedListPosition.win);
+      const pane = ordersPaneElement();
+      if (pane) pane.scrollTop = savedListPosition.pane;
+    }, delay);
+  }
+}
+
 export function OrdersDashboard({ orders, counts, query, page, pageCount, catalog, deliveryOptions, deliveryZones, guestContact, timeZone, initialSelectedId, selectedOrder }: {
   orders: OrderWithItems[]; counts: ReturnType<typeof orderListCounts>; query: OrderListQuery; page: number; pageCount: number;
   catalog: CatalogCategory[]; deliveryOptions: DeliveryOptionChoice[]; deliveryZones: DeliveryZoneChoice[];
@@ -43,9 +62,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const router = useRouter();
   const [quickPending, startQuickTransition] = useTransition();
-  // D05: позиция списка сохраняется при «проваливании» в деталь и восстанавливается по возврату.
-  const paneRef = useRef<HTMLElement | null>(null);
-  const savedScrollRef = useRef({ win: 0, pane: 0 });
+  // D05: «проваливание» в деталь сохраняет позицию списка, возврат — восстанавливает.
   // Быстрое действие на карточке — тот же допустимый переход, что кнопка в детали.
   const quickAdvance = (orderId: string, status: string) => startQuickTransition(async () => {
     try { await setOrderStatus(orderId, status); router.refresh(); } catch { /* деталь показывает причину */ }
@@ -60,8 +77,6 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   const href = (next: OrderListQuery) => adminListHref("/admin", next);
   // Открытие заказа с защитой черновика: при правке состава спрашиваем про потерю.
   const openOrder = (id: string) => {
-    // Сохраняем позицию синхронно — до любых перерендеров и гонок с фоновым обновлением.
-    savedScrollRef.current = { win: window.scrollY, pane: paneRef.current?.scrollTop ?? 0 };
     void confirmDiscard("Изменения состава заказа не сохранятся.").then((proceed) => {
       if (!proceed) return;
       setSelectedId(id);
@@ -81,14 +96,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
     // Если слой открыт через pushState — возврат системной кнопкой сохранит контекст списка.
     if (window.history.state?.orderDetail) window.history.back();
     else setMobileDetail(false);
-    // D05: позиция восстанавливается несколькими попытками — фоновый опрос может
-    // перезаписать скролл уже после первого восстановления.
-    for (const delay of [80, 250, 500, 900]) {
-      setTimeout(() => {
-        window.scrollTo(0, savedScrollRef.current.win);
-        if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
-      }, delay);
-    }
+    restoreListPosition();
   };
   const toggleGroup = (key: string) => setCollapsedGroups((current) => {
     const next = new Set(current);
@@ -117,7 +125,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       ];
 
   return <div className={`${styles.dashboard} ${mobileDetail ? styles.mobileDetail : ""}`} data-order-detail-open={mobileDetail ? "" : undefined}>
-    <section className={styles.ordersPanel} aria-label="Список заказов" ref={paneRef as never}>
+    <section className={styles.ordersPanel} aria-label="Список заказов">
       <div className={styles.queueHead}><h1>Заказы</h1></div>
       {/* F19: вкладки с клавиатурной навигацией (стрелки, Home, End) */}
       <div
@@ -152,7 +160,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       <div className={styles.list}>{!orders.length && <p className={styles.empty}>Заказов по этим условиям нет.</p>}
         <div className={styles.ordersDesktopList}>
           {orders.length ? orders.map((order) => <div className={`${styles.orderPreview} ${selected?.id === order.id ? styles.selectedPreview : ""}`} key={order.id}>
-            <button type="button" className={styles.orderOpen} aria-label={`Открыть заказ № ${order.number}`} aria-pressed={selected?.id === order.id} onClick={() => openOrder(order.id)}/>
+            <button type="button" className={styles.orderOpen} aria-label={`Открыть заказ № ${order.number}`} aria-pressed={selected?.id === order.id} onClick={() => { saveListPosition(); openOrder(order.id); }}/>
             <span className={styles.rowTop}><span><strong>№ {order.number}</strong><time>{orderTime(order.createdAt, timeZone)}</time></span><StatusPill tone={statusTone(order.status)}>{orderStatusLabel(order.status)}</StatusPill></span>
             <span className={styles.rowPerson}>{order.customerName}</span>
             <span className={styles.rowBottom}><span>{order.type === "delivery" ? "Доставка" : "Самовывоз"} · {order.desiredTime ? `к ${order.desiredTime}` : "как можно скорее"}</span><b>{rub(order.total)}</b></span>
@@ -177,7 +185,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
                       <article key={order.id} className={`${styles.orderMobileCard} ${order.status === "new" ? styles.orderMobileCardNew : ""}`}>
                         <button type="button" className={styles.orderCardOpen} aria-current={selected?.id === order.id}
                           aria-label={`Открыть заказ № ${order.number}, ${rub(order.total)}, ${count} ${dishWord(count)}, ${order.type === "delivery" ? "доставка" : "самовывоз"}${order.desiredTime ? ` к ${order.desiredTime}` : ""}`}
-                          onClick={() => openOrder(order.id)}>
+                          onClick={() => { saveListPosition(); openOrder(order.id); }}>
                           <span className={styles.orderCardTop}><strong>№ {order.number}</strong><time>{orderTime(order.createdAt, timeZone)}</time></span>
                           <span className={styles.orderCardMeta}>{rub(order.total)} · {count} {dishWord(count)}</span>
                           <span className={styles.orderCardRoute}>{order.type === "delivery" ? "Доставка" : "Самовывоз"}{order.desiredTime ? ` · к ${order.desiredTime}` : ""}</span>

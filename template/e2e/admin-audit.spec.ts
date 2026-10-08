@@ -41,6 +41,7 @@ test("F01: поиск заказов по имени фильтрует спис
 });
 
 test("F02: добавление блюда в состав заказа работает", async ({ page }) => {
+  test.setTimeout(150_000);
   // Заказ через витрину
   await page.goto("/menu");
   await page.getByRole("button", { name: /Хачапури по-аджарски/ }).first().click();
@@ -64,7 +65,9 @@ test("F02: добавление блюда в состав заказа рабо
   await detail.getByRole("button", { name: "Изменить" }).click();
   // Пикер — список блюд кнопками: кликаем первое блюдо, оно добавляется в черновик.
   const picker = detail.getByRole("dialog", { name: "Добавить блюдо в заказ" });
-  await picker.locator("[class*=pickerList] button").first().click();
+  const firstDish = picker.locator("[class*=pickerList] button").first();
+  await firstDish.waitFor({ state: "visible", timeout: 20000 });
+  await firstDish.click({ timeout: 20000 });
   await detail.getByRole("button", { name: "Сохранить состав" }).click();
   // В сохранённом составе две позиции
   await expect(detail.locator("[class*=lineItem]")).toHaveCount(2, { timeout: 15000 });

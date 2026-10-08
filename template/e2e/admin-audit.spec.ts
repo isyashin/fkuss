@@ -31,10 +31,11 @@ test("F01: поиск заказов по имени фильтрует спис
   await expect(page).toHaveURL(/\/admin\/?(\?mode=current)?$/);
 
   // Существующий гость: список фильтруется ровно до одного заказа
+  // (getByRole исключает скрытый мобильный список — в DOM две копии кнопок).
   await page.getByLabel("Поиск заказа").fill("Поисковик Аудит");
   await page.getByRole("button", { name: "Найти" }).click();
   await expect(page).toHaveURL(/q=/);
-  await expect(page.locator("button[aria-label^='Открыть заказ']")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /Открыть заказ №/ })).toHaveCount(1);
   await expect(page.getByText("Заказов по этим условиям нет.")).toHaveCount(0);
 });
 
@@ -58,9 +59,14 @@ test("F02: добавление блюда в состав заказа рабо
   await page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
   await detail.getByRole("button", { name: "Изменить" }).click();
-  await detail.getByRole("button", { name: /Добавить блюдо/ }).click();
-  // Пикер выбора блюда — ждём диалог, выбираем первое блюдо списка
+  // Пикер открываем с повтором: фоновый опрос событий может перерендерить деталь
+  // между кликом и появлением диалога.
   const picker = detail.getByRole("dialog", { name: "Добавить блюдо в заказ" });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await detail.getByRole("button", { name: /Добавить блюдо/ }).click();
+    const opened = await picker.waitFor({ timeout: 4000 }).then(() => true).catch(() => false);
+    if (opened) break;
+  }
   await picker.getByRole("combobox").waitFor({ timeout: 15000 });
   await picker.getByRole("combobox").selectOption({ index: 1 });
   await picker.getByRole("button", { name: "Добавить", exact: true }).click();

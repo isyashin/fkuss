@@ -109,7 +109,7 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   }
 
   // Режим «История» доступен и работает с пагинацией
-  await page.getByRole("group", { name: "Режим списка броней" }).getByRole("link", { name: /История/ }).click();
+  await page.getByRole("tablist", { name: "Режим списка броней" }).getByRole("link", { name: /История/ }).click();
   await expect(page).toHaveURL(/mode=history/);
   await page.setViewportSize({ width: 360, height: 800 });
   const mobile = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));

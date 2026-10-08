@@ -60,9 +60,10 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   const href = (next: OrderListQuery) => adminListHref("/admin", next);
   // Открытие заказа с защитой черновика: при правке состава спрашиваем про потерю.
   const openOrder = (id: string) => {
+    // Сохраняем позицию синхронно — до любых перерендеров и гонок с фоновым обновлением.
+    savedScrollRef.current = { win: window.scrollY, pane: paneRef.current?.scrollTop ?? 0 };
     void confirmDiscard("Изменения состава заказа не сохранятся.").then((proceed) => {
       if (!proceed) return;
-      savedScrollRef.current = { win: window.scrollY, pane: paneRef.current?.scrollTop ?? 0 };
       setSelectedId(id);
       setMobileDetail(true);
       window.scrollTo(0, 0);

@@ -87,9 +87,10 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
     if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
   }, 80);
   const select = (id: string | null, create = false) => {
+    // Сохраняем позицию синхронно — до любых перерендеров и гонок с фоновым обновлением.
+    savedScrollRef.current = { win: window.scrollY, pane: paneRef.current?.scrollTop ?? 0 };
     void confirmDiscard("Изменения блюда не сохранены и будут потеряны.").then((proceed) => {
       if (!proceed) return;
-      savedScrollRef.current = { win: window.scrollY, pane: paneRef.current?.scrollTop ?? 0 };
       setSelectedId(id);
       setCreating(create);
       setMobileDetail(true);

@@ -30,11 +30,12 @@ test("F01: поиск заказов по имени фильтрует спис
   await page.getByRole("link", { name: "Сбросить поиск" }).click();
   await expect(page).toHaveURL(/\/admin\/?(\?mode=current)?$/);
 
-  // Существующий гость: список фильтруется
+  // Существующий гость: список фильтруется ровно до одного заказа
   await page.getByLabel("Поиск заказа").fill("Поисковик Аудит");
   await page.getByRole("button", { name: "Найти" }).click();
   await expect(page).toHaveURL(/q=/);
-  await expect(page.getByRole("button", { name: /Открыть заказ № \d+, .*Поисковик Аудит/ })).toBeVisible();
+  await expect(page.locator("button[aria-label^='Открыть заказ']")).toHaveCount(1);
+  await expect(page.getByText("Заказов по этим условиям нет.")).toHaveCount(0);
 });
 
 test("F02: добавление блюда в состав заказа работает", async ({ page }) => {
@@ -58,9 +59,11 @@ test("F02: добавление блюда в состав заказа рабо
   const detail = page.getByRole("region", { name: "Детали заказа" });
   await detail.getByRole("button", { name: "Изменить" }).click();
   await detail.getByRole("button", { name: /Добавить блюдо/ }).click();
-  // Пикер выбора блюда — единственный combobox у самовывозного заказа
-  await detail.getByRole("combobox").selectOption({ index: 1 });
-  await detail.getByRole("button", { name: "Добавить", exact: true }).click();
+  // Пикер выбора блюда — ждём диалог, выбираем первое блюдо списка
+  const picker = detail.getByRole("dialog", { name: "Добавить блюдо в заказ" });
+  await picker.getByRole("combobox").waitFor({ timeout: 15000 });
+  await picker.getByRole("combobox").selectOption({ index: 1 });
+  await picker.getByRole("button", { name: "Добавить", exact: true }).click();
   await detail.getByRole("button", { name: "Сохранить состав" }).click();
   // В сохранённом составе две позиции
   await expect(detail.locator("[class*=lineItem]")).toHaveCount(2, { timeout: 15000 });

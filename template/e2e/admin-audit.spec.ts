@@ -68,5 +68,6 @@ test("F02: добавление блюда в состав заказа рабо
   //  падение F02 было именно в генерации ключа новой строки.)
   await detail.getByRole("button", { name: /Увеличить количество/ }).first().click();
   await detail.getByRole("button", { name: "Сохранить состав" }).click();
-  await expect(detail.locator("[class*=lineItem] small").first()).toContainText("2 ×", { timeout: 15000 });
+  // Количество первой позиции сохранилось как 2
+  await expect(detail.locator("[class*=lineItem] b").first()).toContainText("2 ×", { timeout: 15000 });
 });

@@ -81,10 +81,10 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
     // Если слой открыт через pushState — возврат системной кнопкой сохранит контекст списка.
     if (window.history.state?.orderDetail) window.history.back();
     else setMobileDetail(false);
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       window.scrollTo(0, savedScrollRef.current.win);
       if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
-    });
+    }, 400);
   };
   const toggleGroup = (key: string) => setCollapsedGroups((current) => {
     const next = new Set(current);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { Reservation } from "@/generated/prisma/client";
 import { adminListHref, BOOKING_MODES, type BookingListQuery } from "@/lib/admin-list-query";
@@ -28,12 +28,21 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
   // Прямая ссылка ?selected= на телефоне сразу открывает деталь вместо списка.
   const [mobileDetail, setMobileDetail] = useState(() => Boolean(initialSelectedId));
   const router = useRouter();
+  // D05: позиция списка сохраняется при открытии брони и восстанавливается по возврату.
+  const paneRef = useRef<HTMLElement | null>(null);
+  const savedScrollRef = useRef({ win: 0, pane: 0 });
+  const restoreListScroll = () => requestAnimationFrame(() => {
+    window.scrollTo(0, savedScrollRef.current.win);
+    if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
+  });
   const selected = (selectedId ? bookings.find((booking) => booking.id === selectedId) ?? (selectedBooking?.id === selectedId ? selectedBooking : null) : null) ?? bookings[0] ?? null;
   const href = (next: BookingListQuery) => adminListHref("/admin/bookings", next);
   // Выбор держим в URL (?selected=), чтобы он переживал router.refresh().
   const select = (id: string) => {
+    savedScrollRef.current = { win: window.scrollY, pane: paneRef.current?.scrollTop ?? 0 };
     setSelectedId(id);
     setMobileDetail(true);
+    window.scrollTo(0, 0);
     const base = href(query);
     router.replace(`${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`, { scroll: false });
   };
@@ -54,7 +63,7 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
   };
 
   return <div className={`${styles.dashboard} ${styles.bookingsDashboard} ${mobileDetail ? styles.mobileDetail : ""}`}>
-    <section className={styles.ordersPanel} aria-label="Список броней">
+    <section className={styles.ordersPanel} aria-label="Список броней" ref={paneRef as never}>
       <div className={styles.queueHead}><h1>Брони</h1></div>
       <div
         className={styles.filters}
@@ -98,7 +107,7 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
       <AdminPagination base="/admin/bookings" query={query} page={page} pageCount={pageCount} total={query.mode === "history" ? counts.history : query.mode === "new" ? counts.pending : counts.upcoming}/>
     </section>
     <section className={styles.detailPanel} aria-label="Детали брони">
-      {selected ? <BookingCard key={selected.id} booking={selected} guestContact={guestContact} timeZone={timeZone} when={bookingWhen(selected)} onBack={() => setMobileDetail(false)}/>
+      {selected ? <BookingCard key={selected.id} booking={selected} guestContact={guestContact} timeZone={timeZone} when={bookingWhen(selected)} onBack={() => { setMobileDetail(false); restoreListScroll(); }}/>
         : <div className={styles.detailInner}><p className={styles.empty}>Выберите бронь.</p></div>}
     </section>
   </div>;

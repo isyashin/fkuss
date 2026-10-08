@@ -79,19 +79,28 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
   const allDishes = flat.flatMap((category) => category.dishes);
   const selected = allDishes.find((dish) => dish.id === selectedId) ?? null;
 
+  // D05: позиция списка блюд сохраняется при открытии редактора и восстанавливается по возврату.
+  const paneRef = useRef<HTMLElement | null>(null);
+  const savedScrollRef = useRef({ win: 0, pane: 0 });
+  const restoreListScroll = () => requestAnimationFrame(() => {
+    window.scrollTo(0, savedScrollRef.current.win);
+    if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
+  });
   const select = (id: string | null, create = false) => {
     void confirmDiscard("Изменения блюда не сохранены и будут потеряны.").then((proceed) => {
       if (!proceed) return;
+      savedScrollRef.current = { win: window.scrollY, pane: paneRef.current?.scrollTop ?? 0 };
       setSelectedId(id);
       setCreating(create);
       setMobileDetail(true);
+      window.scrollTo(0, 0);
       setError("");
     });
   };
 
   return (
     <div className={`${ui.dashboard} ${styles.menuLayout} ${mobileDetail ? ui.mobileDetail : ""}`}>
-      <section className={ui.ordersPanel} aria-label="Список блюд">
+      <section className={ui.ordersPanel} aria-label="Список блюд" ref={paneRef as never}>
         <div className={ui.queueHead}>
           <h1>Меню</h1>
           <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} onClick={() => select(null, true)}>+ Блюдо</button>
@@ -124,7 +133,7 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
             <div key={category.id}>
               {categoryId === "all" && <p className={ui.dayDivider}>{category.name}</p>}
               {category.dishes.map((dish) => (
-                <div key={dish.id} className={`${styles.menuRow} ${dish.image ? styles.hasPhoto : ""} ${selected?.id === dish.id && !creating ? ui.selectedPreview : ""}`}>
+                <div key={dish.id} className={`${styles.menuRow} ${dish.image ? styles.hasPhoto : ""} ${selected?.id === dish.id && !creating ? styles.menuRowSelected : ""}`}>
                   <button type="button" className={ui.orderOpen} aria-label={`Открыть блюдо ${dish.name}`} aria-pressed={selected?.id === dish.id && !creating} onClick={() => select(dish.id)} />
                   {dish.image && <span className={styles.dishPhoto}><img src={dishImageUrl(dish.image, "sm")} alt="" loading="lazy" /></span>}
                   <span className={styles.dishCopy}>
@@ -144,10 +153,10 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
       <section className={ui.detailPanel} aria-label="Выбранное блюдо">
         {creating ? (
           <NewDishEditor categories={menuFiltered} menus={menus} defaultCategoryId={categoryId !== "all" ? categoryId : menuFiltered[0]?.id ?? ""}
-            onClose={() => setCreating(false)} onCreated={(id) => { setCreating(false); setSelectedId(id); router.refresh(); }} />
+            onClose={() => { setCreating(false); restoreListScroll(); }} onCreated={(id) => { setCreating(false); setSelectedId(id); router.refresh(); }} />
         ) : selected ? (
           <DishEditor key={selected.id} dish={selected} categories={menuFiltered} menus={menus}
-            onBack={() => setMobileDetail(false)} onDeleted={() => { setSelectedId(null); setMobileDetail(false); router.refresh(); }} />
+            onBack={() => { setMobileDetail(false); restoreListScroll(); }} onDeleted={() => { setSelectedId(null); setMobileDetail(false); router.refresh(); }} />
         ) : (
           <div className={`${ui.detailInner} ${styles.menuDetailInner}`}><p className={ui.empty}>Выберите блюдо.</p></div>
         )}

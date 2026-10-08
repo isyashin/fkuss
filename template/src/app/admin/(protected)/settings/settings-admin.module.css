@@ -36,6 +36,12 @@
 .note { margin:0; color:var(--admin-muted); font-size:11px; line-height:1.4; }
 .soundHead { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }.soundHead p { margin:5px 0 0; color:var(--admin-muted); font-size:12px; line-height:1.45; }.soundHead>svg { flex:0 0 auto; color:var(--admin-accent); }
 .soundRow { border-top:0; }.soundRow button { min-width:44px; width:44px; height:44px; padding:0; border-radius:50%; display:grid; place-items:center; }
+/* D04: «Повторы сигнала» на телефоне — подпись отдельной строкой, поле не сжимается */
+@media (max-width: 600px) {
+  .soundRow { flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 12px 0; }
+  .soundRow label[for="admin-sound-repeats"] { flex: 1 1 100%; min-height: 0; }
+  .soundRow input#admin-sound-repeats { width: 96px !important; flex: none; }
+}
 .soundUpload { gap:8px; }
 .extraCard :global(.max-w-2xl),.extraCard :global(.max-w-xl) { max-width:none; }
 .extraCard :global(.rounded-full) { border-radius:9px; }

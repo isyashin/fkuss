@@ -8,11 +8,13 @@
 .menuRow { position: relative; width: 100%; min-height: 78px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 13px; padding: 14px 27px 14px 24px; border: 0; border-bottom: 1px solid var(--admin-line); border-left: 3px solid transparent; background: transparent; color: var(--admin-text); text-align: left; font: inherit; }
 .menuRow.hasPhoto { min-height: 91px; grid-template-columns: 54px minmax(0, 1fr) auto; }
 .menuRow:hover { background: #eef1ec; }
+/* D13: выбранная строка — единый признак с заказами/бронями (полоса + белый фон) */
+.menuRowSelected { border-left-color: var(--admin-accent) !important; background: var(--admin-surface) !important; }
 .dishPhoto { grid-row: 1 / 3; width: 56px; height: 56px; display: block; overflow: hidden; border: 1px solid #e7e9e3; border-radius: 5px; background: #eceee9; }
 .dishPhoto img { width: 100%; height: 100%; object-fit: cover; }
 .dishCopy { min-width: 0; overflow: hidden; align-self: end; display: grid; gap: 4px; justify-items: start; }
 .dishCopy strong { display: block; overflow: hidden; font-size: 13.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; color: var(--admin-text); }
-.dishCopy small { display: block; overflow: hidden; color: var(--admin-muted); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.dishCopy small { display: block; overflow: hidden; color: var(--admin-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .dishPrice { align-self: end; font-size: 13px; font-weight: 650; white-space: nowrap; color: var(--admin-text); }
 
 /* Редактор блюда */

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { Order, OrderItem } from "@/generated/prisma/client";
 import { orderActionsFor, orderStatusLabel } from "@/lib/order-status";
@@ -43,6 +43,9 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const router = useRouter();
   const [quickPending, startQuickTransition] = useTransition();
+  // D05: позиция списка сохраняется при «проваливании» в деталь и восстанавливается по возврату.
+  const paneRef = useRef<HTMLElement | null>(null);
+  const savedScrollRef = useRef({ win: 0, pane: 0 });
   // Быстрое действие на карточке — тот же допустимый переход, что кнопка в детали.
   const quickAdvance = (orderId: string, status: string) => startQuickTransition(async () => {
     try { await setOrderStatus(orderId, status); router.refresh(); } catch { /* деталь показывает причину */ }
@@ -59,8 +62,10 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   const openOrder = (id: string) => {
     void confirmDiscard("Изменения состава заказа не сохранятся.").then((proceed) => {
       if (!proceed) return;
+      savedScrollRef.current = { win: window.scrollY, pane: paneRef.current?.scrollTop ?? 0 };
       setSelectedId(id);
       setMobileDetail(true);
+      window.scrollTo(0, 0);
       const isMobile = window.matchMedia("(max-width: 760px)").matches;
       if (isMobile) {
         const base = href(query);
@@ -75,6 +80,10 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
     // Если слой открыт через pushState — возврат системной кнопкой сохранит контекст списка.
     if (window.history.state?.orderDetail) window.history.back();
     else setMobileDetail(false);
+    requestAnimationFrame(() => {
+      window.scrollTo(0, savedScrollRef.current.win);
+      if (paneRef.current) paneRef.current.scrollTop = savedScrollRef.current.pane;
+    });
   };
   const toggleGroup = (key: string) => setCollapsedGroups((current) => {
     const next = new Set(current);
@@ -103,7 +112,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       ];
 
   return <div className={`${styles.dashboard} ${mobileDetail ? styles.mobileDetail : ""}`} data-order-detail-open={mobileDetail ? "" : undefined}>
-    <section className={styles.ordersPanel} aria-label="Список заказов">
+    <section className={styles.ordersPanel} aria-label="Список заказов" ref={paneRef as never}>
       <div className={styles.queueHead}><h1>Заказы</h1></div>
       {/* F19: вкладки с клавиатурной навигацией (стрелки, Home, End) */}
       <div

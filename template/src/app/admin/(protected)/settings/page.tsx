@@ -30,6 +30,7 @@ import { readSettingsRev } from "@/lib/admin-settings-version";
 import { SettingsRevProvider } from "./use-settings-save";
 import { SettingsNavGuard } from "./nav-guard";
 import { SectionPicker } from "./section-picker";
+import { NavActiveScroller } from "./nav-active-scroller";
 import { PinGate } from "./pin-gate";
 import styles from "./settings-redesign.module.css";
 
@@ -186,6 +187,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
         <SectionPicker groups={GROUPS} active={active} />
         <SettingsNavGuard>
           <nav className={styles.sectionsCol} aria-label="Разделы настроек">
+            <NavActiveScroller active={active} />
         {GROUPS.map((g) => (
           <div key={g.group} className={styles.groupBlock}>
             <p className={styles.groupLabel}>{g.group}</p>

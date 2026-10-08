@@ -90,7 +90,7 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/admin/bookings");
   await expect(page.getByRole("heading", { name: "Брони" })).toBeVisible();
-  await expect(page.getByRole("group", { name: "Режим списка броней" })).toBeVisible();
+  await expect(page.getByRole("tablist", { name: "Режим списка броней" })).toBeVisible();
 
   const list = await page.getByRole("region", { name: "Список броней" }).boundingBox();
   const detail = await page.getByRole("region", { name: "Детали брони" }).boundingBox();

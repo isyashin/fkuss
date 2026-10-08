@@ -134,16 +134,21 @@ export function ZonesTab({
             )}
           </div>
         )}
+        {/* F21: сохранение появляется только при изменениях */}
+        {dirty && (
+          <div className="flex items-center gap-3 ml-auto">
+            <span className="text-sm text-muted">Есть несохранённые изменения</span>
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending}
+              className="min-h-11 px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50"
+            >
+              {pending ? "Сохраняю…" : "Сохранить"}
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-3 ml-auto">
-          {dirty && <span className="text-sm text-muted">Есть несохранённые изменения</span>}
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending}
-            className="min-h-11 px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50"
-          >
-            {pending ? "Сохраняю…" : "Сохранить"}
-          </button>
           {feedback.text && (
             <span role={feedback.error ? "alert" : "status"} className={feedback.error ? "text-sm text-red-600" : "text-sm text-green-700"}>
               {feedback.text}
@@ -153,7 +158,7 @@ export function ZonesTab({
       </div>
       {geo.enabled && (
         <p className="text-sm text-muted">
-          Гость вводит адрес — сервер сам определит зону. Нужен ключ <code>YANDEX_GEOCODER_API_KEY</code> в env сайта.
+          Гость вводит адрес — сервер сам определит зону. Для геокодинга нужен ключ Яндекс.Карт (задаётся при развёртывании сайта).
         </p>
       )}
 

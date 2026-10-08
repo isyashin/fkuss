@@ -57,6 +57,8 @@ test("F02: добавление блюда в состав заказа рабо
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
+  // Блокируем фоновый опрос событий: его router.refresh() гоняется с открытием пикера.
+  await page.route("**/api/admin/events", (route) => route.abort());
   await page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
   await detail.getByRole("button", { name: "Изменить" }).click();

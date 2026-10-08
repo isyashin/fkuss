@@ -127,8 +127,9 @@ test("admin login, dashboard and bookings fit the viewport", async ({ page }) =>
   }
 });
 
-test("admin menu and settings fit the viewport", async ({ page }) => {
+test("admin menu and settings fit the viewport", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
+  const isMobile = testInfo.project.name.includes("mobile");
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
@@ -145,12 +146,14 @@ test("admin menu and settings fit the viewport", async ({ page }) => {
   // Редизайн: настройки — колонка разделов + один редактор (?section=).
   // На телефоне колонка скрыта — есть переключатель разделов (макет).
   await gotoStable(page, "/admin/settings");
-  await expect(page.getByLabel("Раздел настроек")).toBeVisible();
+  if (isMobile) await expect(page.getByLabel("Раздел настроек")).toBeVisible();
+  else await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Данные и контакты" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Профиль:/ })).toBeVisible();
   for (const section of ["theme", "pages", "gallery", "promos", "banquets", "print", "delivery", "payment", "booking", "sound", "pricing", "sync", "guest-contact", "notify", "cabinet", "team", "billing"]) {
     await gotoStable(page, `/admin/settings?section=${section}`);
-    await expect(page.getByLabel("Раздел настроек")).toHaveValue(section);
+    if (isMobile) await expect(page.getByLabel("Раздел настроек")).toHaveValue(section);
+    else await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
   }
   await gotoStable(page, "/admin/settings?section=delivery");
   const settingsWidth = await page.evaluate(() => ({

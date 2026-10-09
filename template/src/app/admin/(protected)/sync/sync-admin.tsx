@@ -5,7 +5,7 @@ import { saveSyncSettings, runSyncNow } from "./actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import { formatAdminDate } from "@/lib/admin-date";
 import { isSyncLockStale } from "@/lib/yandex-eda/sync-lock";
-import { useSettingsSave } from "../settings/use-settings-save";
+import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../settings/use-settings-save";
 import styles from "./sync-admin.module.css";
 
 export function SyncAdmin({
@@ -23,6 +23,12 @@ export function SyncAdmin({
   const [saved, setSaved] = useState(false);
   // F04: сохранение через версионированный хук — конфликт вкладок показывает диалог.
   const { save, control } = useSettingsSave();
+  // P1-2: после «Обновить» берём свежие данные.
+  const settingsEpoch = useSettingsEpoch();
+  useResetSettingsOnEpoch(settingsEpoch, () => {
+    setSync(settings.sync);
+    setResult("");
+  });
   const saveSettings = () => startTransition(async () => {
     const outcome = await save({ ...settings, sync });
     if (outcome === "ok") { setSaved(true); setTimeout(() => setSaved(false), 3000); }

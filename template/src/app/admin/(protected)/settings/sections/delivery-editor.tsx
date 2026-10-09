@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSettingsSave } from "../use-settings-save";
+import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../use-settings-save";
 import { saveSettings } from "../actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import rd from "../../admin-redesign.module.css";
@@ -23,6 +23,14 @@ export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
   const { save: saveWithRev, control: revControl } = useSettingsSave();
+  // P1-2: после «Обновить» в диалоге конфликта редактор берёт свежие данные.
+  const settingsEpoch = useSettingsEpoch();
+  useResetSettingsOnEpoch(settingsEpoch, () => {
+    setDelivery(settings.delivery);
+    setTimezone(settings.timezone);
+    setSaved({ delivery: settings.delivery, timezone: settings.timezone });
+    setStatus(null);
+  });
   const dirty = JSON.stringify(delivery) !== JSON.stringify(saved.delivery) || timezone !== saved.timezone;
 
   function save() {

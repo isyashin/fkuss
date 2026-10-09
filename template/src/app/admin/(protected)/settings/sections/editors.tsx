@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSettingsSave } from "../use-settings-save";
+import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../use-settings-save";
 import { savePricing } from "../actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { ThemeConfig } from "@/lib/content";
@@ -16,6 +16,14 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
   const { save: saveWithRev, control: revControl } = useSettingsSave();
+  // P1-2: после «Обновить» берём свежие данные, свою правку применяем повторно.
+  const settingsEpoch = useSettingsEpoch();
+  useResetSettingsOnEpoch(settingsEpoch, () => {
+    setPayment(settings.payment);
+    setLoyalty(settings.loyalty);
+    setSaved({ payment: settings.payment, loyalty: settings.loyalty });
+    setStatus(null);
+  });
   const dirty = JSON.stringify(payment) !== JSON.stringify(saved.payment) || JSON.stringify(loyalty) !== JSON.stringify(saved.loyalty);
 
   function save() {
@@ -69,6 +77,14 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
   const { save: saveWithRev, control: revControl } = useSettingsSave<{ globalMode: string; globalPercent: number }>(savePricing);
+  // P1-2: после «Обновить» берём свежие данные, свою правку применяем повторно.
+  const settingsEpoch = useSettingsEpoch();
+  useResetSettingsOnEpoch(settingsEpoch, () => {
+    setMode(settings.pricing.globalMode);
+    setPercent(settings.pricing.globalPercent);
+    setSaved({ mode: settings.pricing.globalMode, percent: settings.pricing.globalPercent });
+    setStatus(null);
+  });
   const dirty = mode !== saved.mode || percent !== saved.percent;
 
   function save() {
@@ -116,6 +132,13 @@ export function BookingEditor({ settings }: { settings: ContentSettings }) {
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
   const { save: saveWithRev, control: revControl } = useSettingsSave();
+  // P1-2: после «Обновить» берём свежие данные, свою правку применяем повторно.
+  const settingsEpoch = useSettingsEpoch();
+  useResetSettingsOnEpoch(settingsEpoch, () => {
+    setBooking(settings.booking);
+    setSaved(settings.booking);
+    setStatus(null);
+  });
   const dirty = JSON.stringify(booking) !== JSON.stringify(saved);
 
   function save() {

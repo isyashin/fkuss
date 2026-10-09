@@ -7,7 +7,7 @@
  * за тело/вершины. Тумблер geo-режима и настройка «вне зон» — в шапке.
  */
 import { useRef, useState, useTransition } from "react";
-import { useSettingsSave } from "../settings/use-settings-save";
+import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../settings/use-settings-save";
 import { tariffLines } from "@/lib/order/pricing";
 import { defaultZonePolygon } from "@/lib/delivery/geo";
 import type { ContentSettings } from "@/lib/content-schema";
@@ -43,6 +43,16 @@ export function ZonesTab({
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState({ text: "", error: false });
   const { save: saveWithRev, control: revControl } = useSettingsSave();
+  // P1-2: после «Обновить» в диалоге конфликта зоны/geo сбрасываются к свежим данным.
+  const settingsEpoch = useSettingsEpoch();
+  useResetSettingsOnEpoch(settingsEpoch, () => {
+    const freshZones = settings.delivery.zones;
+    const freshGeo = settings.delivery.geo ?? { enabled: false, outside: "block", outsidePrice: 0 };
+    setZones(freshZones);
+    setGeo(freshGeo);
+    setSavedSnapshot(JSON.stringify([freshZones, freshGeo]));
+    setFeedback({ text: "", error: false });
+  });
   const mapApiRef = useRef<{ getCenter: () => [number, number] } | null>(null);
 
   const inputCls = "min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";

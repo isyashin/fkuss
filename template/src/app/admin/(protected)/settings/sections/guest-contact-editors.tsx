@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSettingsSave } from "../use-settings-save";
+import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../use-settings-save";
 import { saveGuestContactChannels, saveSettings } from "../actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import { visibleGuestChannels } from "@/lib/guest-contact";
@@ -14,6 +14,12 @@ export function GuestContactEditor({ settings }: { settings: ContentSettings }) 
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
   const { save: saveWithRev, control: revControl } = useSettingsSave();
+  // P1-2: после «Обновить» берём свежие данные.
+  const settingsEpoch = useSettingsEpoch();
+  useResetSettingsOnEpoch(settingsEpoch, () => {
+    setContact(visibleGuestChannels(settings));
+    setStatus(null);
+  });
 
   function toggle(channel: "whatsapp" | "telegram", enabled: boolean) {
     const previous = contact;
@@ -51,6 +57,13 @@ export function NotifyChannelsEditor({ settings }: { settings: ContentSettings }
   const { save: saveWithRev, control: revControl } = useSettingsSave();
   // F21: сохранение появляется только при изменениях.
   const dirty = JSON.stringify(channels) !== JSON.stringify(saved);
+  // P1-2: после «Обновить» берём свежие данные.
+  const settingsEpoch = useSettingsEpoch();
+  useResetSettingsOnEpoch(settingsEpoch, () => {
+    setChannels(settings.channels);
+    setSaved(settings.channels);
+    setStatus(null);
+  });
 
   function toggle(key: "telegram" | "max" | "email" | "whatsapp", enabled: boolean) {
     setChannels((current) => ({ ...current, [key]: { ...current[key], enabled } }));

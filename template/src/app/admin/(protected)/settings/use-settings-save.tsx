@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { saveSettings } from "./actions";
 import { isSettingsConflict } from "@/lib/admin-settings-version";
@@ -14,6 +14,36 @@ import rd from "../admin-redesign.module.css";
    явно — кнопкой «Обновить» в диалоге конфликта. */
 let savedRev: number | null = null;
 let latestRev: number | null = null;
+// Эпоха явного обновления: «Обновить» ждёт свежих props (rev изменился),
+// затем бампит эпоху — редакторы сбрасывают локальные черновики к свежим
+// данным, и пользователь заново применяет только свою правку (P1-2).
+let refreshEpoch = 0;
+let awaitingRefresh = false;
+const epochListeners = new Set<() => void>();
+
+function bumpEpoch() {
+  refreshEpoch += 1;
+  epochListeners.forEach((listener) => listener());
+}
+
+function subscribeEpoch(listener: () => void) {
+  epochListeners.add(listener);
+  return () => { epochListeners.delete(listener); };
+}
+
+/** Эпоха обновления настроек: меняется после «Обновить» в диалоге конфликта. */
+export function useSettingsEpoch(): number {
+  return useSyncExternalStore(subscribeEpoch, () => refreshEpoch);
+}
+
+/** Сбрасывает локальное состояние редактора к свежим props после «Обновить». */
+export function useResetSettingsOnEpoch(epoch: number, reset: () => void) {
+  const resetRef = useRef(reset);
+  useEffect(() => { resetRef.current = reset; }, [reset]);
+  useEffect(() => {
+    if (epoch > 0) resetRef.current();
+  }, [epoch]);
+}
 
 export function setSettingsRev(rev: number | null) {
   savedRev = rev;
@@ -23,16 +53,21 @@ export function getSettingsRev(): number | null {
   return savedRev;
 }
 
-/** «Обновить» в диалоге конфликта: принять последнюю версию после router.refresh(). */
-export function acceptLatestSettingsRev(): void {
-  savedRev = latestRev;
-}
-
-/** Серверная страница настроек кладёт актуальную версию сюда (обновляется при refresh). */
+/** Серверная страница настроек кладёт актуальную версию сюда (обновляется при refresh).
+    Если вкладка нажала «Обновить» и свежие данные приехали — принимаем версию
+    и оповещаем редакторы о сбросе черновиков. */
 export function SettingsRevProvider({ rev, children }: { rev: number; children: ReactNode }) {
   useEffect(() => {
     latestRev = rev;
-    if (savedRev === null) setSettingsRev(rev);
+    if (savedRev === null) {
+      setSettingsRev(rev);
+      return;
+    }
+    if (awaitingRefresh && rev !== savedRev) {
+      savedRev = rev;
+      awaitingRefresh = false;
+      bumpEpoch();
+    }
   }, [rev]);
   return <>{children}</>;
 }
@@ -72,7 +107,13 @@ export function useSettingsSave<TInput = ContentSettings>(
 
   const control = conflict ? (
     <SettingsConflictDialog
-      onRefresh={() => { setConflict(false); acceptLatestSettingsRev(); router.refresh(); }}
+      onRefresh={() => {
+        setConflict(false);
+        // Ждём свежие props: провайдер примет новую версию и бампнет эпоху,
+        // редакторы сбросят черновики к свежим данным (P1-2).
+        awaitingRefresh = true;
+        router.refresh();
+      }}
       onOverwrite={() => {
         const next = lastNextRef.current;
         setConflict(false);

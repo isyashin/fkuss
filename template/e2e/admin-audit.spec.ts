@@ -40,6 +40,50 @@ test("F01: поиск заказов по имени фильтрует спис
   await expect(page.getByText("Заказов по этим условиям нет.")).toHaveCount(0);
 });
 
+// P1-1 (merge-gate PR #35): строка категорий в диалоге выбора блюда всегда
+// видна на телефоне — контейнер не сжимается ниже высоты кнопки.
+for (const viewport of [{ width: 360, height: 640 }, { width: 390, height: 844 }]) {
+  test(`P1-1: категории блюд видны в диалоге (${viewport.width}px)`, async ({ browser }) => {
+    test.setTimeout(150_000);
+    const context = await browser.newContext({ viewport });
+    const page = await context.newPage();
+    try {
+      await page.goto("/admin/login");
+      await loginAdminUi(page);
+      await expect(page).toHaveURL(/\/admin$/);
+      await page.waitForTimeout(600);
+      await page.route("**/api/admin/events", (route) => route.abort());
+      await page.locator("button[class*=orderCardOpen]").first().click();
+      await page.waitForTimeout(700);
+      const detail = page.getByRole("region", { name: "Детали заказа" });
+      await detail.getByRole("button", { name: "Изменить" }).click();
+      await detail.getByRole("button", { name: /Добавить блюдо/ }).click();
+      const dialog = page.getByRole("dialog", { name: "Добавить блюдо в заказ" });
+      await dialog.locator("[class*=pickerCategories]").waitFor({ timeout: 15000 });
+      const geometry = await page.evaluate(() => {
+        const categories = document.querySelector("[class*=pickerCategories]");
+        const button = categories?.querySelector("button");
+        if (!categories || !button) return null;
+        const c = categories.getBoundingClientRect();
+        const b = button.getBoundingClientRect();
+        return { categoriesHeight: c.height, categoriesWidth: c.width, buttonHeight: b.height, buttonVisible: b.height > 0 && b.width > 0 };
+      });
+      expect(geometry, "строка категорий должна существовать").not.toBeNull();
+      expect(geometry!.buttonHeight, "высота кнопки категории").toBeGreaterThanOrEqual(44);
+      expect(geometry!.categoriesHeight, "контейнер категорий не сжат").toBeGreaterThanOrEqual(geometry!.buttonHeight);
+      expect(geometry!.buttonVisible, "кнопка категории видима").toBe(true);
+      // Диалог вписан в экран
+      const box = await dialog.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 1);
+      await context.close();
+    } finally {
+      await context.close().catch(() => {});
+    }
+  });
+}
+
 test("F02: добавление блюда в состав заказа работает", async ({ page }) => {
   test.setTimeout(150_000);
   // Заказ через витрину

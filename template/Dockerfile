@@ -8,14 +8,18 @@ RUN npm ci
 FROM node:22-alpine AS migrator
 # Образ для применения миграций: prisma migrate deploy.
 # Запуск: docker run --rm --network template_default -e DATABASE_URL=... <image>
+# Также содержит seed.ts: seed серверный, без SSH-туннелей —
+# docker run --rm --network template_default --env-file <site>/.env \
+#   -v <site>/content:/content -e CONTENT_DIR=/content <image> \
+#   node_modules/.bin/tsx scripts/seed.ts
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 COPY tsconfig.json ./
-COPY src/lib/db.ts src/lib/admin-users.ts src/lib/admin-password.ts ./src/lib/
-COPY scripts/bootstrap-admin.ts ./scripts/
+COPY src/lib/db.ts src/lib/admin-users.ts src/lib/admin-password.ts src/lib/content-schema.ts src/lib/content-readiness.ts src/lib/pwa-icons.ts ./src/lib/
+COPY scripts/bootstrap-admin.ts scripts/seed.ts ./scripts/
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN npx prisma generate
 CMD ["npx", "prisma", "migrate", "deploy"]

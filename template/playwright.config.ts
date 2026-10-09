@@ -20,6 +20,10 @@ export default defineConfig({
       INSECURE_HTTP: "1",
       SITE_KEY: "e2e-test-site-key",
       ADMIN_LOGIN_ATTEMPTS: "1000",
+      // Только для E2E: выброшенная пара ключей, реальная доставка не выполняется
+      // (транспорт push в тестах мокается на уровне браузера).
+      VAPID_PUBLIC_KEY: "BOi3C8InmNrjQcp5LHfUmGDdeL_cyA2PJUBCPbiEhghC0sUu-L5EKw3tx5Eqw5l0WOkV8-NpuSOH1957hF6q10Q",
+      VAPID_PRIVATE_KEY: "p5hhwy_D41mXieyJXyChe4i5ZArs5vykhbHZU8dwYBk",
     },
   },
   projects: [

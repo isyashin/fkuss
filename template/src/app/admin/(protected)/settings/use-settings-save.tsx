@@ -49,7 +49,9 @@ export function useSettingsSave() {
   async function save(next: ContentSettings, force = false): Promise<"ok" | "conflict" | "error"> {
     lastNextRef.current = next;
     try {
-      await saveSettings(next, getSettingsRev(), force);
+      const rev = getSettingsRev();
+      console.log("[settings-save] expectedRev =", rev, "force =", force);
+      await saveSettings(next, rev, force);
       setConflict(false);
       return "ok";
     } catch (error) {

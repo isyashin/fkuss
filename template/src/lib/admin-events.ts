@@ -14,12 +14,23 @@ const RECEIPT_TTL_MS = 7 * 24 * 3600 * 1000;
 
 /** Записывается в транзакции создания заказа/брони или подтверждения оплаты. */
 export async function recordAdminEvent(
-  tx: Pick<PrismaClient, "adminEvent">,
+  tx: Pick<PrismaClient, "adminEvent" | "adminPushSubscription" | "adminPushDelivery">,
   kind: AdminEventKind,
   reference: string,
   label: string,
 ): Promise<void> {
-  await tx.adminEvent.create({ data: { kind, reference, label } });
+  const event = await tx.adminEvent.create({ data: { kind, reference, label } });
+  // Outbox web push: каждое активное устройство админа — в той же транзакции,
+  // чтобы rollback события не оставлял «висящих» доставок.
+  const subscriptions = await tx.adminPushSubscription.findMany({
+    where: { revokedAt: null, user: { active: true } },
+    select: { id: true },
+  });
+  if (subscriptions.length) {
+    await tx.adminPushDelivery.createMany({
+      data: subscriptions.map((subscription) => ({ eventId: event.id, subscriptionId: subscription.id })),
+    });
+  }
 }
 
 /**

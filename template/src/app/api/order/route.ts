@@ -495,6 +495,13 @@ export async function POST(request: Request) {
     } catch {
       // уведомления не должны ронять заказ
     }
+    // Web push сотрудникам — фоном, после ответа (дожим — job push-delivery)
+    try {
+      const { schedulePushAttempt } = await import("@/lib/admin-push");
+      schedulePushAttempt("order", order.id);
+    } catch {
+      // push не должен ронять заказ
+    }
   }
 
   // Мгновенный репорт метрик на платформу (fire-and-forget, заказ не ждёт)

@@ -7,21 +7,33 @@ import { isSettingsConflict } from "@/lib/admin-settings-version";
 import type { ContentSettings } from "@/lib/content-schema";
 import rd from "../admin-redesign.module.css";
 
-/* Хранилище текущей версии настроек: страница (серверная) передаёт _rev,
-   редакторы читают его в момент сохранения — без prop-drilling. */
-let currentRev: number | null = null;
+/* Хранилище текущей версии настроек: страница (серверная) передаёт _rev.
+   Важно: версия для сохранения фиксируется при загрузке страницы и НЕ
+   обновляется фоновым опросом (иначе устаревшая вкладка получает свежий rev
+   и конфликт перестаёт обнаруживаться — F04). Свежая версия принимается
+   явно — кнопкой «Обновить» в диалоге конфликта. */
+let savedRev: number | null = null;
+let latestRev: number | null = null;
 
 export function setSettingsRev(rev: number | null) {
-  currentRev = rev;
+  savedRev = rev;
 }
 
 export function getSettingsRev(): number | null {
-  return currentRev;
+  return savedRev;
+}
+
+/** «Обновить» в диалоге конфликта: принять последнюю версию после router.refresh(). */
+export function acceptLatestSettingsRev(): void {
+  savedRev = latestRev;
 }
 
 /** Серверная страница настроек кладёт актуальную версию сюда (обновляется при refresh). */
 export function SettingsRevProvider({ rev, children }: { rev: number; children: ReactNode }) {
-  useEffect(() => { setSettingsRev(rev); }, [rev]);
+  useEffect(() => {
+    latestRev = rev;
+    if (savedRev === null) setSettingsRev(rev);
+  }, [rev]);
   return <>{children}</>;
 }
 
@@ -51,7 +63,7 @@ export function useSettingsSave() {
 
   const control = conflict ? (
     <SettingsConflictDialog
-      onRefresh={() => { setConflict(false); router.refresh(); }}
+      onRefresh={() => { setConflict(false); acceptLatestSettingsRev(); router.refresh(); }}
       onOverwrite={() => {
         const next = lastNextRef.current;
         setConflict(false);

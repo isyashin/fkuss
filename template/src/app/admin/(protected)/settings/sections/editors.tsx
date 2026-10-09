@@ -68,7 +68,7 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
   const [saved, setSaved] = useState({ mode: settings.pricing.globalMode, percent: settings.pricing.globalPercent });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const { save: saveWithRev, control: revControl } = useSettingsSave<typeof savePricing extends (input: infer T, ...args: never[]) => Promise<void> ? T : never>(savePricing);
+  const { save: saveWithRev, control: revControl } = useSettingsSave<{ globalMode: string; globalPercent: number }>(savePricing);
   const dirty = mode !== saved.mode || percent !== saved.percent;
 
   function save() {

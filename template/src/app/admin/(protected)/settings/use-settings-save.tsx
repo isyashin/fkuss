@@ -42,19 +42,23 @@ export function SettingsRevProvider({ rev, children }: { rev: number; children: 
     saveFn: по умолчанию saveSettings; можно передать другой версионируемый
     action с любым входом (например, savePricing для правил цен). */
 export function useSettingsSave<TInput = ContentSettings>(
-  saveFn?: (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<void>,
+  saveFn?: (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<"ok" | "conflict">,
 ) {
   const router = useRouter();
   const [conflict, setConflict] = useState(false);
   const lastNextRef = useRef<TInput | null>(null);
-  const actionRef = useRef(saveFn ?? (saveSettings as unknown as (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<void>));
+  const actionRef = useRef(saveFn ?? (saveSettings as unknown as (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<"ok" | "conflict">));
 
   /** Сохраняет настройки. При конфликте показывает диалог, повторный вызов
       с force=true — явная перезапись. */
   async function save(next: TInput, force = false): Promise<"ok" | "conflict" | "error"> {
     lastNextRef.current = next;
     try {
-      await actionRef.current(next, getSettingsRev(), force);
+      const result = await actionRef.current(next, getSettingsRev(), force);
+      if (result === "conflict") {
+        setConflict(true);
+        return "conflict";
+      }
       setConflict(false);
       return "ok";
     } catch (error) {

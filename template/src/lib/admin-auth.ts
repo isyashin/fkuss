@@ -46,8 +46,15 @@ export async function requireAdminPermission(permission: AdminPermission): Promi
   return actor;
 }
 
-export async function logoutAdmin(): Promise<void> {
+export async function logoutAdmin(installId?: string): Promise<void> {
   const jar = await cookies();
-  await revokeAdminSession(getPrisma(), jar.get(ADMIN_COOKIE)?.value);
+  const prisma = getPrisma();
+  await revokeAdminSession(prisma, jar.get(ADMIN_COOKIE)?.value);
+  if (installId && /^[A-Za-z0-9_-]{8,64}$/.test(installId)) {
+    // Выход на устройстве отзывает подписку именно этого устройства;
+    // остальные устройства пользователя продолжают получать push.
+    const { revokePushInstall } = await import("./admin-push");
+    await revokePushInstall(prisma, installId).catch(() => {});
+  }
   jar.delete(ADMIN_COOKIE);
 }

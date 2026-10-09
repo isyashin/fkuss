@@ -2,10 +2,17 @@ import { randomBytes } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import { createAdminUser } from "@/lib/admin-users";
+import { createAdminUser, updateAdminUser } from "@/lib/admin-users";
 import { recordAdminEvent } from "@/lib/admin-events";
 import { applyPaymentEvent } from "@/lib/payments/apply-event";
-import { processPushDeliveries, type PushTransport } from "@/lib/admin-push";
+import {
+  findActivePushInstall,
+  processPushDeliveries,
+  revokePushInstall,
+  revokeUserPushSubscriptions,
+  upsertPushSubscription,
+  type PushTransport,
+} from "@/lib/admin-push";
 
 // Только одноразовая PostgreSQL после миграции 0012_admin_push.
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
@@ -316,5 +323,88 @@ describe("процессор доставок (job push-delivery)", () => {
     });
     await processPushDeliveries(prisma, { transport: { async send() {} }, limit: 10 });
     expect(await prisma.adminPushDelivery.count({ where: { eventId: event.id } })).toBe(0);
+  });
+});
+
+describe("подписки устройств", () => {
+  it("вход другого аккаунта на том же устройстве заменяет привязку installId", async () => {
+    await revokeAll();
+    const first = await makeUserWithSubscription("d1", ep("dev1"));
+    const second = await makeUserWithSubscription("d2", ep("dev2"));
+
+    await upsertPushSubscription(prisma, first.user.id, {
+      endpoint: ep("e1"),
+      p256dh: "k1",
+      auth: "a1",
+      installId: "install-shared",
+    });
+
+    // Тот же installId под другим аккаунтом — первая привязка исчезает
+    await upsertPushSubscription(prisma, second.user.id, {
+      endpoint: ep("e2"),
+      p256dh: "k2",
+      auth: "a2",
+      installId: "install-shared",
+    });
+
+    const subs = await prisma.adminPushSubscription.findMany({ where: { installId: "install-shared" } });
+    expect(subs).toHaveLength(1);
+    expect(subs[0].userId).toBe(second.user.id);
+    expect(await findActivePushInstall(prisma, first.user.id, "install-shared")).toBeNull();
+  });
+
+  it("endpoint уникален: переподписка того же браузера переносит его текущему аккаунту", async () => {
+    await revokeAll();
+    const user = await makeUserWithSubscription("d3", ep("dev3"));
+    await upsertPushSubscription(prisma, user.user.id, { endpoint: ep("e3"), p256dh: "k", auth: "a", installId: "install-3" });
+    // Переподписка (браузер выдал тот же endpoint, ключи обновились)
+    await upsertPushSubscription(prisma, user.user.id, { endpoint: ep("e3"), p256dh: "k-new", auth: "a-new", installId: "install-3" });
+    const subs = await prisma.adminPushSubscription.findMany({ where: { userId: user.user.id, endpoint: ep("e3") } });
+    expect(subs).toHaveLength(1);
+    expect(subs[0].p256dh).toBe("k-new");
+  });
+
+  it("выход с устройства отзывает только его подписку; смена роли отзывает все устройства", async () => {
+    await revokeAll();
+    const user = await makeUserWithSubscription("d4", ep("dev4"));
+    await upsertPushSubscription(prisma, user.user.id, { endpoint: ep("e4a"), p256dh: "k", auth: "a", installId: "install-4a" });
+    await upsertPushSubscription(prisma, user.user.id, { endpoint: ep("e4b"), p256dh: "k", auth: "a", installId: "install-4b" });
+
+    expect(await revokePushInstall(prisma, "install-4a")).toBe(1);
+    expect(await findActivePushInstall(prisma, user.user.id, "install-4a")).toBeNull();
+    expect(await findActivePushInstall(prisma, user.user.id, "install-4b")).not.toBeNull();
+
+    // Смена роли/пароля/блокировка отзывает все подписки (как и сессии)
+    await updateAdminUser(prisma, user.user.id, { role: "owner" });
+    const left = await prisma.adminPushSubscription.findMany({ where: { userId: user.user.id, revokedAt: null } });
+    expect(left).toEqual([]);
+
+    expect(await revokeUserPushSubscriptions(prisma, user.user.id)).toBe(0); // уже отозваны
+  });
+
+  it("давно молчащее устройство job помечает отозванным и не шлёт", async () => {
+    await revokeAll();
+    const { subscription } = await makeUserWithSubscription("d5", ep("dev5"));
+
+    const order = await prisma.order.create({ data: { type: "pickup", itemsTotal: 100, total: 100, customerName: "Тест", customerPhone: "+7000" } });
+    orderIds.push(order.id);
+    const event = await makeEvent("order", order.id, `Заказ №${order.number}`);
+
+    // Устройство перестало открывать приложение уже после постановки доставки
+    await prisma.adminPushSubscription.update({
+      where: { id: subscription.id },
+      data: { lastSeenAt: new Date(Date.now() - 91 * 24 * 3600 * 1000) },
+    });
+
+    let sent = 0;
+    const result = await processPushDeliveries(prisma, {
+      transport: { async send() { sent += 1; } },
+      eventId: event.id,
+    });
+    expect(sent).toBe(0);
+    expect(result.expired).toBe(1);
+    expect(result.revoked).toBe(1);
+    const sub = await prisma.adminPushSubscription.findUniqueOrThrow({ where: { id: subscription.id } });
+    expect(sub.revokedAt).not.toBeNull();
   });
 });

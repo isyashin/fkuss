@@ -14,8 +14,8 @@ import { getPrisma } from "@/lib/db";
 
 export type PushPayload = {
   eventId: string;
-  kind: "order" | "booking";
-  reference: string; // id заказа/брони — клиент строит цель из проверенной пары
+  kind: "order" | "booking" | "test"; // test — собственный тестовый push из профиля
+  reference: string; // id заказа/брони — клиент строит цель из проверенной пары; для test пустой
   label: string; // служебный минимум: «Заказ №123» / «Бронь 10 октября»
 };
 
@@ -26,6 +26,7 @@ export type PushTransport = {
 export const MAX_PUSH_ATTEMPTS = 8;
 export const PUSH_EVENT_TTL_MS = 24 * 3600_000; // старше суток событие не доставляем
 export const PUSH_DELIVERY_TTL_MS = 7 * 24 * 3600_000; // cleanup завершённых доставок
+export const PUSH_SUBSCRIPTION_TTL_MS = 90 * 24 * 3600_000; // неактивное устройство перестаём слать
 const STALE_SENDING_MS = 10 * 60_000; // «зависшие» sending возвращаются в очередь
 
 const BACKOFF_BASE_MS = 30_000;
@@ -184,7 +185,12 @@ export async function processPushDeliveries(
     const sub = row.subscription;
     const id = { eventId: row.eventId, subscriptionId: row.subscriptionId };
 
-    if (!sub || sub.revokedAt || !sub.user.active) {
+    if (!sub || sub.revokedAt || !sub.user.active || sub.lastSeenAt.getTime() < now.getTime() - PUSH_SUBSCRIPTION_TTL_MS) {
+      if (sub && !sub.revokedAt) {
+        // Давно молчащее устройство закрываем подписку
+        await prisma.adminPushSubscription.updateMany({ where: { id: sub.id, revokedAt: null }, data: { revokedAt: now } });
+        result.revoked += 1;
+      }
       await prisma.adminPushDelivery.update({ where: { eventId_subscriptionId: id }, data: { status: "expired", lastErrorCode: null } });
       result.expired += 1;
       continue;
@@ -273,4 +279,80 @@ export function schedulePushAttempt(kind: "order" | "booking", reference: string
       // доставка не должна ронять ответ гостю
     }
   });
+}
+
+export type PushSubscriptionInput = {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  installId: string;
+  userAgent?: string;
+};
+
+/**
+ * Регистрация/обновление подписки устройства.
+ * - installId привязан к одному аккаунту: вход другого пользователя на том же
+ *   устройстве заменяет прежнюю привязку;
+ * - endpoint уникален: переподписка того же браузера переносит его текущему аккаунту.
+ */
+export async function upsertPushSubscription(prisma: PrismaClient, userId: string, input: PushSubscriptionInput): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    await tx.adminPushSubscription.deleteMany({ where: { installId: input.installId, userId: { not: userId } } });
+    const existing = await tx.adminPushSubscription.findUnique({ where: { endpoint: input.endpoint } });
+    if (existing) {
+      await tx.adminPushSubscription.update({
+        where: { id: existing.id },
+        data: {
+          userId,
+          p256dh: input.p256dh,
+          auth: input.auth,
+          installId: input.installId,
+          userAgent: input.userAgent ?? null,
+          revokedAt: null,
+          lastSeenAt: new Date(),
+        },
+      });
+    } else {
+      await tx.adminPushSubscription.create({
+        data: {
+          userId,
+          endpoint: input.endpoint,
+          p256dh: input.p256dh,
+          auth: input.auth,
+          installId: input.installId,
+          userAgent: input.userAgent ?? null,
+        },
+      });
+    }
+  });
+}
+
+/** Отзыв подписки текущего устройства (выход из приложения на нём). Остальные устройства пользователя сохраняются. */
+export async function revokePushInstall(prisma: PrismaClient, installId: string): Promise<number> {
+  return (await prisma.adminPushSubscription.updateMany({ where: { installId, revokedAt: null }, data: { revokedAt: new Date() } })).count;
+}
+
+/** Отзыв всех подписок пользователя: блокировка, смена роли или пароля, удаление учётки. */
+export async function revokeUserPushSubscriptions(prisma: PrismaClient, userId: string): Promise<number> {
+  return (await prisma.adminPushSubscription.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } })).count;
+}
+
+/** Продление жизни подписки при авторизованном открытии приложения на устройстве. */
+export async function touchPushInstall(prisma: PrismaClient, installId: string): Promise<void> {
+  await prisma.adminPushSubscription.updateMany({ where: { installId, revokedAt: null }, data: { lastSeenAt: new Date() } });
+}
+
+/** Активная и непротухшая подписка устройства (для конфигурации и тестового push). */
+export async function findActivePushInstall(
+  prisma: PrismaClient,
+  userId: string,
+  installId: string,
+  now: Date = new Date(),
+) {
+  const subscription = await prisma.adminPushSubscription.findFirst({
+    where: { userId, installId, revokedAt: null },
+  });
+  if (!subscription) return null;
+  const stale = subscription.lastSeenAt.getTime() < now.getTime() - PUSH_SUBSCRIPTION_TTL_MS;
+  return { subscription, stale };
 }

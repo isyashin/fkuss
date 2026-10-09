@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { PUSH_SUBSCRIPTION_TTL_MS } from "./admin-push";
 
 export type AdminEventKind = "order" | "booking";
 
@@ -21,9 +22,10 @@ export async function recordAdminEvent(
 ): Promise<void> {
   const event = await tx.adminEvent.create({ data: { kind, reference, label } });
   // Outbox web push: каждое активное устройство админа — в той же транзакции,
-  // чтобы rollback события не оставлял «висящих» доставок.
+  // чтобы rollback события не оставлял «висящих» доставок. Давно молчащие
+  // устройства не ставим: job всё равно отозвал бы их подписку.
   const subscriptions = await tx.adminPushSubscription.findMany({
-    where: { revokedAt: null, user: { active: true } },
+    where: { revokedAt: null, user: { active: true }, lastSeenAt: { gt: new Date(Date.now() - PUSH_SUBSCRIPTION_TTL_MS) } },
     select: { id: true },
   });
   if (subscriptions.length) {

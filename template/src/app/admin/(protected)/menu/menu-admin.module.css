@@ -1,6 +1,12 @@
 /* Меню по staff-прототипу: очередь блюд слева (menu-row), редактор справа. */
 .menuLayout { grid-template-columns: minmax(340px, 405px) minmax(0, 1fr); }
-.menuTools { display: grid; gap: 10px; padding: 0 27px 17px; }
+.menuTools {
+  display: grid; gap: 10px; padding: 0 27px 17px;
+  /* D05: поиск и фильтры доступны при прокрутке длинного списка */
+  position: sticky; top: 0; z-index: 5;
+  background: var(--admin-surface-2, #f5f6f2);
+  padding-top: 8px;
+}
 .menuFilterRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .menuFilterRow select { min-width: 0; min-height: 44px; padding: 10px 27px 10px 12px; border: 1px solid var(--rd-field-line, #cdd3cc); border-radius: 6px; background: var(--admin-surface); color: var(--admin-text); font: inherit; font-size: 13px; }
 .categoryAdd { justify-self: start; }

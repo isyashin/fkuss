@@ -216,7 +216,8 @@
   .orderMobileCancel { display: inline-flex; min-height: 44px; align-items: center; margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--admin-danger, #a3473b); font: inherit; font-size: 13px; font-weight: 630; cursor: pointer; }
   .orderMobileAction { position: fixed; right: 0; bottom: 0; left: 0; z-index: 3; display: block; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--admin-line); background: #fff; }
   .orderMobileAction .primaryAction { width: 100%; min-height: 52px; font-size: 15px; }
-  .pagination { padding: 14px 20px 24px; }
+  /* N02: пагинация на телефоне не должна попадать под нижнюю навигацию */
+  .pagination { padding: 14px 20px calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (max-width: 420px) {
   .queueTools { grid-template-columns: minmax(0, 1fr) 113px; }

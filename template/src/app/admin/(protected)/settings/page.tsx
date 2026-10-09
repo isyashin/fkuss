@@ -52,7 +52,7 @@ async function SectionRestaurant({ focus }: { focus?: "contacts" | "hours" }) {
   const hours = focus === "hours";
   return <div className={styles.legacyCard}>
     <h2>{hours ? "Часы работы" : "Данные и контакты"}</h2>
-    <p className={styles.editorHint}>{hours ? "Расписание ресторана по дням и особые дни. Контакты и логотип — в разделе «Данные и контакты»." : "Название, телефон, email, адрес, соцсети и логотип ресторана."}</p>
+    <p className={styles.editorHint}>{hours ? "Расписание ресторана по дням недели и особые дни." : "Как гости узнают ресторан: название, способы связи, адрес и логотип."}</p>
     <RestaurantAdmin initial={{
       name: restaurant.name, phone: restaurant.phone, email: restaurant.email,
       address: restaurant.address, socials: restaurant.socials, schedule: resolveSchedule(restaurant),

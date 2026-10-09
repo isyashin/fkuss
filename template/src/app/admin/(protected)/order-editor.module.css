@@ -36,9 +36,16 @@
 .error { margin: 0 0 10px; color: var(--admin-danger, #a3473b); font-size: 12.5px; line-height: 1.4; }
 .empty { padding: 25px 12px; text-align: center; color: var(--admin-muted); font-size: 13px; }
 
-/* Диалог выбора блюда */
+/* Диалог выбора блюда — N01: якорим к viewport (dvw/dvh), чтобы ширина
+   не зависела от containing block и диалог всегда вписывался в телефон. */
 .modalBackdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 18px; background: #17241d77; }
-.picker { width: min(520px, 100%); max-height: min(720px, 88vh); display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 0; border-radius: 8px; background: var(--admin-surface); box-shadow: 0 18px 65px #17221b33; }
+.picker {
+  position: fixed; left: 50dvw; top: 50dvh; transform: translate(-50%, -50%);
+  width: min(520px, calc(100dvw - 32px));
+  max-height: calc(100dvh - 32px);
+  display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 0; border-radius: 8px;
+  background: var(--admin-surface); box-shadow: 0 18px 65px #17221b33;
+}
 .pickerHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .pickerHead h3 { margin: 0; font-size: 19px; font-weight: 620; letter-spacing: -.02em; color: var(--admin-text); }
 .pickerHead button { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--admin-line); border-radius: 6px; background: var(--admin-surface); color: var(--admin-text); cursor: pointer; }

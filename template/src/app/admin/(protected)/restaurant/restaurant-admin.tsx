@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useEffect, useRef } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { saveRestaurant, afterLogoUpload } from "./actions";
+import { useDirtyGuard } from "../admin-dirty";
 import type { WeeklySchedule, DaySchedule, DayException } from "@/lib/hours";
 import { contentAssetUrl } from "@/lib/assets";
 import styles from "./restaurant-admin.module.css";
@@ -33,6 +33,11 @@ export function RestaurantAdmin({ initial, logoUrl = "", focus = "contacts" }: {
   const [currentLogo, setCurrentLogo] = useState(logoUrl);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [baseline, setBaseline] = useState(initial);
+  // F06: уход с несохранёнными правками спрашивает подтверждение (навигация
+  // по секциям перехватывается через реестр грязных форм).
+  const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
+  useDirtyGuard(dirty);
   const hoursRef = useRef<HTMLHeadingElement>(null);
   // F12: ссылка «Часы работы» открывает ту же форму, но сразу показывает расписание.
   useEffect(() => {
@@ -59,6 +64,9 @@ export function RestaurantAdmin({ initial, logoUrl = "", focus = "contacts" }: {
 
   return (
     <div className={styles.form}>
+      {/* F12: «Данные и контакты» и «Часы работы» — отдельные задачи:
+          каждая секция показывает только свои поля (форма одна, значения общие). */}
+      {focus !== "hours" &&
       <section className={styles.section}>
         <div className={styles.fields}>
         <label className="block">
@@ -113,8 +121,10 @@ export function RestaurantAdmin({ initial, logoUrl = "", focus = "contacts" }: {
           </label>
           </div>
         </div>
-      </section>
+      </section>}
 
+      {focus !== "contacts" && (
+      <>
       <section>
         <h3 className={styles.subhead} ref={hoursRef as never}>Часы работы</h3>
         <div className={styles.hoursList}>
@@ -207,6 +217,8 @@ export function RestaurantAdmin({ initial, logoUrl = "", focus = "contacts" }: {
           + Особый день
         </button>
       </section>
+      </>
+      )}
 
       <div className={styles.actions}>
         <button
@@ -214,6 +226,7 @@ export function RestaurantAdmin({ initial, logoUrl = "", focus = "contacts" }: {
           onClick={() =>
             startTransition(async () => {
               await saveRestaurant(form);
+              setBaseline(form);
               setSaved(true);
               setTimeout(() => setSaved(false), 3000);
             })

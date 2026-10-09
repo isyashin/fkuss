@@ -43,7 +43,8 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
   };
   const selected = (selectedId ? bookings.find((booking) => booking.id === selectedId) ?? (selectedBooking?.id === selectedId ? selectedBooking : null) : null) ?? bookings[0] ?? null;
   const href = (next: BookingListQuery) => adminListHref("/admin/bookings", next);
-  // Выбор держим в URL (?selected=), чтобы он переживал router.refresh().
+  // Выбор держим в URL (?selected=), чтобы он переживал router.refresh();
+  // возврат убирает selected из адреса (N04): reload после «← К броням» открывает список.
   const select = (id: string) => {
     savedScrollRef.current = { win: window.scrollY, pane: paneRef.current?.scrollTop ?? 0 };
     setSelectedId(id);
@@ -51,6 +52,12 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
     window.scrollTo(0, 0);
     const base = href(query);
     router.replace(`${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`, { scroll: false });
+  };
+  const closeDetail = () => {
+    setSelectedId(null);
+    setMobileDetail(false);
+    restoreListScroll();
+    router.replace(href(query), { scroll: false });
   };
   const bookingWhen = (booking: Reservation) => {
     const nextDay = new Date(`${today}T12:00:00Z`);
@@ -113,7 +120,7 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
       <AdminPagination base="/admin/bookings" query={query} page={page} pageCount={pageCount} total={query.mode === "history" ? counts.history : query.mode === "new" ? counts.pending : counts.upcoming}/>
     </section>
     <section className={styles.detailPanel} aria-label="Детали брони">
-      {selected ? <BookingCard key={selected.id} booking={selected} guestContact={guestContact} timeZone={timeZone} when={bookingWhen(selected)} onBack={() => { setMobileDetail(false); restoreListScroll(); }}/>
+      {selected ? <BookingCard key={selected.id} booking={selected} guestContact={guestContact} timeZone={timeZone} when={bookingWhen(selected)} onBack={closeDetail}/>
         : <div className={styles.detailInner}><p className={styles.empty}>Выберите бронь.</p></div>}
     </section>
   </div>;

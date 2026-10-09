@@ -5,6 +5,7 @@ import { saveSyncSettings, runSyncNow } from "./actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import { formatAdminDate } from "@/lib/admin-date";
 import { isSyncLockStale } from "@/lib/yandex-eda/sync-lock";
+import { useSettingsSave } from "../settings/use-settings-save";
 import styles from "./sync-admin.module.css";
 
 export function SyncAdmin({
@@ -20,6 +21,12 @@ export function SyncAdmin({
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<string>("");
   const [saved, setSaved] = useState(false);
+  // F04: сохранение через версионированный хук — конфликт вкладок показывает диалог.
+  const { save, control } = useSettingsSave();
+  const saveSettings = () => startTransition(async () => {
+    const outcome = await save({ ...settings, sync });
+    if (outcome === "ok") { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+  });
 
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
   const sources = sync.sources ?? [];
@@ -113,13 +120,7 @@ export function SyncAdmin({
         <div className={styles.actions}>
         <button
           disabled={pending}
-          onClick={() =>
-            startTransition(async () => {
-              await saveSyncSettings(sync);
-              setSaved(true);
-              setTimeout(() => setSaved(false), 3000);
-            })
-          }
+          onClick={saveSettings}
           className={styles.save}
         >
           Сохранить
@@ -154,6 +155,7 @@ export function SyncAdmin({
           {lastError && !running && <p role="alert">Ошибка: {lastError}</p>}
           {result && <p role="status">{result}</p>}
         </div>
+        {control}
     </div>
   );
 }

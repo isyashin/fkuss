@@ -67,9 +67,15 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   const quickAdvance = (orderId: string, status: string) => startQuickTransition(async () => {
     try { await setOrderStatus(orderId, status); router.refresh(); } catch { /* деталь показывает причину */ }
   });
-  // Выбор в URL переживает reload; системная Back закрывает полноэкранный слой.
+  // Выбор в URL переживает reload; системная Back закрывает полноэкранный слой
+  // и синхронизирует выбранный заказ с адресом (F10).
   useEffect(() => {
-    const onPopState = () => setMobileDetail(false);
+    const onPopState = () => {
+      setMobileDetail(false);
+      const params = new URLSearchParams(window.location.search);
+      const fromUrl = params.get("selected");
+      setSelectedId(fromUrl && fromUrl.length <= 100 ? fromUrl : null);
+    };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);

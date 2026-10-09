@@ -86,6 +86,14 @@ export function CartSheet({
   const selectedOption = options.find((o) => o.id === deliveryOptionId);
   // F03: если варианты настроены, но все недоступны сегодня — объясняем до отправки.
   const noDeliveryAvailable = options.length > 0 && !selectedOption;
+  // F03: если все варианты доставки недоступны сегодня — сразу переключаем
+  // гостя на самовывоз, чтобы итог и следующий шаг не вводили в заблуждение.
+  // Корректировка состояния во время рендера (react-compiler: не setState в эффекте).
+  const [prevNoDelivery, setPrevNoDelivery] = useState(false);
+  if (noDeliveryAvailable !== prevNoDelivery) {
+    setPrevNoDelivery(noDeliveryAvailable);
+    if (noDeliveryAvailable && type === "delivery") setType("pickup");
+  }
   const zone = delivery.zones.find((z) => z.name === zoneName);
 
   // Зоны на карте: автоопределение зоны по адресу вместо выбора из списка.

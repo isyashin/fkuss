@@ -295,7 +295,7 @@ export type PushSubscriptionInput = {
  *   устройстве заменяет прежнюю привязку;
  * - endpoint уникален: переподписка того же браузера переносит его текущему аккаунту.
  */
-export async function upsertPushSubscription(prisma: PrismaClient, userId: string, input: PushSubscriptionInput): Promise<void> {
+export async function upsertPushSubscription(prisma: Pick<PrismaClient, "adminPushSubscription" | "$transaction">, userId: string, input: PushSubscriptionInput): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await tx.adminPushSubscription.deleteMany({ where: { installId: input.installId, userId: { not: userId } } });
     const existing = await tx.adminPushSubscription.findUnique({ where: { endpoint: input.endpoint } });
@@ -328,23 +328,23 @@ export async function upsertPushSubscription(prisma: PrismaClient, userId: strin
 }
 
 /** Отзыв подписки текущего устройства (выход из приложения на нём). Остальные устройства пользователя сохраняются. */
-export async function revokePushInstall(prisma: PrismaClient, installId: string): Promise<number> {
+export async function revokePushInstall(prisma: Pick<PrismaClient, "adminPushSubscription">, installId: string): Promise<number> {
   return (await prisma.adminPushSubscription.updateMany({ where: { installId, revokedAt: null }, data: { revokedAt: new Date() } })).count;
 }
 
 /** Отзыв всех подписок пользователя: блокировка, смена роли или пароля, удаление учётки. */
-export async function revokeUserPushSubscriptions(prisma: PrismaClient, userId: string): Promise<number> {
+export async function revokeUserPushSubscriptions(prisma: Pick<PrismaClient, "adminPushSubscription">, userId: string): Promise<number> {
   return (await prisma.adminPushSubscription.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } })).count;
 }
 
 /** Продление жизни подписки при авторизованном открытии приложения на устройстве. */
-export async function touchPushInstall(prisma: PrismaClient, installId: string): Promise<void> {
+export async function touchPushInstall(prisma: Pick<PrismaClient, "adminPushSubscription">, installId: string): Promise<void> {
   await prisma.adminPushSubscription.updateMany({ where: { installId, revokedAt: null }, data: { lastSeenAt: new Date() } });
 }
 
 /** Активная и непротухшая подписка устройства (для конфигурации и тестового push). */
 export async function findActivePushInstall(
-  prisma: PrismaClient,
+  prisma: Pick<PrismaClient, "adminPushSubscription">,
   userId: string,
   installId: string,
   now: Date = new Date(),

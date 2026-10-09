@@ -38,20 +38,23 @@ export function SettingsRevProvider({ rev, children }: { rev: number; children: 
 }
 
 /** Сохранение секции с обнаружением конфликта вкладок (F04).
-    Возвращает элемент диалога — его нужно отрендерить в дереве редактора. */
-export function useSettingsSave() {
+    Возвращает элемент диалога — его нужно отрендерить в дереве редактора.
+    saveFn: по умолчанию saveSettings; можно передать другой версионируемый
+    action с любым входом (например, savePricing для правил цен). */
+export function useSettingsSave<TInput = ContentSettings>(
+  saveFn?: (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<void>,
+) {
   const router = useRouter();
   const [conflict, setConflict] = useState(false);
-  const lastNextRef = useRef<ContentSettings | null>(null);
+  const lastNextRef = useRef<TInput | null>(null);
+  const actionRef = useRef(saveFn ?? (saveSettings as unknown as (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<void>));
 
   /** Сохраняет настройки. При конфликте показывает диалог, повторный вызов
       с force=true — явная перезапись. */
-  async function save(next: ContentSettings, force = false): Promise<"ok" | "conflict" | "error"> {
+  async function save(next: TInput, force = false): Promise<"ok" | "conflict" | "error"> {
     lastNextRef.current = next;
     try {
-      const rev = getSettingsRev();
-      console.log("[settings-save] expectedRev =", rev, "force =", force);
-      await saveSettings(next, rev, force);
+      await actionRef.current(next, getSettingsRev(), force);
       setConflict(false);
       return "ok";
     } catch (error) {

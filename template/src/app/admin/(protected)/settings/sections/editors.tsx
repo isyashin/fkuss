@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useSettingsSave } from "../use-settings-save";
-import { saveAllAdminSettings, saveSettings } from "../actions";
+import { savePricing } from "../actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { ThemeConfig } from "@/lib/content";
 import rd from "../../admin-redesign.module.css";
@@ -23,12 +23,8 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
       setStatus(null);
       try {
         const next: ContentSettings = { ...settings, payment, loyalty };
-        await saveAllAdminSettings({
-          settings: next,
-          pricing: settings.pricing,
-          theme: { preset: theme.preset, accent: theme.accent },
-          background: theme.background ?? { enabled: false, image: "", position: "center", dimPercent: 40, disableOnMobile: true },
-        });
+        const revResult = await saveWithRev(next);
+        if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
         setSaved({ payment, loyalty });
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
@@ -72,7 +68,7 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
   const [saved, setSaved] = useState({ mode: settings.pricing.globalMode, percent: settings.pricing.globalPercent });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const { save: saveWithRev, control: revControl } = useSettingsSave();
+  const { save: saveWithRev, control: revControl } = useSettingsSave<typeof savePricing extends (input: infer T, ...args: never[]) => Promise<void> ? T : never>(savePricing);
   const dirty = mode !== saved.mode || percent !== saved.percent;
 
   function save() {
@@ -80,13 +76,8 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
       setStatus(null);
       try {
         const pricing = { globalMode: mode, globalPercent: percent };
-        const next: ContentSettings = { ...settings, pricing };
-        await saveAllAdminSettings({
-          settings: next,
-          pricing,
-          theme: { preset: theme.preset, accent: theme.accent },
-          background: theme.background ?? { enabled: false, image: "", position: "center", dimPercent: 40, disableOnMobile: true },
-        });
+        const revResult = await saveWithRev(pricing);
+        if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
         setSaved({ mode, percent });
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {

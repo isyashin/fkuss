@@ -124,16 +124,20 @@ const pricingSchema = z.object({
   globalPercent: z.number().min(-100).max(500),
 });
 
-export async function savePricing(pricing: { globalMode: string; globalPercent: number }): Promise<void> {
+export async function savePricing(pricing: { globalMode: string; globalPercent: number }, expectedRev?: number | null, force = false): Promise<void> {
   await guard();
   const parsed = pricingSchema.parse(pricing);
   const prisma = getPrisma();
+  // F04: та же защита версий, что у saveSettings.
+  const { assertSettingsRev } = await import("@/lib/admin-settings-version");
   const row = await prisma.settings.findUnique({ where: { key: "settings" } });
+  const nextRev = assertSettingsRev(row?.value ?? null, expectedRev ?? null, force);
   const current = (row?.value ?? {}) as Record<string, unknown>;
+  const value = JSON.parse(JSON.stringify({ ...current, pricing: parsed, _rev: nextRev }));
   await prisma.settings.upsert({
     where: { key: "settings" },
-    create: { key: "settings", value: JSON.parse(JSON.stringify({ ...current, pricing: parsed })) },
-    update: { value: JSON.parse(JSON.stringify({ ...current, pricing: parsed })) },
+    create: { key: "settings", value },
+    update: { value },
   });
   const { recomputePrices } = await import("@/lib/order/recompute");
   await recomputePrices(prisma);

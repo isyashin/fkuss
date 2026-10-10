@@ -7,7 +7,7 @@ function paymentDb(initialStatus: string, initialPayment = "pending", conflictOn
   const updates: unknown[] = [];
   const events: unknown[] = [];
   let stale = conflictOnce;
-  const tx = { adminEvent: { create: async (args: unknown) => { events.push(args); } }, order: {
+  const tx = { adminEvent: { create: async (args: unknown) => { events.push(args); return { id: "event-1" }; } }, adminPushSubscription: { findMany: async () => [] }, adminPushDelivery: { createMany: async () => ({ count: 0 }) }, order: {
     findUnique: async () => order,
     updateMany: async (args: { where: { status: string }; data: { status: string; paymentStatus: string; paymentId: string } }) => {
       updates.push(args);

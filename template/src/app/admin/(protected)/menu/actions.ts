@@ -18,6 +18,7 @@ const updateDishSchema = z.object({
   available: z.boolean().optional(),
   manualAvailable: z.boolean().optional(),
   weight: z.string().max(50).optional(),
+  categoryId: adminIdSchema.optional(),
   priceMode: z.enum(["inherit", "yandex", "manual", "coefficient"]).optional(),
   manualPrice: adminMoneySchema.nullable().optional(),
   coefficientPercent: adminPercentSchema.nullable().optional(),
@@ -33,6 +34,7 @@ export async function updateDish(
     available?: boolean;
     manualAvailable?: boolean;
     weight?: string;
+    categoryId?: string;
     priceMode?: "inherit" | "yandex" | "manual" | "coefficient";
     manualPrice?: number | null;
     coefficientPercent?: number | null;
@@ -45,6 +47,10 @@ export async function updateDish(
   const { manualAvailable, ...rest } = parsed;
   const dish = await prisma.dish.findUnique({ where: { id } });
   if (!dish) throw new Error("Блюдо не найдено");
+  if (parsed.categoryId && parsed.categoryId !== dish.categoryId) {
+    const category = await prisma.category.findUnique({ where: { id: parsed.categoryId } });
+    if (!category) throw new Error("Категория не найдена");
+  }
 
   const update: Record<string, unknown> = { ...rest };
   if (manualAvailable !== undefined) {

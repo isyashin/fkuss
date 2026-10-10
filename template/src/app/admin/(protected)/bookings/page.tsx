@@ -5,7 +5,6 @@ import { loadBookingsPage } from "../admin-list-data";
 import { BookingsDashboard } from "./bookings-dashboard";
 import { getSiteSettings } from "@/lib/site";
 import { visibleGuestChannels } from "@/lib/guest-contact";
-import { loadUpcomingBookings } from "@/lib/admin-bookings-service";
 import { nowInTimeZone } from "@/lib/hours";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +15,13 @@ export default async function AdminBookingsPage({ searchParams }: { searchParams
   const raw = await searchParams;
   const query = parseBookingListQuery(raw);
   const selectedId = typeof raw.selected === "string" && raw.selected.length <= 100 ? raw.selected : null;
-  const [listing, settings, selectedBooking] = await Promise.all([
-    loadBookingsPage(prisma, query), getSiteSettings(),
+  const settings = await getSiteSettings();
+  const today = nowInTimeZone(settings.timezone).date;
+  const [listing, selectedBooking] = await Promise.all([
+    loadBookingsPage(prisma, query, today),
     selectedId ? prisma.reservation.findUnique({ where: { id: selectedId } }) : Promise.resolve(null),
   ]);
-  const upcomingBookings = await loadUpcomingBookings(prisma, settings.timezone);
 
-  return <BookingsDashboard {...listing} upcomingBookings={upcomingBookings} query={{ ...query, page: listing.page }} guestContact={visibleGuestChannels(settings)} timeZone={settings.timezone} today={nowInTimeZone(settings.timezone).date}
-    initialSelectedId={selectedId} selectedBooking={selectedBooking}/>;
+  return <BookingsDashboard {...listing} query={{ ...query, page: listing.page }} guestContact={visibleGuestChannels(settings)}
+    timeZone={settings.timezone} today={today} initialSelectedId={selectedId} selectedBooking={selectedBooking}/>;
 }

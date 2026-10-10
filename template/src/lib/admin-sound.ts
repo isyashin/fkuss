@@ -5,7 +5,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { getContentDir, resolveContentPath } from "./content-dir";
 import { DEFAULT_SOUND_REPEATS, MAX_SOUND_REPEATS, MIN_SOUND_REPEATS } from "./admin-sound-constants";
 
-export type AdminSoundChoice = "standard1" | "standard2" | "custom";
+export type AdminSoundChoice = "standard1" | "standard2" | "site" | "custom";
 export type AdminSound = { selected: AdminSoundChoice; customName: string; customPath: string; repeats: number };
 export type PublicAdminSound = { selected: AdminSoundChoice; customName: string; customUrl: string; repeats: number };
 
@@ -25,7 +25,7 @@ export function parseAdminSound(value: unknown): AdminSound {
   const data = value as Record<string, unknown>;
   const customPath = typeof data.customPath === "string" && CUSTOM_PATH.test(data.customPath) ? data.customPath : "";
   const customName = customPath && typeof data.customName === "string" ? data.customName.slice(0, 100) : "";
-  const selected = data.selected === "standard2" ? "standard2" : data.selected === "custom" && customPath ? "custom" : "standard1";
+  const selected = data.selected === "standard2" ? "standard2" : data.selected === "site" ? "site" : data.selected === "custom" && customPath ? "custom" : "standard1";
   return { selected, customName, customPath, repeats: parseSoundRepeats(data.repeats) };
 }
 
@@ -78,7 +78,7 @@ async function removeStoredSound(relativePath: string): Promise<void> {
 }
 
 export async function selectAdminSound(prisma: PrismaClient, choice: AdminSoundChoice): Promise<PublicAdminSound> {
-  if (!["standard1", "standard2", "custom"].includes(choice)) throw new Error("Неизвестный звук");
+  if (!["standard1", "standard2", "site", "custom"].includes(choice)) throw new Error("Неизвестный звук");
   const { next } = await mutateAdminSound(prisma, (current) => {
     if (choice === "custom" && !current.customPath) throw new Error("Сначала загрузите звуковой файл");
     return { ...current, selected: choice };

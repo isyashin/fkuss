@@ -10,17 +10,29 @@ async function guard() {
   if (!(await isAdmin())) throw new Error("Forbidden");
 }
 
-export async function saveSyncSettings(input: ContentSettings["sync"]): Promise<void> {
+export async function saveSyncSettings(input: ContentSettings["sync"], expectedRev?: number | null, force = false): Promise<"ok" | "conflict"> {
   await guard();
   const prisma = getPrisma();
+  // F04: та же защита от параллельных правок, что у saveSettings — секция
+  // «Импорт» больше не перезаписывает более свежую версию молча.
+  const { assertSettingsRev, isSettingsConflict } = await import("@/lib/admin-settings-version");
   const row = await prisma.settings.findUnique({ where: { key: "settings" } });
+  let nextRev: number;
+  try {
+    nextRev = assertSettingsRev(row?.value ?? null, expectedRev ?? null, force);
+  } catch (error) {
+    if (isSettingsConflict(error)) return "conflict";
+    throw error;
+  }
   const current = (row?.value ?? {}) as Record<string, unknown>;
+  const value = JSON.parse(JSON.stringify({ ...current, sync: input, _rev: nextRev }));
   await prisma.settings.upsert({
     where: { key: "settings" },
-    create: { key: "settings", value: JSON.parse(JSON.stringify({ ...current, sync: input })) },
-    update: { value: JSON.parse(JSON.stringify({ ...current, sync: input })) },
+    create: { key: "settings", value },
+    update: { value },
   });
   revalidatePath("/admin/sync");
+  return "ok";
 }
 
 export async function runSyncNow(): Promise<{ ok: boolean; error?: string; upserted?: number; missing?: number }> {

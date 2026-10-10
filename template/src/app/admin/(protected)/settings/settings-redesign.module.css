@@ -1,0 +1,148 @@
+/* settings-redesign.module.css — раскладка «Настроек» по прототипу:
+   rail разделов 244px (full-height, border-right) + белый редактор max 980px.
+   Одна открытая задача, блоки отделены тонкими линиями (без карточек). */
+
+.layout {
+  display: grid;
+  grid-template-columns: 244px minmax(0, 1fr);
+  align-items: stretch;
+  min-height: calc(100vh - 112px);
+}
+.sectionsCol {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  margin: -22px 0 -90px -26px;
+  padding: 34px 16px 38px;
+  border-right: 1px solid var(--line, #e2e4df);
+  background: var(--queue, #f5f6f2);
+  scrollbar-width: thin;
+}
+.groupLabel { margin: 18px 13px 9px; font-size: 11px; font-weight: 650; letter-spacing: 0.075em; text-transform: uppercase; color: #819087; }
+.groupLabel:first-child { margin-top: 0; }
+.groupBlock { margin-bottom: 22px; }
+.sectionLink {
+  position: relative;
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; min-height: 44px; padding: 10px 13px;
+  border: 0; border-radius: 5px; background: transparent; cursor: pointer;
+  color: #59645d; font: inherit; font-size: 13px; line-height: 1.35; text-align: left; text-decoration: none;
+}
+.sectionLink:hover { background: #e9ede7; color: var(--text, #202723); }
+.sectionLink.current { background: var(--surface, #fff); color: var(--text, #202723); font-weight: 650; box-shadow: 0 1px 2px #10201609; }
+.sectionLink.current::before {
+  content: ""; position: absolute; left: 0; top: 8px; bottom: 8px;
+  width: 2px; border-radius: 2px; background: var(--accent, #ad573b);
+}
+
+/* Белый редактор по центру */
+.editor {
+  min-width: 0;
+  margin: -22px -26px -90px 0;
+  padding: 54px clamp(32px, 5vw, 72px) 100px;
+  background: var(--surface, #fff);
+  display: grid; gap: 35px; align-content: start;
+}
+
+/* Обертки секций: плоские блоки с разделителями (прототип .block) */
+.editorCard { min-width: 0; padding-bottom: 34px; border-bottom: 1px solid var(--line, #e2e4df); display: grid; gap: 17px; align-content: start; }
+.editorCard:last-child { padding-bottom: 0; border-bottom: 0; }
+.editorTitle { margin: 0; font-size: 16px; line-height: 1.3; font-weight: 650; letter-spacing: -0.015em; color: var(--text, #202723); }
+.editorHint { margin: -8px 0 0; font-size: 12px; line-height: 1.55; color: var(--muted, #68716a); }
+
+/* legacy-обёртки: встройка существующих секций в новый каркас */
+.legacyCard { min-width: 0; padding-bottom: 34px; border-bottom: 1px solid var(--line, #e2e4df); display: grid; gap: 17px; align-content: start; }
+.legacyCard:last-child { padding-bottom: 0; border-bottom: 0; }
+/* D11: заголовки задач единой иерархии — внутренний заголовок не крупнее заголовка раздела */
+.legacyCard :global(h2) { margin: 0; font-size: 16px !important; line-height: 1.3; font-weight: 650 !important; font-family: var(--rd-font, "Segoe UI", sans-serif) !important; letter-spacing: -0.015em; color: var(--text, #202723); }
+.legacyCard :global(.cardHint) { margin: -8px 0 0; font-size: 12px; line-height: 1.55; color: var(--muted, #68716a); }
+
+/* Нормализация контролов legacy-секций под язык прототипа */
+.legacyCard :global(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"])),
+.legacyCard :global(select),
+.legacyCard :global(textarea) {
+  min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--rd-field-line, #cdd3cc); border-radius: 6px;
+  background: var(--surface, #fff); color: var(--text, #202723);
+  font: inherit; font-size: 13px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.legacyCard :global(textarea) { min-height: 87px; line-height: 1.5; }
+.legacyCard :global(input:hover:not(:disabled)),
+.legacyCard :global(select:hover:not(:disabled)),
+.legacyCard :global(textarea:hover:not(:disabled)) { border-color: var(--rd-field-line-hover, #9faa9f); }
+.legacyCard :global(input:focus-visible),
+.legacyCard :global(select:focus-visible),
+.legacyCard :global(textarea:focus-visible) {
+  border-color: var(--accent, #ad573b); box-shadow: 0 0 0 3px var(--rd-focus-ring, #ad573b1f); outline: 0;
+}
+.legacyCard :global(input::placeholder),
+.legacyCard :global(textarea::placeholder) { color: var(--rd-field-placeholder, #9aa39a); }
+.legacyCard :global(input:disabled),
+.legacyCard :global(select:disabled) { background: #f2f3f0; color: #747c75; }
+.legacyCard :global(button:not([type="checkbox"])) {
+  min-height: 44px; padding: 0 15px;
+  border: 1px solid var(--rd-btn-line, #cbd1ca); border-radius: 6px;
+  background: var(--surface, #fff); color: var(--rd-btn-text, #344039);
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.legacyCard :global(button:not([type="checkbox"]):hover) { border-color: #89978c; background: #f7f9f6; }
+.shell[data-theme="dark"] .legacyCard :global(button:not([type="checkbox"]):hover) { background: var(--queue, #f5f6f2); }
+.legacyCard :global(label) { color: var(--rd-field-text, #3b473f); font-size: 12.5px; font-weight: 600; }
+.legacyCard :global(h3) { font-size: 15px; font-weight: 680; letter-spacing: -0.015em; color: var(--text, #202723); }
+
+/* Сохранение по макету: липкая плашка снизу; на телефоне — над нижней навигацией */
+.saveBar {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  margin: 18px calc(-1 * clamp(32px, 5vw, 72px)) -100px;
+  padding: 14px clamp(32px, 5vw, 72px);
+  border-top: 1px solid var(--line, #e2e4df);
+  background: #fffffff5;
+}
+.shell[data-theme="dark"] .saveBar { background: #1b211cf5; }
+.saveBar button { min-height: 44px; }
+.saveStatus { color: var(--rd-savebar-text, #81512c); font-size: 12.5px; font-weight: 600; }
+.saveStatus.error { color: var(--danger, #a3473b); }
+
+.formGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 22px; margin-bottom: 16px; }
+.full { grid-column: 1 / -1; }
+/* D03: на телефоне текстовые поля форм (акции, банкеты, печать) — одна колонка */
+@media (max-width: 760px) {
+  .legacyCard :global([class*="grid-cols-"]) { grid-template-columns: 1fr !important; }
+  .editorCard :global([class*="grid-cols-"]) { grid-template-columns: 1fr !important; }
+}
+
+/* D11: кабинет гостя и звук — плоские блоки вместо вложенных карточек */
+.editorCard :global(.page) { margin: 0; padding: 0; width: 100%; max-width: none; }
+.editorCard :global(.page) :global(.card),
+.editorCard :global(.page) :global(.more) {
+  border: 0; padding: 0; background: transparent; border-radius: 0;
+}
+
+/* Мобильный переключатель разделов (F15) — по макету; виден только на ≤900px */
+.guard { display: contents; }
+.picker { display: none; }
+.pickerSelect { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid var(--rd-field-line, #cdd3cc); border-radius: 6px; background: var(--soft, #f7f8f5); color: var(--text, #202723); font: inherit; font-size: 14px; font-weight: 650; }
+.note { margin: 10px 0 0; font-size: 12.5px; color: var(--muted, #68716a); }
+.note a { color: var(--accent, #ad573b); }
+.toggleList { display: grid; gap: 4px; margin-bottom: 14px; }
+.toggleRow { display: flex; align-items: center; gap: 11px; min-height: 44px; font-size: 13px; cursor: pointer; color: var(--rd-field-text, #3b473f); }
+.toggleRow input { width: 19px; height: 19px; margin: 0; accent-color: var(--success, #30694a); }
+.divider { height: 1px; margin: 18px 0; background: var(--line, #e2e4df); }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; align-content: start; }
+  /* D01: переключатель раздела доступен при прокрутке длинной формы */
+  .picker { display: block; position: sticky; top: 0; z-index: 10; height: 67px; box-sizing: border-box; margin: -8px 0 4px; padding: 8px 0; background: var(--surface, #fff); }
+  .sectionsCol { display: none; }
+  .editor { margin: 0 -14px; padding: 26px 20px 170px; gap: 30px; }
+  .editorCard, .legacyCard { padding-bottom: 30px; }
+  .formGrid { grid-template-columns: 1fr; }
+  .saveBar { margin: 18px -20px -120px; padding: 11px 20px; box-shadow: 0 -5px 22px #20272310; }
+}
+/* F08: на телефоне панель сохранения — над нижней навигацией (64px) с safe area */
+@media (max-width: 760px) {
+  .saveBar { position: fixed; right: 0; left: 0; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); margin: 0; padding: 11px 20px; z-index: 40; box-shadow: 0 -5px 22px #20272310; }
+}

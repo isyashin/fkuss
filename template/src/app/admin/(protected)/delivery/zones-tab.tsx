@@ -7,7 +7,7 @@
  * за тело/вершины. Тумблер geo-режима и настройка «вне зон» — в шапке.
  */
 import { useRef, useState, useTransition } from "react";
-import { saveSettings } from "../settings/actions";
+import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../settings/use-settings-save";
 import { tariffLines } from "@/lib/order/pricing";
 import { defaultZonePolygon } from "@/lib/delivery/geo";
 import type { ContentSettings } from "@/lib/content-schema";
@@ -31,7 +31,9 @@ export function ZonesTab({
     settings.delivery.geo ?? { enabled: false, outside: "block", outsidePrice: 0 },
   );
   const [savedSnapshot, setSavedSnapshot] = useState(() =>
-    JSON.stringify([settings.delivery.zones, settings.delivery.geo]),
+    // F21: снапшот строится из тех же значений, что и начальное состояние —
+    // иначе форма «грязная» сразу после открытия (geo undefined vs дефолт).
+    JSON.stringify([settings.delivery.zones, settings.delivery.geo ?? { enabled: false, outside: "block", outsidePrice: 0 }]),
   );
   const [selected, setSelected] = useState<number | null>(null);
   const [drawToken, setDrawToken] = useState(0);
@@ -40,6 +42,17 @@ export function ZonesTab({
   const [busy, setBusy] = useState({ drawing: false, editing: false });
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState({ text: "", error: false });
+  const { save: saveWithRev, control: revControl } = useSettingsSave();
+  // P1-2: после «Обновить» в диалоге конфликта зоны/geo сбрасываются к свежим данным.
+  const settingsEpoch = useSettingsEpoch();
+  useResetSettingsOnEpoch(settingsEpoch, () => {
+    const freshZones = settings.delivery.zones;
+    const freshGeo = settings.delivery.geo ?? { enabled: false, outside: "block", outsidePrice: 0 };
+    setZones(freshZones);
+    setGeo(freshGeo);
+    setSavedSnapshot(JSON.stringify([freshZones, freshGeo]));
+    setFeedback({ text: "", error: false });
+  });
   const mapApiRef = useRef<{ getCenter: () => [number, number] } | null>(null);
 
   const inputCls = "min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
@@ -80,7 +93,7 @@ export function ZonesTab({
           ...settings,
           delivery: { ...settings.delivery, zones, geo },
         };
-        await saveSettings(next);
+        const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
         setSavedSnapshot(JSON.stringify([zones, geo]));
         setFeedback({ text: "Сохранено", error: false });
       } catch (cause) {
@@ -131,16 +144,21 @@ export function ZonesTab({
             )}
           </div>
         )}
+        {/* F21: сохранение появляется только при изменениях */}
+        {dirty && (
+          <div className="flex items-center gap-3 ml-auto">
+            <span className="text-sm text-muted">Есть несохранённые изменения</span>
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending}
+              className="min-h-11 px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50"
+            >
+              {pending ? "Сохраняю…" : "Сохранить"}
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-3 ml-auto">
-          {dirty && <span className="text-sm text-muted">Есть несохранённые изменения</span>}
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending}
-            className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
-          >
-            {pending ? "Сохраняю…" : "Сохранить"}
-          </button>
           {feedback.text && (
             <span role={feedback.error ? "alert" : "status"} className={feedback.error ? "text-sm text-red-600" : "text-sm text-green-700"}>
               {feedback.text}
@@ -150,7 +168,7 @@ export function ZonesTab({
       </div>
       {geo.enabled && (
         <p className="text-sm text-muted">
-          Гость вводит адрес — сервер сам определит зону. Нужен ключ <code>YANDEX_GEOCODER_API_KEY</code> в env сайта.
+          Гость вводит адрес — сервер сам определит зону. Для геокодинга нужен ключ Яндекс.Карт (задаётся при развёртывании сайта).
         </p>
       )}
 
@@ -171,7 +189,7 @@ export function ZonesTab({
           }}
         />
         {(busy.drawing || busy.editing) && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-black/70 text-white text-sm px-4 py-2 rounded-full pointer-events-none">
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-black/70 text-white text-sm px-4 py-2 rounded-md pointer-events-none">
             {busy.drawing
               ? "Рисование: клик — точка, «Готово» или двойной клик — завершить"
               : "Перетаскивайте зону и точки границы; «Готово» — закончить"}
@@ -183,7 +201,7 @@ export function ZonesTab({
         type="button"
         onClick={addZone}
         disabled={busy.drawing || busy.editing}
-        className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
+        className="min-h-11 px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50"
       >
         + Добавить зону
       </button>
@@ -209,7 +227,7 @@ export function ZonesTab({
           );
           const dot = (
             <span
-              className="w-4 h-4 rounded-full shrink-0"
+              className="w-4 h-4 rounded-md shrink-0"
               style={{ backgroundColor: color.stroke }}
               aria-hidden="true"
             />
@@ -295,7 +313,7 @@ export function ZonesTab({
                           onClick={() =>
                             busy.drawing ? setStopDrawToken((t) => t + 1) : setStopEditToken((t) => t + 1)
                           }
-                          className="min-h-11 px-4 rounded-full bg-accent text-white text-sm font-medium"
+                          className="min-h-11 px-4 rounded-md bg-accent text-white text-sm font-medium"
                         >
                           Готово
                         </button>
@@ -304,7 +322,7 @@ export function ZonesTab({
                         <button
                           type="button"
                           onClick={() => setDrawToken((t) => t + 1)}
-                          className="min-h-11 px-4 rounded-full border border-foreground/20 text-sm"
+                          className="min-h-11 px-4 rounded-md border border-foreground/20 text-sm"
                         >
                           Нарисовать
                         </button>
@@ -325,6 +343,6 @@ export function ZonesTab({
           );
         })}
       </div>
-    </div>
+    {revControl}</div>
   );
 }

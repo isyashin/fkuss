@@ -11,7 +11,7 @@ function ip(project: string, n: number) {
 }
 
 async function setGeoZones(page: import("@playwright/test").Page, enabled: boolean) {
-  await page.goto("/admin/delivery");
+  await page.goto("/admin/settings?section=delivery");
   await page.getByRole("checkbox", { name: /Зоны на карте/ }).setChecked(enabled);
   await page.getByRole("button", { name: "Сохранить" }).first().click();
   await expect(page.getByText("Сохранено")).toBeVisible({ timeout: 15000 });
@@ -29,7 +29,7 @@ test("geo-режим: default выключен; без ключа геокоде
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
-  await page.goto("/admin/delivery");
+  await page.goto("/admin/settings?section=delivery");
   await page.getByRole("tab", { name: "Варианты доставки" }).click();
   const optionCards = page.locator("[data-option-name]");
   for (let remaining = await optionCards.count(); remaining > 0; remaining--) {
@@ -74,7 +74,7 @@ test("geo-режим: default выключен; без ключа геокоде
   } finally {
     // 7. Возвращаем настройки и вариант «Курьер»
     await setGeoZones(page, false);
-    await page.goto("/admin/delivery");
+    await page.goto("/admin/settings?section=delivery");
     await page.getByRole("tab", { name: "Варианты доставки" }).click();
     await page.getByRole("button", { name: "+ Вариант доставки" }).click();
     await page.getByLabel("Название").fill("Курьер");

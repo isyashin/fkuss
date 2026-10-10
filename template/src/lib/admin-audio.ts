@@ -30,6 +30,13 @@ export async function playAdminSound(sound: PublicAdminSound): Promise<void> {
     await audio.play();
     return;
   }
+  if (sound.selected === "site") {
+    // Встроенный сигнал «Заказ с сайта» (поставляется с шаблоном).
+    const audio = new Audio("/audio/order-site.mp3");
+    audio.volume = 1;
+    await audio.play();
+    return;
+  }
 
   audioContext ??= new AudioContext();
   await audioContext.resume();

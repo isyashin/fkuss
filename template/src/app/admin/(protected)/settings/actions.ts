@@ -27,18 +27,32 @@ export async function saveAllAdminSettings(input: AdminSettingsInput): Promise<v
   for (const path of ["/admin/settings", "/admin/menu", "/", "/menu", "/booking"]) revalidatePath(path);
 }
 
-export async function saveSettings(settings: ContentSettings): Promise<void> {
+export async function saveSettings(settings: ContentSettings, expectedRev?: number | null, force = false): Promise<"ok" | "conflict"> {
   await guard();
   const parsed = validateSettingsMutation(settings);
   const prisma = getPrisma();
+  // F04: версионирование — параллельная вкладка с устаревшими данными не молча
+  // перезаписывает чужие правки. Конфликт возвращаем значением: сообщения
+  // ошибок server actions на клиент не передаются (React их редактирует).
+  const { assertSettingsRev, isSettingsConflict } = await import("@/lib/admin-settings-version");
+  const row = await prisma.settings.findUnique({ where: { key: "settings" } });
+  let nextRev: number;
+  try {
+    nextRev = assertSettingsRev(row?.value ?? null, expectedRev ?? null, force);
+  } catch (error) {
+    if (isSettingsConflict(error)) return "conflict";
+    throw error;
+  }
+  const value = JSON.parse(JSON.stringify({ ...parsed, _rev: nextRev }));
   await prisma.settings.upsert({
     where: { key: "settings" },
-    create: { key: "settings", value: JSON.parse(JSON.stringify(parsed)) },
-    update: { value: JSON.parse(JSON.stringify(parsed)) },
+    create: { key: "settings", value },
+    update: { value },
   });
   revalidatePath("/admin/settings");
   revalidatePath("/menu");
   revalidatePath("/booking");
+  return "ok";
 }
 
 export async function saveGuestContactChannels(input: { whatsapp: boolean; telegram: boolean }): Promise<void> {
@@ -118,16 +132,26 @@ const pricingSchema = z.object({
   globalPercent: z.number().min(-100).max(500),
 });
 
-export async function savePricing(pricing: { globalMode: string; globalPercent: number }): Promise<void> {
+export async function savePricing(pricing: { globalMode: string; globalPercent: number }, expectedRev?: number | null, force = false): Promise<"ok" | "conflict"> {
   await guard();
   const parsed = pricingSchema.parse(pricing);
   const prisma = getPrisma();
+  // F04: та же защита версий, что у saveSettings.
+  const { assertSettingsRev, isSettingsConflict } = await import("@/lib/admin-settings-version");
   const row = await prisma.settings.findUnique({ where: { key: "settings" } });
+  let nextRev: number;
+  try {
+    nextRev = assertSettingsRev(row?.value ?? null, expectedRev ?? null, force);
+  } catch (error) {
+    if (isSettingsConflict(error)) return "conflict";
+    throw error;
+  }
   const current = (row?.value ?? {}) as Record<string, unknown>;
+  const value = JSON.parse(JSON.stringify({ ...current, pricing: parsed, _rev: nextRev }));
   await prisma.settings.upsert({
     where: { key: "settings" },
-    create: { key: "settings", value: JSON.parse(JSON.stringify({ ...current, pricing: parsed })) },
-    update: { value: JSON.parse(JSON.stringify({ ...current, pricing: parsed })) },
+    create: { key: "settings", value },
+    update: { value },
   });
   const { recomputePrices } = await import("@/lib/order/recompute");
   await recomputePrices(prisma);
@@ -135,4 +159,5 @@ export async function savePricing(pricing: { globalMode: string; globalPercent: 
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
   revalidatePath("/");
+  return "ok";
 }

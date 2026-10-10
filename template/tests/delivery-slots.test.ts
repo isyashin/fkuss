@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deliveryPrice, generateWindows, isValidWindow, type DeliveryOptionRule } from "@/lib/delivery/slots";
+import { deliveryPrice, generateWindows, isOptionAvailableOn, isValidWindow, type DeliveryOptionRule } from "@/lib/delivery/slots";
 
 const option = (over: Partial<DeliveryOptionRule> = {}): DeliveryOptionRule => ({
   name: "Курьер",
@@ -100,5 +100,23 @@ describe("deliveryPrice", () => {
 
   it("не считает доставку бесплатной без настроенного порога", () => {
     expect(deliveryPrice(option({ price: 300, freeFrom: null }), 10000)).toBe(300);
+  });
+});
+
+describe("isOptionAvailableOn (F03: недоступный по дням вариант не предлагается)", () => {
+  it("вариант без единого дня недели недоступен всегда", () => {
+    expect(isOptionAvailableOn(option({ days: [] }), NOW, TZ)).toBe(false);
+  });
+
+  it("сегодняшний день входит в разрешённые — доступен", () => {
+    expect(isOptionAvailableOn(option({ days: [3] }), NOW, TZ)).toBe(true); // 16.09.2026 — среда (3)
+  });
+
+  it("сегодняшний день не входит — недоступен, даже если другие дни разрешены", () => {
+    expect(isOptionAvailableOn(option({ days: [0, 6] }), NOW, TZ)).toBe(false);
+  });
+
+  it("сегодняшняя дата в исключениях — недоступен", () => {
+    expect(isOptionAvailableOn(option({ exceptions: ["2026-09-16"] }), NOW, TZ)).toBe(false);
   });
 });

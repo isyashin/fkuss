@@ -44,6 +44,10 @@ export function SoundSettings({ initial }: { initial: PublicAdminSound }) {
       <label><input type="radio" name="admin-sound" checked={sound.selected === choice} disabled={busy} onChange={() => choose(choice)}/> Звук {index + 1}</label>
       <button type="button" onClick={() => void preview(choice)} aria-label={`Прослушать звук ${index + 1}`}><AdminIcon name="play" size={16}/></button>
     </div>)}
+    <div className={styles.soundRow}>
+      <label><input type="radio" name="admin-sound" checked={sound.selected === "site"} disabled={busy} onChange={() => choose("site")}/><span>Заказ с сайта</span></label>
+      <button type="button" onClick={() => void preview("site")} aria-label="Прослушать сигнал «Заказ с сайта»"><AdminIcon name="play" size={16}/></button>
+    </div>
     {sound.customName && <div className={styles.soundRow}>
       <label><input type="radio" name="admin-sound" checked={sound.selected === "custom"} disabled={busy} onChange={() => choose("custom")}/><span title={sound.customName}>{sound.customName}</span></label>
       <button type="button" onClick={() => void preview("custom")} aria-label="Прослушать свой звук"><AdminIcon name="play" size={16}/></button>
@@ -67,7 +71,7 @@ export function SoundSettings({ initial }: { initial: PublicAdminSound }) {
           const value = Number(event.target.value);
           if (Number.isInteger(value) && value >= MIN_SOUND_REPEATS && value <= MAX_SOUND_REPEATS) saveRepeats(value);
         }}
-        style={{ width: 76 }} aria-label="Повторы сигнала"/>
+        className={styles.repeatsInput} aria-label="Повторы сигнала"/>
       <span className={styles.soundHint}>раз (до обработки заказа или брони)</span>
     </div>
     <p className={styles.soundHint}>MP3, WAV или Ogg до 2 МБ. После удаления своего звука выбирается сигнал 1.</p>

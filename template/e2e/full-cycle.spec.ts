@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { Client } from "pg";
 import { loginAdminUi } from "./login-admin";
 
 // Полный цикл лояльности: вход → заказ → выдача → кэшбэк в кабинете
@@ -39,16 +40,30 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
 
-  await page.getByRole("button", { name: `Открыть заказ № ${orderNumber}` }).click();
+  await page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) }).click();
   const detail = page.getByRole("region", { name: "Детали заказа" });
-  const status = detail.getByLabel("Статус заказа");
-  for (const [value, label] of [["accepted", "Принят"], ["cooking", "Готовится"], ["ready", "Готов"], ["issued", "Выдан"]] as const) {
-    await status.selectOption(value);
-    await expect(status).toHaveValue(value);
-    await expect(detail.getByText(label, { exact: true }).first()).toBeVisible();
+  // Редизайн: одна главная кнопка следующего шага (селект статуса убран).
+  // После каждого клика ждём кнопку СЛЕДУЮЩЕГО шага — признак, что сервер применил
+  // переход и деталь обновилась (иначе клики гонятся с обработкой на сервере).
+  const steps: [string, string | null][] = [["Принять", "Готовится"], ["Готовится", "Готов"], ["Готов", "Выдан"], ["Выдан", null]];
+  for (const [action, nextAction] of steps) {
+    const stepButton = detail.getByRole("button", { name: action, exact: true });
+    await stepButton.click();
+    if (nextAction) {
+      await expect(detail.getByRole("button", { name: nextAction, exact: true })).toBeVisible({ timeout: 15000 });
+    } else {
+      await expect(stepButton).toHaveCount(0, { timeout: 15000 });
+    }
   }
-  await expect(status.locator("option")).toHaveCount(1);
-  await expect(detail.getByText("Выдан", { exact: true }).first()).toBeVisible();
+  // «Выдан» выбывает из «Текущих» — статус проверяем в БД (не зависит от вьюпорта и списка).
+  const db = new Client({ connectionString: process.env.DATABASE_URL! });
+  await db.connect();
+  try {
+    const { rows } = await db.query<{ status: string }>('SELECT "status" FROM "Order" WHERE "number" = $1', [orderNumber]);
+    expect(rows[0]?.status).toBe("issued");
+  } finally {
+    await db.end();
+  }
 
   // 4. Кабинет: баланс бонусов > 0 (5% от 490 = 24)
   await page.goto("/account");

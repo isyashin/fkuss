@@ -4,7 +4,7 @@ import { loginAdminUi } from "./login-admin";
 // Фавикон с живой индикацией: новая бронь → бейдж со счётом необработанных;
 // открытие колокольчика бейдж НЕ гасит — только обработка брони/заказа.
 // Счётчик считаем относительно начального состояния (БД общая с другими спеками).
-test("фавикон показывает необработанные заказы и брони", async ({ page, request }) => {
+test("фавикон показывает необработанные заказы и брони", async ({ page, request }, testInfo) => {
   test.setTimeout(150_000);
   await page.goto("/admin/login");
   await loginAdminUi(page);
@@ -27,7 +27,7 @@ test("фавикон показывает необработанные зака�
       date: "2026-12-05",
       time: times[0],
       guests: 2,
-      customerName: "E2E Фавикон",
+      customerName: `E2E Фавикон ${testInfo.project.name}`,
       customerPhone: "+79000000077",
       comment: "badge",
     },
@@ -42,9 +42,13 @@ test("фавикон показывает необработанные зака�
   await page.getByRole("button", { name: /Оповещения/ }).first().click();
   await expect.poll(async () => (await iconHref()).startsWith("data:image/png"), { timeout: 10_000, intervals: [700, 1200] }).toBe(true);
 
-  // Обработка брони: быстрое подтверждение в виджете «Ближайшие брони» на дашборде; счёт возвращается к n0
-  await page.goto("/admin");
-  const card = page.locator("div", { has: page.getByRole("link", { name: /Открыть бронь 2026-12-05/ }) }).last();
+  // Обработка брони: подтверждение в разделе «Брони» (редизайн: виджета на дашборде нет); счёт возвращается к n0.
+  // БД общая с другими спеками: имя уникально для проекта — берём именно свою бронь.
+  await page.goto("/admin/bookings");
+  const bookingItem = page.getByRole("button", { name: new RegExp(`Открыть бронь 2026-12-05 .*, E2E Фавикон ${testInfo.project.name}`) });
+  await expect(bookingItem).toBeVisible({ timeout: 20000 });
+  await bookingItem.click();
+  const card = page.getByRole("region", { name: "Детали брони" });
   await expect(card.getByRole("button", { name: "Подтвердить" })).toBeVisible({ timeout: 20000 });
   await card.getByRole("button", { name: "Подтвердить" }).click();
   await expect.poll(async () => await badgeCount(), { timeout: 30_000, intervals: [1000, 2000, 4000] }).toBe(n0);
@@ -74,9 +78,16 @@ test("две вкладки админки получают событие од�
   });
   expect(booking.ok()).toBe(true);
 
-  // Обе вкладки видят событие в панели (поллинг ~10 с + запас)
+  // Обе вкладки видят событие в панели (поллинг ~10 с + запас).
+  // Под нагрузкой CI гидратация мобильной оболочки отстаёт — кликаем по колокольчику
+  // до фактического открытия панели, затем ждём текст события.
   for (const tab of [page, pageB]) {
-    await tab.getByRole("button", { name: /Оповещения/ }).first().click();
+    const bell = tab.getByRole("button", { name: /Оповещения/ }).first();
+    await expect(bell).toBeVisible();
+    await expect.poll(async () => {
+      await bell.click().catch(() => false);
+      return tab.getByRole("region", { name: "Новые события" }).isVisible().catch(() => false);
+    }, { timeout: 30_000, intervals: [900, 1600] }).toBe(true);
     await expect(tab.getByText("2026-12-06 в", { exact: false }).first()).toBeVisible({ timeout: 30_000 });
   }
   await context.close();
@@ -100,7 +111,7 @@ test("повторы сигнала настраиваются и отдаютс
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
-  await page.goto("/admin/settings");
+  await page.goto("/admin/settings?section=sound");
   const repeats = page.getByLabel("Повторы сигнала");
   await expect(repeats).toBeVisible();
 

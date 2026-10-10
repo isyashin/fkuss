@@ -14,10 +14,10 @@ test("ресторатор входит в админку и двигает за
   await expect(page.getByRole("heading", { name: "Заказы" })).toBeVisible();
 
   const detail = page.getByRole("region", { name: "Детали заказа" });
-  const status = detail.getByLabel("Статус заказа");
-  if (await status.isVisible().catch(() => false) && await status.locator('option[value="accepted"]').count()) {
-    await status.selectOption("accepted");
-    await expect(status).toHaveValue("accepted");
+  // Редизайн: переходы — главной кнопкой следующего шага.
+  const next = detail.getByRole("button", { name: "Принять", exact: true });
+  if (await next.isVisible().catch(() => false)) {
+    await next.click();
     await expect(detail.getByText("Принят", { exact: true }).first()).toBeVisible();
   }
 });
@@ -27,7 +27,7 @@ test("админка без пароля уводит на логин", async ({
   await expect(page).toHaveURL(/\/admin\/login/);
 });
 
-test("ближайшая бронь доступна на общем экране и подтверждается", async ({ page }) => {
+test("ближайшая бронь доступна в разделе «Брони» и подтверждается", async ({ page }) => {
   const db = new Client({ connectionString: process.env.DATABASE_URL! });
   const id = crypto.randomUUID();
   const guestName = `Гость E2E ${crypto.randomUUID().slice(0, 8)}`;
@@ -37,11 +37,12 @@ test("ближайшая бронь доступна на общем экран�
       [id, nowInTimeZone("Europe/Moscow").date, "23:59", 2, guestName, "+79990000003"]);
     await page.goto("/admin/login");
     await loginAdminUi(page);
-    const widget = page.getByRole("region", { name: "Ближайшие брони" });
-    await expect(widget.getByText(guestName)).toBeVisible();
-    await widget.getByRole("link", { name: new RegExp(`Открыть бронь .*${guestName}`) }).click();
+    await expect(page).toHaveURL(/\/admin$/);
+    // Редизайн: брони живут в своём разделе, на дашборде заказов их нет.
+    // Выбор — по прямой ссылке ?selected=: не зависит от позиции в списке.
+    await page.goto(`/admin/bookings?selected=${id}`);
     const detail = page.getByRole("region", { name: "Детали брони" });
-    await expect(detail.getByText(guestName)).toBeVisible();
+    await expect(detail.getByText(guestName)).toBeVisible({ timeout: 15000 });
     await detail.getByRole("button", { name: "Подтвердить" }).click();
     await expect(detail.getByText("Подтверждена").first()).toBeVisible();
     expect((await db.query<{ status: string }>('SELECT "status" FROM "Reservation" WHERE "id" = $1', [id])).rows[0]?.status).toBe("confirmed");

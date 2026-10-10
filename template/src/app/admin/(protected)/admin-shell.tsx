@@ -3,25 +3,20 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { logoutAction } from "./admin-shell-actions";
+import { setDirtyAsk } from "./admin-dirty";
+import { ConfirmDialog, type ConfirmRequest } from "./confirm-dialog";
 import type { AdminActor } from "@/lib/admin-users";
 import { AdminNotifications } from "./admin-notifications";
 import { AdminIcon } from "./admin-icon";
-import styles from "./admin-ui.module.css";
+import styles from "./admin-redesign.module.css";
 
 const primary = [
   { href: "/admin", label: "Заказы", icon: "orders" },
   { href: "/admin/bookings", label: "Брони", icon: "bookings" },
   { href: "/admin/menu", label: "Меню", icon: "menu" },
   { href: "/admin/settings", label: "Настройки", icon: "settings" },
-] as const;
-const secondary = [
-  { href: "/admin/promos", label: "Акции" }, { href: "/admin/gallery", label: "Галерея" },
-  { href: "/admin/banquets", label: "Банкеты" }, { href: "/admin/pages", label: "Страницы" },
-  { href: "/admin/restaurant", label: "Ресторан" }, { href: "/admin/sync", label: "Синхронизация" },
-  { href: "/admin/delivery", label: "Доставка" }, { href: "/admin/print-materials", label: "Печать" },
-  { href: "/admin/billing", label: "Подписка" }, { href: "/admin/team", label: "Сотрудники" },
 ] as const;
 
 function subscribeTheme(callback: () => void) {
@@ -31,60 +26,140 @@ function subscribeTheme(callback: () => void) {
 }
 const readTheme = () => localStorage.getItem("restaurant-admin-theme") === "dark";
 
+function badgeFor(href: string, newOrdersCount: number, newBookingsCount: number) {
+  if (href === "/admin" && newOrdersCount > 0) return newOrdersCount;
+  if (href === "/admin/bookings" && newBookingsCount > 0) return newBookingsCount;
+  return 0;
+}
+
 export function AdminShell({ children, restaurantName, logo, actor, newOrdersCount, newBookingsCount, unlocked }: {
   children: ReactNode; restaurantName: string; logo: string; actor: AdminActor;
   newOrdersCount: number; newBookingsCount: number; unlocked: boolean;
 }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [dirtyDialog, setDirtyDialog] = useState<ConfirmRequest | null>(null);
+  const dirtyResolverRef = useRef<((proceed: boolean) => void) | null>(null);
+  // F06: единый диалог подтверждения потери правок для всех «грязных» форм.
+  useEffect(() => {
+    setDirtyAsk((message) => new Promise<boolean>((resolve) => {
+      dirtyResolverRef.current = resolve;
+      setDirtyDialog({
+        title: "Потерять правки?",
+        text: message,
+        acceptLabel: "Потерять правки",
+        onAccept: () => { const resolve = dirtyResolverRef.current; dirtyResolverRef.current = null; resolve?.(true); },
+      });
+    }));
+    return () => setDirtyAsk(null);
+  }, []);
   const dark = useSyncExternalStore(subscribeTheme, readTheme, () => false);
   const changeTheme = () => { localStorage.setItem("restaurant-admin-theme", dark ? "light" : "dark"); window.dispatchEvent(new Event("restaurant-admin-theme-change")); };
+  // Ручное сворачивание панели в новом дизайне отсутствует (ширина задаётся
+  // брейкпоинтами), но события слушаем, чтобы старые разделы не ломались
+  // до их переноса на новый язык (кнопка в Настройках станет no-op).
   useEffect(() => {
-    const toggleSidebar = () => setCollapsed((value) => !value);
-    window.addEventListener("restaurant-admin-sidebar-toggle", toggleSidebar);
-    return () => window.removeEventListener("restaurant-admin-sidebar-toggle", toggleSidebar);
+    const noop = () => {};
+    window.addEventListener("restaurant-admin-sidebar-toggle", noop);
+    return () => window.removeEventListener("restaurant-admin-sidebar-toggle", noop);
   }, []);
-  useEffect(() => {
-    window.dispatchEvent(new CustomEvent("restaurant-admin-sidebar-state", { detail: collapsed }));
-  }, [collapsed]);
-  const section = [...primary, ...secondary].find((item) => item.href === pathname)?.label ?? "Управление";
   const active = (href: string) => href === "/admin" ? pathname === href : pathname.startsWith(href);
+  // Поповеры закрываются при переходе между разделами (не «прилипают» поверх контента).
+  // Корректировка состояния во время рендера (react-compiler: не setState в эффекте).
+  const [popPath, setPopPath] = useState(pathname);
+  if (popPath !== pathname) { setPopPath(pathname); setProfileOpen(false); }
   const fullAccess = actor.role === "owner" || unlocked;
   // Сотрудник: заказы, брони, меню + настройки (владельческие разделы — через PIN).
+  // По прототипу навигация — ровно четыре пункта; владельческие задачи живут внутри «Настроек».
   const visiblePrimary = fullAccess
     ? primary
     : primary.filter((item) => ["/admin", "/admin/bookings", "/admin/menu", "/admin/settings"].includes(item.href));
-  const visibleSecondary = fullAccess ? secondary : [];
   const initials = actor.name.trim().split(/\s+/).slice(0, 2).map((part) => part.slice(0, 1).toLocaleUpperCase("ru-RU")).join("") || "А";
 
-  return <div className={`${styles.shell} ${dark ? styles.dark : ""} ${collapsed ? styles.collapsed : ""}`}>
-    <aside className={styles.sidebar} aria-label="Панель ресторана">
-      <Link href="/admin" className={styles.brand} aria-label={`${restaurantName}: заказы`}>
-        <span className={styles.logo}>{logo && !logoFailed ? <Image src={logo} width={52} height={52} alt="" unoptimized onError={() => setLogoFailed(true)}/> : restaurantName.slice(0, 1)}</span>
-        <span className={styles.brandText}><strong>{restaurantName}</strong><small>Панель ресторана</small></span>
+  const navLinks = (navStyles: "rail" | "bottom") => visiblePrimary.map((item) => {
+    const badge = badgeFor(item.href, newOrdersCount, newBookingsCount);
+    return navStyles === "rail" ? (
+      <Link key={item.href} href={item.href} className={`${styles.navLink} ${active(item.href) ? styles.current : ""}`} aria-current={active(item.href) ? "page" : undefined} aria-label={item.label} title={item.label}>
+        <AdminIcon name={item.icon} size={22} />
+        <span>{item.label}</span>
+        {badge > 0 && <em className={styles.navBadge} aria-label={`Необработанных: ${badge}`}>{badge}</em>}
       </Link>
-      <button type="button" className={styles.collapseButton} aria-label={collapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"} aria-expanded={!collapsed} onClick={() => setCollapsed((value) => !value)}><AdminIcon name={collapsed ? "chevron" : "collapse"}/></button>
-      <nav className={styles.primaryNav} aria-label="Главная навигация">
-        {visiblePrimary.map((item) => <Link key={item.href} href={item.href} className={`${styles.navLink} ${active(item.href) ? styles.current : ""}`} aria-label={item.label} aria-current={active(item.href) ? "page" : undefined} title={collapsed ? item.label : undefined}><AdminIcon name={item.icon} size={22}/><span>{item.label}</span>{item.href === "/admin" && newOrdersCount > 0 && <em>{newOrdersCount}</em>}{item.href === "/admin/bookings" && newBookingsCount > 0 && <em>{newBookingsCount}</em>}</Link>)}
-      </nav>
-      <div className={styles.sidebarFoot}><span aria-hidden="true">✳</span><div>Хорошего дня!<small>Вкусная еда собирает людей</small></div></div>
+    ) : (
+      <Link key={item.href} href={item.href} className={active(item.href) ? styles.current : ""} aria-current={active(item.href) ? "page" : undefined}>
+        <AdminIcon name={item.icon} />
+        <span>{item.label}</span>
+        {badge > 0 && <em aria-label={`Необработанных: ${badge}`}>{badge}</em>}
+      </Link>
+    );
+  });
+
+  const brand = (
+    <>
+      <span className={styles.logo}>{logo && !logoFailed ? <Image src={logo} width={40} height={40} alt="" unoptimized onError={() => setLogoFailed(true)} /> : restaurantName.slice(0, 1)}</span>
+      <span className={styles.brandText}><strong>{restaurantName}</strong><small>Панель ресторана</small></span>
+    </>
+  );
+
+  return <div className={styles.shell} data-theme={dark ? "dark" : "light"}>
+    <aside className={styles.rail} aria-label="Панель ресторана">
+      <Link href="/admin" className={styles.brand} aria-label={`${restaurantName}: заказы`}>{brand}</Link>
+      <nav className={styles.primaryNav} aria-label="Главная навигация">{navLinks("rail")}</nav>
+      <div className={styles.railFoot}>
+        <AdminNotifications />
+        <div className={styles.popWrap}>
+          <button type="button" className={styles.footButton} onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}>
+            <AdminIcon name="settings" size={20} />
+            <span>{actor.name}</span>
+          </button>
+          {profileOpen && (
+            <div className={styles.profilePopover}>
+              <strong>{actor.name}</strong>
+              <small>{actor.role === "owner" ? "Владелец" : "Сотрудник"}</small>
+              <nav aria-label="Профиль">
+                <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
+                <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
+                <form action={logoutAction}><button type="submit">Выйти</button></form>
+              </nav>
+            </div>
+          )}
+        </div>
+      </div>
     </aside>
+
     <div className={styles.workspace}>
       <header className={styles.topbar}>
-        <div className={styles.breadcrumb}>Панель администратора <span>/</span> <strong>{section}</strong></div>
-        <div className={styles.topActions}>
-          <AdminNotifications/>
-          <button type="button" className={`${styles.themeButton} ${dark ? styles.themeDark : ""}`} onClick={changeTheme} aria-label={dark ? "Включить светлую тему" : "Включить тёмную тему"} aria-pressed={dark}><span className={styles.themeThumb}><AdminIcon name={dark ? "moon" : "sun"} size={19}/></span><span>{dark ? "Тёмная" : "Светлая"}</span></button>
-          <div className={styles.profileWrap}>
-            <button type="button" className={styles.profileButton} onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}><span className={styles.avatar}>{initials}</span><span className={styles.profileText}><strong>{actor.name}</strong><small>{actor.role === "owner" ? "Владелец" : "Сотрудник"}</small></span><AdminIcon name="chevron" size={16}/></button>
-            {profileOpen && <div className={styles.profilePopover}><strong>{actor.name}</strong><small>{actor.role === "owner" ? "Владелец" : "Сотрудник"}</small>{visibleSecondary.length > 0 && <nav aria-label="Другие разделы">{visibleSecondary.map((item) => <Link key={item.href} href={item.href} onClick={() => setProfileOpen(false)}>{item.label}</Link>)}</nav>}<Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link><form action={logoutAction}><button type="submit">Выйти</button></form></div>}
-          </div>
+        <span className={styles.logo}>{logo && !logoFailed ? <Image src={logo} width={34} height={34} alt="" unoptimized onError={() => setLogoFailed(true)} /> : restaurantName.slice(0, 1)}</span>
+        <strong>{restaurantName}</strong>
+        <AdminNotifications />
+        <div className={styles.popWrap}>
+          <button type="button" className={styles.footButton} onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}>
+            <span className={styles.footBadge} style={{ background: "rgba(255,255,255,.16)", color: "#fff" }}>{initials}</span>
+          </button>
+          {profileOpen && (
+            <div className={styles.profilePopover}>
+              <strong>{actor.name}</strong>
+              <small>{actor.role === "owner" ? "Владелец" : "Сотрудник"}</small>
+              <nav aria-label="Профиль">
+                <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
+                <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
+                <form action={logoutAction}><button type="submit">Выйти</button></form>
+              </nav>
+            </div>
+          )}
         </div>
       </header>
       <main className={styles.main}>{children}</main>
     </div>
-    <nav className={styles.bottomNav} aria-label="Мобильная навигация">{visiblePrimary.map((item) => <Link key={item.href} href={item.href} className={active(item.href) ? styles.current : ""} aria-current={active(item.href) ? "page" : undefined}><AdminIcon name={item.icon}/><span>{item.label}</span>{item.href === "/admin" && newOrdersCount > 0 && <em aria-label={`Новых заказов: ${newOrdersCount}`}>{newOrdersCount}</em>}{item.href === "/admin/bookings" && newBookingsCount > 0 && <em aria-label={`Новых броней: ${newBookingsCount}`}>{newBookingsCount}</em>}</Link>)}</nav>
+
+    <nav className={styles.bottomNav} aria-label="Мобильная навигация">{navLinks("bottom")}</nav>
+    <ConfirmDialog
+      request={dirtyDialog}
+      onClose={() => {
+        dirtyResolverRef.current?.(false);
+        dirtyResolverRef.current = null;
+        setDirtyDialog(null);
+      }}
+    />
   </div>;
 }

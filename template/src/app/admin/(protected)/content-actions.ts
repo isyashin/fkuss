@@ -13,22 +13,25 @@ export async function savePromo(input: {
   title: string;
   text: string;
   image?: string;
+  enabled?: boolean;
+  activeFrom?: string | null;
+  activeTo?: string | null;
 }): Promise<void> {
   await guard();
   const prisma = getPrisma();
+  const data = {
+    title: input.title,
+    text: input.text,
+    image: input.image ?? "",
+    enabled: input.enabled ?? true,
+    activeFrom: input.activeFrom ?? null,
+    activeTo: input.activeTo ?? null,
+  };
   if (input.id) {
-    await prisma.promo.update({
-      where: { id: input.id },
-      data: { title: input.title, text: input.text, image: input.image ?? "" },
-    });
+    await prisma.promo.update({ where: { id: input.id }, data });
   } else {
     await prisma.promo.create({
-      data: {
-        id: `promo-${Date.now().toString(36)}`,
-        title: input.title,
-        text: input.text,
-        image: input.image ?? "",
-      },
+      data: { id: `promo-${Date.now().toString(36)}`, ...data },
     });
   }
   revalidatePath("/admin/promos");
@@ -43,6 +46,13 @@ export async function deletePromo(id: string): Promise<void> {
   revalidatePath("/");
 }
 
+export async function saveGalleryAlt(id: string, alt: string): Promise<void> {
+  await guard();
+  const prisma = getPrisma();
+  await prisma.galleryImage.update({ where: { id }, data: { alt: alt.slice(0, 200) } });
+  revalidatePath("/admin/settings");
+  revalidatePath("/");
+}
 export async function savePage(slug: string, title: string, body: string): Promise<void> {
   await guard();
   const prisma = getPrisma();

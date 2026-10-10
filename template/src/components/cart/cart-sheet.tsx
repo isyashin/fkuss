@@ -63,6 +63,7 @@ export function CartSheet({
     mode: "asap" | "scheduled";
     price: number;
     freeFrom: number | null;
+    available: boolean;
     windows: { date: string; start: string; end: string }[];
   }[]>([]);
   const [deliveryOptionId, setDeliveryOptionId] = useState("");
@@ -75,13 +76,24 @@ export function CartSheet({
       .then((data) => {
         const opts = data.options ?? [];
         setOptions(opts);
-        if (opts.length > 0) setDeliveryOptionId(opts[0].id);
+        // F03: выбираем первый доступный — недоступные варианты не предлагаем.
+        setDeliveryOptionId(opts.find((o: { available?: boolean }) => o.available)?.id ?? "");
       })
       .catch(() => {});
   }, []);
 
   const itemsTotal = total();
   const selectedOption = options.find((o) => o.id === deliveryOptionId);
+  // F03: если варианты настроены, но все недоступны сегодня — объясняем до отправки.
+  const noDeliveryAvailable = options.length > 0 && !selectedOption;
+  // F03: если все варианты доставки недоступны сегодня — сразу переключаем
+  // гостя на самовывоз, чтобы итог и следующий шаг не вводили в заблуждение.
+  // Корректировка состояния во время рендера (react-compiler: не setState в эффекте).
+  const [prevNoDelivery, setPrevNoDelivery] = useState(false);
+  if (noDeliveryAvailable !== prevNoDelivery) {
+    setPrevNoDelivery(noDeliveryAvailable);
+    if (noDeliveryAvailable && type === "delivery") setType("pickup");
+  }
   const zone = delivery.zones.find((z) => z.name === zoneName);
 
   // Зоны на карте: автоопределение зоны по адресу вместо выбора из списка.
@@ -385,12 +397,18 @@ export function CartSheet({
                       className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
                     >
                       {options.map((o) => (
-                        <option key={o.id} value={o.id}>
+                        <option key={o.id} value={o.id} disabled={!o.available}>
                           {o.name} — {o.mode === "asap" ? "как можно скорее" : "к выбранному времени"} ·{" "}
                           {o.freeFrom !== null ? `бесплатно от ${o.freeFrom} ₽` : `${o.price} ₽`}
+                          {!o.available ? " · сегодня недоступно" : ""}
                         </option>
                       ))}
                     </select>
+                    {noDeliveryAvailable && (
+                      <span className="mt-1 block text-sm text-red-600">
+                        Сегодня доставка недоступна по всем вариантам — выберите самовывоз.
+                      </span>
+                    )}
                   </label>
                 )}
 
@@ -660,6 +678,7 @@ export function CartSheet({
                   !form.phone ||
                   (type === "delivery" && !form.address) ||
                   (type === "delivery" && geoActive && !geoResolved) ||
+                  (type === "delivery" && noDeliveryAvailable) ||
                   (type === "delivery" && selectedOption?.mode === "scheduled" && (!deliveryDate || !slotStart))
                 }
                 className="flex-1 min-h-12 rounded-full bg-accent text-white font-medium text-lg disabled:opacity-50"

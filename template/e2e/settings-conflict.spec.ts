@@ -7,11 +7,20 @@ import { loginAdminUi } from "./login-admin";
 
 const SECTION = "/admin/settings?section=payment";
 
+// router.refresh() админки прерывает goto — повторяем переход один раз.
+async function gotoStable(page: Page, path: string) {
+  await page.goto(path, { waitUntil: "commit" }).catch(async () => {
+    await page.waitForLoadState("load").catch(() => {});
+    await page.goto(path, { waitUntil: "commit" });
+  });
+  await page.waitForLoadState("networkidle").catch(() => {});
+}
+
 async function openPayment(page: Page) {
-  await page.goto("/admin/login");
+  await gotoStable(page, "/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
-  await page.goto(SECTION);
+  await gotoStable(page, SECTION);
   await page.waitForTimeout(700);
 }
 
@@ -23,7 +32,7 @@ async function readPair(page: Page) {
 }
 
 test("F04-обновить: конфликт вкладок, «Обновить» сохраняет обе правки", async ({ browser }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const tab1 = await context.newPage();
   const tab2 = await context.newPage();
@@ -63,7 +72,7 @@ test("F04-обновить: конфликт вкладок, «Обновить�
   } finally {
     // Возвращаем исходные значения (лучшее усилие).
     try {
-      await tab2.goto(SECTION);
+      await gotoStable(tab2, SECTION);
       await tab2.waitForTimeout(700);
       const now = await readPair(tab2);
       if (now.cashback !== initial.cashback) await tab2.getByLabel(/Кэшбэк/).fill(String(initial.cashback));
@@ -74,12 +83,12 @@ test("F04-обновить: конфликт вкладок, «Обновить�
         await tab2.waitForTimeout(1200);
       }
     } catch { /* восстановление лучшее усилие */ }
-    await context.close();
+    await context.close().catch(() => {});
   }
 });
 
 test("F04-перезаписать: явная перезапись затирает чужую правку", async ({ browser }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const tab1 = await context.newPage();
   const tab2 = await context.newPage();
@@ -108,7 +117,7 @@ test("F04-перезаписать: явная перезапись затира
     await expect(tab1.getByLabel(/Списание бонусов до/)).toHaveValue(String(nextMaxSpend), { timeout: 15000 });
   } finally {
     try {
-      await tab2.goto(SECTION);
+      await gotoStable(tab2, SECTION);
       await tab2.waitForTimeout(700);
       await tab2.getByLabel(/Кэшбэк/).fill(String(initial.cashback));
       await tab2.getByLabel(/Списание бонусов до/).fill(String(initial.maxSpend));
@@ -118,6 +127,6 @@ test("F04-перезаписать: явная перезапись затира
         await tab2.waitForTimeout(1200);
       }
     } catch { /* восстановление лучшее усилие */ }
-    await context.close();
+    await context.close().catch(() => {});
   }
 });

@@ -77,7 +77,6 @@ for (const viewport of [{ width: 360, height: 640 }, { width: 390, height: 844 }
       expect(box).not.toBeNull();
       expect(box!.x).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 1);
-      await context.close();
     } finally {
       await context.close().catch(() => {});
     }

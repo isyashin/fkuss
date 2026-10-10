@@ -11,6 +11,17 @@ self.addEventListener("activate", function (event) {
 
 var REFERENCE_RE = /^[A-Za-z0-9_-]{1,100}$/;
 
+/* Страницы админского приложения: /admin и всё под /admin/. Scope регистрации
+   (/admin/) НЕ покрывает URL без слэша — сравниваем по pathname. */
+function inAdminApp(url) {
+  try {
+    var pathname = new URL(url).pathname;
+    return pathname === "/admin" || pathname.indexOf("/admin/") === 0;
+  } catch {
+    return false;
+  }
+}
+
 /* Цель строим из ПРОВЕРЕННОЙ пары kind+reference (обе пришли от нашего сервера).
    Произвольный URL из payload не принимаем. */
 function targetFromPayload(data) {
@@ -23,7 +34,7 @@ self.addEventListener("push", function (event) {
   var data = {};
   try {
     data = event.data ? event.data.json() : {};
-  } catch (error) {
+  } catch {
     data = {};
   }
   var kind = data.kind === "booking" ? "booking" : data.kind === "test" ? "test" : "order";
@@ -44,7 +55,7 @@ self.addEventListener("notificationclick", function (event) {
   var target = "/admin";
   try {
     if (event.notification.data && event.notification.data.target) target = event.notification.data.target;
-  } catch (error) {
+  } catch {
     target = "/admin";
   }
   event.waitUntil(
@@ -52,12 +63,12 @@ self.addEventListener("notificationclick", function (event) {
       var windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       for (var i = 0; i < windows.length; i++) {
         var client = windows[i];
-        if (client.url.indexOf(self.registration.scope) === 0 && "focus" in client) {
+        if (inAdminApp(client.url) && "focus" in client) {
           await client.focus();
           if ("navigate" in client) {
             try {
               await client.navigate(target);
-            } catch (error) {
+            } catch {
               /* навигация не обязана успеть — окно уже сфокусировано */
             }
           }

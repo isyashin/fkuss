@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPrisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
-import { revokePushInstall, touchPushInstall, upsertPushSubscription } from "@/lib/admin-push";
+import { isAllowedPushEndpoint, revokePushInstall, touchPushInstall, upsertPushSubscription } from "@/lib/admin-push";
 import { clientIp, originMatches, readJsonBody, requirePushActor } from "../shared";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,10 @@ const installIdSchema = z.string().regex(/^[A-Za-z0-9_-]{8,64}$/);
 
 const subscribeSchema = z.object({
   installId: installIdSchema,
-  endpoint: z.url().max(500),
+  endpoint: z
+    .url()
+    .max(500)
+    .refine(isAllowedPushEndpoint, "Недопустимый push-endpoint"),
   keys: z.object({
     p256dh: z.string().min(1).max(300),
     auth: z.string().min(1).max(150),
@@ -58,7 +61,8 @@ export async function DELETE(request: Request) {
   const parsed = z.object({ installId: installIdSchema }).safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
 
-  await revokePushInstall(getPrisma(), parsed.data.installId);
+  // Отзываем только подписки самого пользователя — installId нельзя доверять
+  await revokePushInstall(getPrisma(), parsed.data.installId, actor.id);
   return NextResponse.json({ ok: true });
 }
 
@@ -72,6 +76,6 @@ export async function PATCH(request: Request) {
   const parsed = z.object({ installId: installIdSchema }).safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
 
-  await touchPushInstall(getPrisma(), parsed.data.installId);
+  await touchPushInstall(getPrisma(), parsed.data.installId, actor.id);
   return NextResponse.json({ ok: true });
 }

@@ -34,9 +34,8 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     if (pushErrorCode(error) === "gone") {
-      // Подписка протухла на стороне провайдера — предлагаем включить заново
-      const { revokePushInstall } = await import("@/lib/admin-push");
-      await revokePushInstall(prisma, parsed.data.installId);
+      // Подписка протухла на стороне провайдера — отзываем именно её и просим включить заново
+      await prisma.adminPushSubscription.updateMany({ where: { id: found.subscription.id, userId: actor.id, revokedAt: null }, data: { revokedAt: new Date() } });
       return NextResponse.json({ error: "Подписка устарела — включите уведомления заново", stale: true }, { status: 409 });
     }
     return NextResponse.json({ error: "Не удалось отправить. Проверьте сеть и настройки браузера." }, { status: 502 });

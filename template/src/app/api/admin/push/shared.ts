@@ -28,14 +28,30 @@ export function originMatches(request: Request): boolean {
   }
 }
 
-/** JSON-тело с жёстким лимитом размера; null — отклонить запрос. */
+/** JSON-тело с жёстким лимитом размера: читаем поток по кускам и обрываем при
+ *  превышении (запрос без Content-Length не читаем целиком). null — отклонить. */
 export async function readJsonBody(request: Request, maxBytes = 4096): Promise<unknown | null> {
   const declared = Number(request.headers.get("content-length") ?? 0);
   if (declared > maxBytes) return null;
-  const text = await request.text();
-  if (text.length > maxBytes) return null;
+  if (!request.body) return null;
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
   try {
-    return JSON.parse(text) as unknown;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) return null;
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks.map((c) => Buffer.from(c))).toString("utf-8")) as unknown;
   } catch {
     return null;
   }

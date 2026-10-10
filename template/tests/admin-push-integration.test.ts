@@ -370,7 +370,8 @@ describe("подписки устройств", () => {
     await upsertPushSubscription(prisma, user.user.id, { endpoint: ep("e4a"), p256dh: "k", auth: "a", installId: "install-4a" });
     await upsertPushSubscription(prisma, user.user.id, { endpoint: ep("e4b"), p256dh: "k", auth: "a", installId: "install-4b" });
 
-    expect(await revokePushInstall(prisma, "install-4a")).toBe(1);
+    // Отзыв чужим пользователем по тому же installId не действует
+    expect(await revokePushInstall(prisma, "install-4a", user.user.id)).toBe(1);
     expect(await findActivePushInstall(prisma, user.user.id, "install-4a")).toBeNull();
     expect(await findActivePushInstall(prisma, user.user.id, "install-4b")).not.toBeNull();
 
@@ -380,6 +381,73 @@ describe("подписки устройств", () => {
     expect(left).toEqual([]);
 
     expect(await revokeUserPushSubscriptions(prisma, user.user.id)).toBe(0); // уже отозваны
+  });
+
+  it("смена endpoint у того же installId гасит прежнюю строку — телефон не получает дубли", async () => {
+    await revokeAll();
+    const user = await makeUserWithSubscription("d6", ep("dev6"));
+    await upsertPushSubscription(prisma, user.user.id, { endpoint: ep("old-endpoint"), p256dh: "k1", auth: "a1", installId: "install-6" });
+    const oldSub = await prisma.adminPushSubscription.findUniqueOrThrow({ where: { endpoint: ep("old-endpoint") } });
+    // Push-сервис выдал новый endpoint тому же браузеру
+    await upsertPushSubscription(prisma, user.user.id, { endpoint: ep("new-endpoint"), p256dh: "k2", auth: "a2", installId: "install-6" });
+
+    const subs = await prisma.adminPushSubscription.findMany({ where: { installId: "install-6" } });
+    expect(subs).toHaveLength(1);
+    expect(subs[0].endpoint).toBe(ep("new-endpoint"));
+    expect(await prisma.adminPushSubscription.findUnique({ where: { id: oldSub.id } })).toBeNull();
+
+    // Фан-аут события идёт только на единственную подписку этого устройства
+    const order = await prisma.order.create({ data: { type: "pickup", itemsTotal: 100, total: 100, customerName: "Тест", customerPhone: "+7000" } });
+    orderIds.push(order.id);
+    await makeEvent("order", order.id, `Заказ №${order.number}`);
+    const deliveries = await prisma.adminPushDelivery.findMany({
+      where: { event: { reference: order.id } },
+      include: { subscription: { select: { installId: true } } },
+    });
+    const forDevice = deliveries.filter((d) => d.subscription.installId === "install-6");
+    expect(forDevice.map((d) => d.subscriptionId)).toEqual([subs[0].id]);
+    expect(deliveries.some((d) => d.subscriptionId === oldSub.id)).toBe(false);
+  });
+
+  it("process со СТАРЫМ снимком не обходит backoff после быстрой ошибки", async () => {
+    await revokeAll();
+    const t0 = new Date();
+    const { subscription } = await makeUserWithSubscription("d7", ep("dev7"));
+    const order = await prisma.order.create({ data: { type: "pickup", itemsTotal: 100, total: 100, customerName: "Тест", customerPhone: "+7000" } });
+    orderIds.push(order.id);
+    const event = await makeEvent("order", order.id, `Заказ №${order.number}`);
+    await prisma.adminPushDelivery.updateMany({
+      where: { eventId: event.id, subscriptionId: subscription.id },
+      data: { nextAttemptAt: new Date(t0.getTime() - 1000) },
+    });
+
+    // Первая job: быстрая ошибка → backoff на 30 с от t0
+    const first = await processPushDeliveries(prisma, {
+      transport: { async send() { throw new Error("fast fail"); } },
+      eventId: event.id,
+      now: t0,
+    });
+    expect(first.retried).toBe(1);
+
+    // Вторая job со СТАРЫМ снимком (now = t0) НЕ перезахватывает строку раньше срока
+    let secondSends = 0;
+    const second = await processPushDeliveries(prisma, {
+      transport: { async send() { secondSends += 1; } },
+      eventId: event.id,
+      now: t0,
+    });
+    expect(second.claimed).toBe(0);
+    expect(secondSends).toBe(0);
+
+    // После наступления backoff отправляется
+    const t1 = new Date(t0.getTime() + 31_000);
+    const third = await processPushDeliveries(prisma, {
+      transport: { async send() { secondSends += 1; } },
+      eventId: event.id,
+      now: t1,
+    });
+    expect(third.sent).toBe(1);
+    expect(secondSends).toBe(1);
   });
 
   it("давно молчащее устройство job помечает отозванным и не шлёт", async () => {

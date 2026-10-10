@@ -80,6 +80,42 @@ export function getVapidConfig(env: Record<string, string | undefined> = process
   };
 }
 
+const PUSH_ENDPOINT_BLOCKED_HOSTNAMES = new Set(["localhost", "0.0.0.0", "metadata.google.internal"]);
+
+/**
+ * Push-endpoint — это URL службы доставки браузера/ОС (только https). Принимаем
+ * публичные адреса: запрет на http и очевидно внутренние сети защищает сервер от
+ * SSRF-подобных подписок (job шлёт серверные запросы на этот хост).
+ */
+export function isAllowedPushEndpoint(raw: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+  let host = url.hostname.toLowerCase();
+  if (host.startsWith("[") && host.endsWith("]")) host = host.slice(1, -1);
+  if (PUSH_ENDPOINT_BLOCKED_HOSTNAMES.has(host) || host === "::1" || host === "::") return false;
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+    if (a === 0 || a === 10 || a === 127 || a >= 224) return false; // loopback/private/multicast/reserved
+    if (a === 169 && b === 254) return false; // link-local (в т.ч. облачные metadata)
+    if (a === 172 && b >= 16 && b <= 31) return false; // private
+    if (a === 192 && (b === 168 || b === 0)) return false; // private/документация
+    if (a === 100 && b >= 64 && b <= 127) return false; // CGNAT
+  }
+  // IPv6: только литералы с двоеточиями (fc/fd — ULA, fe80 — link-local)
+  if (host.includes(":") && (host.startsWith("fe80:") || host.startsWith("fc") || host.startsWith("fd"))) return false;
+  return true;
+}
+
+/** Таймаут запроса к push-провайдеру: меньше срока повторного захвата
+ *  «зависшего» sending (10 мин), чтобы две job не вели зависший запрос разом. */
+const PUSH_SEND_TIMEOUT_MS = 8000;
+
 /** Транспорт через web-push (VAPID). Модуль тянем лениво — без ключей импорт не нужен. */
 export function createWebPushTransport(): PushTransport {
   let client: typeof import("web-push") | null = null;
@@ -99,6 +135,7 @@ export function createWebPushTransport(): PushTransport {
       await webpush.sendNotification(
         { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
         JSON.stringify(payload),
+        { timeout: PUSH_SEND_TIMEOUT_MS },
       );
     },
   };
@@ -171,12 +208,13 @@ export async function processPushDeliveries(
 
   for (const row of due) {
     // Захват строго по исходному состоянию строки: пока одна job держит sending,
-    // вторая (свежая) эту строку не перезахватит.
+    // вторая эту строку не перезахватит; pending перепроверяем по nextAttemptAt,
+    // иначе процесс со старым снимком обошёл бы backoff после быстрой ошибки.
     const claim = await prisma.adminPushDelivery.updateMany({
       where:
         row.status === "sending"
           ? { eventId: row.eventId, subscriptionId: row.subscriptionId, status: "sending", updatedAt: { lte: staleBefore } }
-          : { eventId: row.eventId, subscriptionId: row.subscriptionId, status: "pending" },
+          : { eventId: row.eventId, subscriptionId: row.subscriptionId, status: "pending", nextAttemptAt: { lte: now } },
       data: { status: "sending" },
     });
     if (claim.count === 0) continue; // строку уже взял другой процесс
@@ -289,15 +327,22 @@ export type PushSubscriptionInput = {
   userAgent?: string;
 };
 
+/** Cookie с ID установки: клиент ставит его при первом получении installId,
+ *  сервер читает при выходе, чтобы отозвать подписку именно этого устройства
+ *  (форму выхода менять не нужно — не касается редизайна оболочки). */
+export const ADMIN_INSTALL_COOKIE = "admin_install_id";
+
 /**
  * Регистрация/обновление подписки устройства.
- * - installId привязан к одному аккаунту: вход другого пользователя на том же
- *   устройстве заменяет прежнюю привязку;
+ * - installId привязан к ОДНОМУ аккаунту и ОДНОМУ endpoint: вход другого
+ *   пользователя на том же устройстве заменяет привязку; смена endpoint у того
+ *   же браузера гасит прежнюю строку (иначе телефон получал бы дубли);
  * - endpoint уникален: переподписка того же браузера переносит его текущему аккаунту.
  */
 export async function upsertPushSubscription(prisma: Pick<PrismaClient, "adminPushSubscription" | "$transaction">, userId: string, input: PushSubscriptionInput): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await tx.adminPushSubscription.deleteMany({ where: { installId: input.installId, userId: { not: userId } } });
+    await tx.adminPushSubscription.deleteMany({ where: { installId: input.installId, userId, endpoint: { not: input.endpoint } } });
     const existing = await tx.adminPushSubscription.findUnique({ where: { endpoint: input.endpoint } });
     if (existing) {
       await tx.adminPushSubscription.update({
@@ -327,9 +372,18 @@ export async function upsertPushSubscription(prisma: Pick<PrismaClient, "adminPu
   });
 }
 
-/** Отзыв подписки текущего устройства (выход из приложения на нём). Остальные устройства пользователя сохраняются. */
-export async function revokePushInstall(prisma: Pick<PrismaClient, "adminPushSubscription">, installId: string): Promise<number> {
-  return (await prisma.adminPushSubscription.updateMany({ where: { installId, revokedAt: null }, data: { revokedAt: new Date() } })).count;
+/**
+ * Отзыв подписки текущего устройства (выход из приложения на нём). Остальные
+ * устройства пользователя сохраняются. userId, когда передан, ограничивает
+ * отзыв подписками самого пользователя — installId из cookie не доверяем.
+ */
+export async function revokePushInstall(prisma: Pick<PrismaClient, "adminPushSubscription">, installId: string, userId?: string): Promise<number> {
+  return (
+    await prisma.adminPushSubscription.updateMany({
+      where: { installId, revokedAt: null, ...(userId ? { userId } : {}) },
+      data: { revokedAt: new Date() },
+    })
+  ).count;
 }
 
 /** Отзыв всех подписок пользователя: блокировка, смена роли или пароля, удаление учётки. */
@@ -338,8 +392,8 @@ export async function revokeUserPushSubscriptions(prisma: Pick<PrismaClient, "ad
 }
 
 /** Продление жизни подписки при авторизованном открытии приложения на устройстве. */
-export async function touchPushInstall(prisma: Pick<PrismaClient, "adminPushSubscription">, installId: string): Promise<void> {
-  await prisma.adminPushSubscription.updateMany({ where: { installId, revokedAt: null }, data: { lastSeenAt: new Date() } });
+export async function touchPushInstall(prisma: Pick<PrismaClient, "adminPushSubscription">, installId: string, userId: string): Promise<void> {
+  await prisma.adminPushSubscription.updateMany({ where: { installId, userId, revokedAt: null }, data: { lastSeenAt: new Date() } });
 }
 
 /** Активная и непротухшая подписка устройства (для конфигурации и тестового push). */

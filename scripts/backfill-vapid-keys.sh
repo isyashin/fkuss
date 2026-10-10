@@ -22,9 +22,21 @@ fill_one() {
     echo "SKIP $slug: .env не найден" >&2
     return 0
   fi
-  if grep -q '^VAPID_PUBLIC_KEY=' "$env_file"; then
-    echo "SKIP $slug: ключи уже есть"
+  local have_public have_private
+  have_public=$(grep -c '^VAPID_PUBLIC_KEY=.\+' "$env_file" || true)
+  have_private=$(grep -c '^VAPID_PRIVATE_KEY=.\+' "$env_file" || true)
+  if [ "$have_public" -eq 1 ] && [ "$have_private" -eq 1 ]; then
+    echo "SKIP $slug: оба ключа уже есть"
     return 0
+  fi
+  if [ "$have_public" -ne "$have_private" ]; then
+    # Неполная пара (оборванная запись) — заменяем целиком: половина пары бесполезна
+    echo "FIX  $slug: найдена неполная пара ключей, заменяю"
+    local tmp
+    tmp=$(mktemp)
+    grep -Ev '^VAPID_(PUBLIC|PRIVATE)_KEY=' "$env_file" > "$tmp" || true
+    cat "$tmp" > "$env_file"
+    rm -f "$tmp"
   fi
   local pair public private
   pair=$(gen_vapid_pair)

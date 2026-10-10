@@ -11,6 +11,8 @@ import styles from "./admin-push.module.css";
 
 const INSTALL_KEY = "admin-install-id";
 const THEME_KEY = "restaurant-admin-theme";
+// Держать в sync с ADMIN_INSTALL_COOKIE в src/lib/admin-push.ts (сервер читает при выходе)
+const ADMIN_INSTALL_COOKIE = "admin_install_id";
 
 type PushConfig = { enabled: boolean; publicKey: string | null; subscribed: boolean; stale: boolean };
 
@@ -38,11 +40,37 @@ export function getAdminInstallId(): string {
     id = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     localStorage.setItem(INSTALL_KEY, id);
   }
+  // Сервер читает куку при выходе, чтобы отозвать подписку этого устройства
+  document.cookie = `${ADMIN_INSTALL_COOKIE}=${id}; path=/; max-age=31536000; samesite=strict`;
   return id;
 }
 
 export function isPushSupported(): boolean {
   return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+
+/**
+ * Регистрация админского SW и ожидание её активного worker-а.
+ * НЕ используем navigator.serviceWorker.ready: URL /admin (без слэша) не входит
+ * в scope /admin/, и ready там может ждать бесконечно. register() по той же
+ * паре script+scope возвращает существующую регистрацию с любой страницы.
+ */
+async function getActivePushRegistration(): Promise<ServiceWorkerRegistration> {
+  const registration = await navigator.serviceWorker.register("/admin/sw.js", { scope: "/admin/", updateViaCache: "none" });
+  if (registration.active) return registration;
+  await new Promise<void>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error("Service worker не активировался. Обновите страницу и попробуйте снова.")), 10_000);
+    const check = () => {
+      if (registration.active) {
+        window.clearTimeout(timer);
+        resolve();
+        return;
+      }
+      window.setTimeout(check, 100);
+    };
+    check();
+  });
+  return registration;
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -92,27 +120,28 @@ export function AdminPushPanel() {
   }, []);
 
   useEffect(() => {
+    installId.current = getAdminInstallId();
+    // setState — асинхронно, чтобы не дергать рендер синхронно в эффекте
     queueMicrotask(() => {
-      installId.current = getAdminInstallId();
       setSupport(isPushSupported() ? "ready" : "unsupported");
       setSecure(window.isSecureContext);
       setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
       setStandalone(window.matchMedia("(display-mode: standalone)").matches);
       if ("Notification" in window) setPermission(Notification.permission);
-      const handler = (event: Event) => {
-        event.preventDefault();
-        setInstallPrompt(event as unknown as { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> });
-      };
-      window.addEventListener("beforeinstallprompt", handler);
-      // Авторизованное открытие приложения продлевает срок действия подписки устройства
-      void fetch("/api/admin/push/subscribe", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ installId: installId.current }),
-      }).catch(() => {});
-      void refresh();
-      return () => window.removeEventListener("beforeinstallprompt", handler);
     });
+    const handler = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as unknown as { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> });
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    // Авторизованное открытие приложения продлевает срок действия подписки устройства
+    void fetch("/api/admin/push/subscribe", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ installId: installId.current }),
+    }).catch(() => {});
+    void refresh();
+    return () => window.removeEventListener("beforeinstallprompt", handler);
   }, [refresh]);
 
   const enable = async () => {
@@ -120,7 +149,7 @@ export function AdminPushPanel() {
     setBusy(true);
     setMessage(null);
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getActivePushRegistration();
       let subscription = await registration.pushManager.getSubscription();
       if (!subscription) {
         subscription = await registration.pushManager.subscribe({
@@ -168,15 +197,25 @@ export function AdminPushPanel() {
     setBusy(true);
     setMessage(null);
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getActivePushRegistration();
       const subscription = await registration.pushManager.getSubscription();
       await subscription?.unsubscribe();
-      await fetch("/api/admin/push/subscribe", {
+      const response = await fetch("/api/admin/push/subscribe", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ installId: installId.current }),
       });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Сервер не подтвердил отключение. Попробуйте ещё раз.");
+      }
       setMessage({ kind: "info", text: "Уведомления на этом устройстве выключены. Остальные устройства продолжают получать." });
+      await refresh();
+    } catch (error) {
+      setMessage({
+        kind: "error",
+        text: error instanceof Error && error.message ? error.message : "Не удалось выключить уведомления. Проверьте сеть и попробуйте ещё раз.",
+      });
       await refresh();
     } finally {
       setBusy(false);
@@ -237,7 +276,7 @@ export function AdminPushPanel() {
 
       {open && (
         <div className={styles.backdrop} role="presentation" onClick={() => setOpen(false)}>
-          <div className={styles.sheetWrap} role="dialog" aria-modal="true" aria-label="Установка и уведомления" onClick={(e) => e.stopPropagation()}>
+          <div className={`${styles.sheet} ${styles.sheetWrap}`} role="dialog" aria-modal="true" aria-label="Установка и уведомления" onClick={(e) => e.stopPropagation()}>
             <button type="button" className={styles.close} aria-label="Закрыть" onClick={() => setOpen(false)}>×</button>
             <h2>Это устройство</h2>
 

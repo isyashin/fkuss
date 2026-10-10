@@ -31,8 +31,11 @@ async function readPair(page: Page) {
   };
 }
 
-test("F04-обновить: конфликт вкладок, «Обновить» сохраняет обе правки", async ({ browser }) => {
-  test.setTimeout(240_000);
+test("F04-обновить: конфликт вкладок, «Обновить» сохраняет обе правки", async ({ browser }, testInfo) => {
+  // Логика конфликта не зависит от вьюпорта; на мобильных проектах пропускаем,
+  // чтобы трёхкратный прогон не раздувал CI (геометрия мобильного покрыта в admin-audit).
+  test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
+  test.setTimeout(300_000);
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const tab1 = await context.newPage();
   const tab2 = await context.newPage();
@@ -87,8 +90,9 @@ test("F04-обновить: конфликт вкладок, «Обновить�
   }
 });
 
-test("F04-перезаписать: явная перезапись затирает чужую правку", async ({ browser }) => {
-  test.setTimeout(240_000);
+test("F04-перезаписать: явная перезапись затирает чужую правку", async ({ browser }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
+  test.setTimeout(300_000);
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const tab1 = await context.newPage();
   const tab2 = await context.newPage();

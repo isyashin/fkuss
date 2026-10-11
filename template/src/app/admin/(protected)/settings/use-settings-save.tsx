@@ -19,6 +19,10 @@ let latestRev: number | null = null;
 // данным, и пользователь заново применяет только свою правку (P1-2).
 let refreshEpoch = 0;
 let awaitingRefresh = false;
+// «Обновить» со свежими props на странице: сброс редакторов уже выполнен
+// немедленным бампом — провайдер лишь примет более новую ревизию без повторного
+// сброса (иначе поздний бамп стёр бы правку, введённую после «Обновить»).
+let acceptRevWithoutBump = false;
 const epochListeners = new Set<() => void>();
 
 function bumpEpoch() {
@@ -65,7 +69,18 @@ export function SettingsRevProvider({ rev, children }: { rev: number; children: 
       setSettingsRev(rev);
       return;
     }
-    if (awaitingRefresh && rev !== savedRev) {
+    const acceptSilently = acceptRevWithoutBump;
+    acceptRevWithoutBump = false;
+    if (rev === savedRev) return;
+    if (acceptSilently) {
+      // Сброс после «Обновить» уже выполнен немедленным бампом — принимаем
+      // ревизию без повторного сброса редакторов.
+      savedRev = rev;
+      return;
+    }
+    if (awaitingRefresh) {
+      // Props отставали от сервера: refresh доставил свежий rev — единственный
+      // сброс редакторов к свежим данным выполняем здесь.
       savedRev = rev;
       awaitingRefresh = false;
       bumpEpoch();
@@ -117,16 +132,24 @@ export function useSettingsSave<TInput = ContentSettings>(
     <SettingsConflictDialog
       onRefresh={() => {
         setConflict(false);
-        // «Обновить» принимает самую свежую известную версию и сразу сбрасывает
-        // редакторы к текущим props. Не опускаем savedRev ниже собственной
-        // ревизии: latestRev из props может отставать. Фоновый опрос мог уже
-        // привезти свежий rev до клика — тогда provider-effect не сработает
-        // повторно, поэтому бампим эпоху немедленно; если router.refresh()
-        // привезёт ещё свежее, SettingsRevProvider добампит (P1-2).
+        // «Обновить» принимает самую свежую известную версию и сбрасывает
+        // редакторы. Не опускаем savedRev ниже собственной ревизии: latestRev
+        // из props может отставать. Два случая:
+        // — опрос уже привёз свежий rev: props на странице актуальны — бампим
+        //   эпоху немедленно, а провайдер лишь примет rev, если refresh
+        //   привезёт ещё свежее (без повторного сброса — он стёр бы правку,
+        //   введённую после «Обновить»);
+        // — props отстают: сброс делает провайдер, когда router.refresh()
+        //   доставит свежий rev (P1-2, гонка двойного сброса 11.10).
+        const knownFresh = (latestRev ?? 0) > (savedRev ?? 0);
         savedRev = Math.max(savedRev ?? 0, latestRev ?? 0);
-        awaitingRefresh = true;
+        if (knownFresh) {
+          acceptRevWithoutBump = true;
+          bumpEpoch();
+        } else {
+          awaitingRefresh = true;
+        }
         router.refresh();
-        bumpEpoch();
       }}
       onOverwrite={() => {
         const next = lastNextRef.current;

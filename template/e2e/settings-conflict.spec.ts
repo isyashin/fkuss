@@ -296,12 +296,14 @@ test("F04-разделы: правка «Связи с гостем» не ти�
   let whatsappInitially = true;
   let cashbackInitial = 5;
   try {
-    // Вкладка 1: связь с гостем — выключаем WhatsApp и сохраняем.
+    // Вкладка 2 (оплата) открыта ПЕРВОЙ — её ревизия зафиксирована до правки связи.
+    await openPayment(paymentTab);
+    const paymentInitial = await readPair(paymentTab);
+    cashbackInitial = paymentInitial.cashback;
+    const nextCashback = cashbackInitial === 45 ? 46 : 45;
+
+    // Вкладка 1: связь с гостем — выключаем WhatsApp (auto-save бампит _rev).
     await gotoStable(contactTab, "/admin/login");
-    if (await contactTab.getByLabel("Логин").isVisible().catch(() => false)) {
-      await loginAdminUi(contactTab);
-      await expect(contactTab).toHaveURL(/\/admin$/, { timeout: 20_000 });
-    }
     await gotoStable(contactTab, CONTACT);
     const waRow = contactTab.locator("label", { hasText: "WhatsApp" }).first();
     await waRow.waitFor({ timeout: 20000 });
@@ -314,11 +316,7 @@ test("F04-разделы: правка «Связи с гостем» не ти�
     await expect(contactTab.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
     mark(`WhatsApp -> ${targetWa} сохранено`);
 
-    // Вкладка 2: оплата — открыта ДО правки связи (устаревший объект).
-    await openPayment(paymentTab);
-    const paymentInitial = await readPair(paymentTab);
-    cashbackInitial = paymentInitial.cashback;
-    const nextCashback = cashbackInitial === 45 ? 46 : 45;
+    // Устаревшая вкладка оплаты сохраняет полный объект — конфликт обязан появиться.
     await paymentTab.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await paymentTab.getByRole("button", { name: "Сохранить" }).click();
     mark("оплата попыталась сохранить устаревший объект");
@@ -328,7 +326,9 @@ test("F04-разделы: правка «Связи с гостем» не ти�
 
     // «Обновить» → свежие props (с выключенным WhatsApp) → повторная правка.
     await paymentTab.getByRole("button", { name: "Обновить", exact: true }).click();
-    await paymentTab.getByLabel(/Кэшбэк/).waitFor();
+    // Сброс редактора — асинхронный эффект эпохи: сначала ждём свежие
+    // значения полей, иначе введённая правка перезапишется сбросом.
+    await expect(paymentTab.getByLabel(/Кэшбэк/)).toHaveValue(String(cashbackInitial), { timeout: 15000 });
     await paymentTab.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await paymentTab.getByRole("button", { name: "Сохранить" }).click();
     await paymentTab.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });

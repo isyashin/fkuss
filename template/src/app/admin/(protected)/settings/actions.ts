@@ -50,13 +50,11 @@ export async function saveGuestContactChannels(input: { whatsapp: boolean; teleg
   const guestContact = guestContactSchema.parse(input);
   const prisma = getPrisma();
   const fallback = await getSiteSettings();
-  await prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('guest-contact-settings'))`;
-    const row = await tx.settings.findUnique({ where: { key: "settings" } });
-    const current = (row?.value ?? fallback) as Record<string, unknown>;
-    const value = JSON.parse(JSON.stringify({ ...current, guestContact }));
-    await tx.settings.upsert({ where: { key: "settings" }, create: { key: "settings", value }, update: { value } });
-  });
+  // Единая точка записи строки settings: общая блокировка и обязательный
+  // бамп _rev — иначе правка не будет замечена версионированными вкладками
+  // и будет тихо затёрта их полным объектом (P1, аудит 11.10).
+  const { writeSettingsVersioned } = await import("@/lib/admin-settings-version");
+  await writeSettingsVersioned(prisma, (current) => ({ ...fallback, ...current, guestContact }), null);
   revalidatePath("/admin/settings");
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");

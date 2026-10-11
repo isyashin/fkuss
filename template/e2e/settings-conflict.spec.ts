@@ -279,6 +279,91 @@ test("F04-разделы: сохранение в оплате не затира
   }
 });
 
+test("F04-разделы: правка «Связи с гостем» не тихо теряется сохранением оплаты из устаревшей вкладки", async ({ browser }, testInfo) => {
+  // P1, аудит 11.10: запись каналов связи не бампила _rev, поэтому оплата из
+  // ранее открытой вкладки сохраняла полный устаревший объект без конфликта
+  // и возвращала WhatsApp. Теперь любая запись строки settings бампит _rev —
+  // устаревшая вкладка получает диалог конфликта, а «Обновить» сохраняет обе
+  // правки.
+  test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
+  test.setTimeout(300_000);
+  const t0 = Date.now();
+  const mark = (step: string) => console.log(`[conflict +${((Date.now() - t0) / 1000).toFixed(0)}s] ${step}`);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const contactTab = await context.newPage();
+  const paymentTab = await context.newPage();
+  const CONTACT = "/admin/settings?section=guest-contact";
+  let whatsappInitially = true;
+  let cashbackInitial = 5;
+  try {
+    // Вкладка 1: связь с гостем — выключаем WhatsApp и сохраняем.
+    await gotoStable(contactTab, "/admin/login");
+    if (await contactTab.getByLabel("Логин").isVisible().catch(() => false)) {
+      await loginAdminUi(contactTab);
+      await expect(contactTab).toHaveURL(/\/admin$/, { timeout: 20_000 });
+    }
+    await gotoStable(contactTab, CONTACT);
+    const waRow = contactTab.locator("label", { hasText: "WhatsApp" }).first();
+    await waRow.waitFor({ timeout: 20000 });
+    const waCheckbox = waRow.locator("input[type=checkbox]");
+    whatsappInitially = await waCheckbox.isChecked();
+    const targetWa = !whatsappInitially;
+    await waCheckbox.setChecked(targetWa);
+    // Тогл сохраняет сразу — ждём статус авто-сохранения.
+    await expect(contactTab.getByRole("status")).toContainText("Сохранено", { timeout: 15000 });
+    await expect(contactTab.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
+    mark(`WhatsApp -> ${targetWa} сохранено`);
+
+    // Вкладка 2: оплата — открыта ДО правки связи (устаревший объект).
+    await openPayment(paymentTab);
+    const paymentInitial = await readPair(paymentTab);
+    cashbackInitial = paymentInitial.cashback;
+    const nextCashback = cashbackInitial === 45 ? 46 : 45;
+    await paymentTab.getByLabel(/Кэшбэк/).fill(String(nextCashback));
+    await paymentTab.getByRole("button", { name: "Сохранить" }).click();
+    mark("оплата попыталась сохранить устаревший объект");
+    // Запись связи бампнула _rev — конфликт обязан появиться.
+    await expect(paymentTab.getByText("Настройки изменены в другой вкладке")).toBeVisible({ timeout: 15000 });
+    mark("конфликт показан");
+
+    // «Обновить» → свежие props (с выключенным WhatsApp) → повторная правка.
+    await paymentTab.getByRole("button", { name: "Обновить", exact: true }).click();
+    await paymentTab.getByLabel(/Кэшбэк/).waitFor();
+    await paymentTab.getByLabel(/Кэшбэк/).fill(String(nextCashback));
+    await paymentTab.getByRole("button", { name: "Сохранить" }).click();
+    await paymentTab.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    mark("оплата сохранена после «Обновить»");
+
+    // Обе правки на сервере: WhatsApp остался выключенным, кэшбэк обновлён.
+    await gotoStable(contactTab, CONTACT);
+    await waRow.waitFor({ timeout: 20000 });
+    await expect(waCheckbox).toBeChecked({ checked: targetWa, timeout: 15000 });
+    const pair = await waitForServerPair(paymentTab, { cashback: nextCashback, maxSpend: paymentInitial.maxSpend });
+    expect(pair.cashback).toBe(nextCashback);
+    mark("ОБЕ ПРАВКИ (СВЯЗЬ + ОПЛАТА) ПОДТВЕРЖДЕНЫ");
+  } finally {
+    try {
+      await gotoStable(contactTab, CONTACT);
+      const waRow = contactTab.locator("label", { hasText: "WhatsApp" }).first();
+      await waRow.waitFor({ timeout: 15000 }).catch(() => {});
+      const waCheckbox = waRow.locator("input[type=checkbox]");
+      if (await waCheckbox.isChecked() !== whatsappInitially) {
+        await waCheckbox.setChecked(whatsappInitially);
+        await contactTab.waitForTimeout(1500);
+      }
+      await gotoStable(paymentTab, SECTION);
+      await paymentTab.getByLabel(/Кэшбэк/).waitFor({ timeout: 15000 }).catch(() => {});
+      const now = await readPair(paymentTab).catch(() => null);
+      if (now && now.cashback !== cashbackInitial) {
+        await paymentTab.getByLabel(/Кэшбэк/).fill(String(cashbackInitial));
+        const savePayment = paymentTab.getByRole("button", { name: "Сохранить" });
+        if (await savePayment.isVisible().catch(() => false)) { await savePayment.click(); await paymentTab.waitForTimeout(1500); }
+      }
+    } catch { /* восстановление лучшее усилие */ }
+    await context.close().catch(() => {});
+  }
+});
+
 test("F04-перезаписать: явная перезапись затирает чужую правку", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
   test.setTimeout(300_000);

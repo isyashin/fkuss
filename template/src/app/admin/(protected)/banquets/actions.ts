@@ -22,13 +22,11 @@ export interface BanquetsSettings {
 export async function saveBanquetsSettings(input: BanquetsSettings): Promise<void> {
   await guard();
   const prisma = getPrisma();
-  const row = await prisma.settings.findUnique({ where: { key: "settings" } });
-  const current = (row?.value ?? {}) as Record<string, unknown>;
-  await prisma.settings.upsert({
-    where: { key: "settings" },
-    create: { key: "settings", value: JSON.parse(JSON.stringify({ ...current, banquets: input })) },
-    update: { value: JSON.parse(JSON.stringify({ ...current, banquets: input })) },
-  });
+  // Единая точка записи строки settings: общая блокировка и бамп _rev
+  // (P1, аудит 11.10) — правка банкетов не должна тихо теряться чужим
+  // полным объектом из устаревшей вкладки.
+  const { writeSettingsVersioned } = await import("@/lib/admin-settings-version");
+  await writeSettingsVersioned(prisma, (current) => ({ ...current, banquets: input }), null);
   revalidatePath("/admin/banquets");
   revalidatePath("/banquets");
   revalidatePath("/");

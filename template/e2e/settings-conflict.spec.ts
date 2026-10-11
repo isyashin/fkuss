@@ -23,10 +23,13 @@ async function gotoStable(page: Page, path: string) {
 
 async function openPayment(page: Page) {
   await gotoStable(page, "/admin/login");
-  await loginAdminUi(page);
-  await expect(page).toHaveURL(/\/admin$/);
+  // Уже авторизованы (общая сессия контекста) — логин-форма не покажется.
+  if (await page.getByLabel("Логин").isVisible().catch(() => false)) {
+    await loginAdminUi(page);
+    await expect(page).toHaveURL(/\/admin$/, { timeout: 20_000 });
+  }
   await gotoStable(page, SECTION);
-  await page.waitForTimeout(700);
+  await page.getByLabel(/Кэшбэк/).waitFor({ timeout: 20_000 });
 }
 
 async function readPair(page: Page) {
@@ -41,13 +44,17 @@ test("F04-обновить: конфликт вкладок, «Обновить�
   // чтобы трёхкратный прогон не раздувал CI (геометрия мобильного покрыта в admin-audit).
   test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
   test.setTimeout(300_000);
+  const t0 = Date.now();
+  const mark = (step: string) => console.log(`[conflict +${((Date.now() - t0) / 1000).toFixed(0)}s] ${step}`);
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const tab1 = await context.newPage();
   const tab2 = await context.newPage();
   let initial = { cashback: 5, maxSpend: 20 };
   try {
     await openPayment(tab1);
+    mark("tab1 открыта");
     await openPayment(tab2);
+    mark("tab2 открыта");
     initial = await readPair(tab1);
     // Уникальные значения для прогона, чтобы не совпасть с текущими.
     const nextCashback = initial.cashback === 33 ? 34 : 33;
@@ -56,27 +63,35 @@ test("F04-обновить: конфликт вкладок, «Обновить�
     // Вкладка 1: правит кэшбэк и сохраняет.
     await tab1.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await tab1.getByRole("button", { name: "Сохранить" }).click();
+    mark("tab1 сохранила кэшбэк");
     await expect(tab1.getByText("Сохранено").first()).toBeVisible({ timeout: 15000 });
 
     // Вкладка 2 (устаревшая): правит предел списания → конфликт.
     await tab2.getByLabel(/Списание бонусов до/).fill(String(nextMaxSpend));
     await tab2.getByRole("button", { name: "Сохранить" }).click();
+    mark("tab2 попыталась сохранить");
     await expect(tab2.getByText("Настройки изменены в другой вкладке")).toBeVisible({ timeout: 15000 });
+    mark("конфликт показан");
 
     // «Обновить»: поля перезагружаются свежими значениями.
     await tab2.getByRole("button", { name: "Обновить", exact: true }).click();
+    mark("нажали «Обновить»");
     await expect(tab2.getByLabel(/Кэшбэк/)).toHaveValue(String(nextCashback), { timeout: 15000 });
     await expect(tab2.getByLabel(/Списание бонусов до/)).toHaveValue(String(initial.maxSpend), { timeout: 15000 });
+    mark("поля обновлены свежими значениями");
 
     // Повторно применяем только свою правку и сохраняем.
     await tab2.getByLabel(/Списание бонусов до/).fill(String(nextMaxSpend));
     await tab2.getByRole("button", { name: "Сохранить" }).click();
+    mark("tab2 повторно сохранила");
     await expect(tab2.getByText("Сохранено").first()).toBeVisible({ timeout: 15000 });
 
     // Обе правки на сервере: первая вкладка видит обновлённую пару после reload.
     await tab1.reload();
+    mark("tab1 перезагружена");
     await expect(tab1.getByLabel(/Кэшбэк/)).toHaveValue(String(nextCashback), { timeout: 15000 });
     await expect(tab1.getByLabel(/Списание бонусов до/)).toHaveValue(String(nextMaxSpend), { timeout: 15000 });
+    mark("ОБЕ ПРАВКИ ПОДТВЕРЖДЕНЫ");
   } finally {
     // Возвращаем исходные значения (лучшее усилие).
     try {
@@ -98,6 +113,8 @@ test("F04-обновить: конфликт вкладок, «Обновить�
 test("F04-перезаписать: явная перезапись затирает чужую правку", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
   test.setTimeout(300_000);
+  const t0 = Date.now();
+  const mark = (step: string) => console.log(`[conflict +${((Date.now() - t0) / 1000).toFixed(0)}s] ${step}`);
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const tab1 = await context.newPage();
   const tab2 = await context.newPage();
@@ -110,20 +127,25 @@ test("F04-перезаписать: явная перезапись затира
 
     await tab1.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await tab1.getByRole("button", { name: "Сохранить" }).click();
+    mark("tab1 сохранила кэшбэк");
     await expect(tab1.getByText("Сохранено").first()).toBeVisible({ timeout: 15000 });
 
     // Вкладка 2 правит предел списания → конфликт → «Перезаписать».
     const nextMaxSpend = initial.maxSpend === 23 ? 24 : 23;
     await tab2.getByLabel(/Списание бонусов до/).fill(String(nextMaxSpend));
     await tab2.getByRole("button", { name: "Сохранить" }).click();
+    mark("tab2 попыталась сохранить");
     await expect(tab2.getByText("Настройки изменены в другой вкладке")).toBeVisible({ timeout: 15000 });
     await tab2.getByRole("button", { name: "Перезаписать" }).click();
+    mark("нажали «Перезаписать»");
     await expect(tab2.getByText("Сохранено").first()).toBeVisible({ timeout: 15000 });
 
     // Перезапись затирает чужую правку: кэшбэк возвращается к значению вкладки 2.
     await tab1.reload();
+    mark("tab1 перезагружена");
     await expect(tab1.getByLabel(/Кэшбэк/)).toHaveValue(String(initial.cashback), { timeout: 15000 });
     await expect(tab1.getByLabel(/Списание бонусов до/)).toHaveValue(String(nextMaxSpend), { timeout: 15000 });
+    mark("ПЕРЕЗАПИСЬ ПОДТВЕРЖДЕНА");
   } finally {
     try {
       await gotoStable(tab2, SECTION);

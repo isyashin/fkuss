@@ -31,9 +31,11 @@ function subscribeEpoch(listener: () => void) {
   return () => { epochListeners.delete(listener); };
 }
 
-/** Эпоха обновления настроек: меняется после «Обновить» в диалоге конфликта. */
+/** Эпоха обновления настроек: меняется после «Обновить» в диалоге конфликта.
+    getServerSnapshot обязателен: без него SSR страницы падает (500) и
+    router.refresh() перестаёт доставлять свежие props (P1-2). */
 export function useSettingsEpoch(): number {
-  return useSyncExternalStore(subscribeEpoch, () => refreshEpoch);
+  return useSyncExternalStore(subscribeEpoch, () => refreshEpoch, () => 0);
 }
 
 /** Сбрасывает локальное состояние редактора к свежим props после «Обновить». */

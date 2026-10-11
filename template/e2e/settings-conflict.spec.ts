@@ -39,6 +39,21 @@ async function readPair(page: Page) {
   };
 }
 
+// Дожидается серверных значений через reload-зонд: server actions применяются
+// асинхронно, поэтому одного reload сразу после клика может не хватить.
+async function waitForServerPair(page: Page, expected: { cashback: number; maxSpend: number }, timeoutMs = 20000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = { cashback: NaN, maxSpend: NaN };
+  while (Date.now() < deadline) {
+    await page.reload({ waitUntil: "load" }).catch(() => {});
+    await page.getByLabel(/Кэшбэк/).waitFor({ timeout: 10000 }).catch(() => {});
+    last = await readPair(page).catch(() => last);
+    if (last.cashback === expected.cashback && last.maxSpend === expected.maxSpend) return last;
+    await page.waitForTimeout(800);
+  }
+  throw new Error(`Сервер не вернул ожидаемую пару: ждали ${JSON.stringify(expected)}, последнее ${JSON.stringify(last)}`);
+}
+
 test("F04-обновить: конфликт вкладок, «Обновить» сохраняет обе правки", async ({ browser }, testInfo) => {
   // Логика конфликта не зависит от вьюпорта; на мобильных проектах пропускаем,
   // чтобы трёхкратный прогон не раздувал CI (геометрия мобильного покрыта в admin-audit).
@@ -60,11 +75,12 @@ test("F04-обновить: конфликт вкладок, «Обновить�
     const nextCashback = initial.cashback === 33 ? 34 : 33;
     const nextMaxSpend = initial.maxSpend === 21 ? 22 : 21;
 
-    // Вкладка 1: правит кэшбэк и сохраняет.
+    // Вкладка 1: правит кэшбэк и сохраняет. Статус «Сохранено» живёт в savebar
+    // и исчезает вместе с ней после успеха — синхронизируемся по исчезновению кнопки.
     await tab1.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await tab1.getByRole("button", { name: "Сохранить" }).click();
     mark("tab1 сохранила кэшбэк");
-    await expect(tab1.getByText("Сохранено").first()).toBeVisible({ timeout: 15000 });
+    await tab1.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
 
     // Вкладка 2 (устаревшая): правит предел списания → конфликт.
     await tab2.getByLabel(/Списание бонусов до/).fill(String(nextMaxSpend));
@@ -84,13 +100,13 @@ test("F04-обновить: конфликт вкладок, «Обновить�
     await tab2.getByLabel(/Списание бонусов до/).fill(String(nextMaxSpend));
     await tab2.getByRole("button", { name: "Сохранить" }).click();
     mark("tab2 повторно сохранила");
-    await expect(tab2.getByText("Сохранено").first()).toBeVisible({ timeout: 15000 });
+    await tab2.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
 
     // Обе правки на сервере: первая вкладка видит обновлённую пару после reload.
-    await tab1.reload();
+    const pair = await waitForServerPair(tab1, { cashback: nextCashback, maxSpend: nextMaxSpend });
     mark("tab1 перезагружена");
-    await expect(tab1.getByLabel(/Кэшбэк/)).toHaveValue(String(nextCashback), { timeout: 15000 });
-    await expect(tab1.getByLabel(/Списание бонусов до/)).toHaveValue(String(nextMaxSpend), { timeout: 15000 });
+    expect(pair.cashback).toBe(nextCashback);
+    expect(pair.maxSpend).toBe(nextMaxSpend);
     mark("ОБЕ ПРАВКИ ПОДТВЕРЖДЕНЫ");
   } finally {
     // Возвращаем исходные значения (лучшее усилие).
@@ -128,7 +144,7 @@ test("F04-перезаписать: явная перезапись затира
     await tab1.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await tab1.getByRole("button", { name: "Сохранить" }).click();
     mark("tab1 сохранила кэшбэк");
-    await expect(tab1.getByText("Сохранено").first()).toBeVisible({ timeout: 15000 });
+    await tab1.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
 
     // Вкладка 2 правит предел списания → конфликт → «Перезаписать».
     const nextMaxSpend = initial.maxSpend === 23 ? 24 : 23;
@@ -138,13 +154,12 @@ test("F04-перезаписать: явная перезапись затира
     await expect(tab2.getByText("Настройки изменены в другой вкладке")).toBeVisible({ timeout: 15000 });
     await tab2.getByRole("button", { name: "Перезаписать" }).click();
     mark("нажали «Перезаписать»");
-    await expect(tab2.getByText("Сохранено").first()).toBeVisible({ timeout: 15000 });
-
-    // Перезапись затирает чужую правку: кэшбэк возвращается к значению вкладки 2.
-    await tab1.reload();
+    // Перезапись идёт через хук асинхронно: ждём серверных значений reload-зондом.
+    // Перезапись возвращает кэшбэк к устаревшему значению вкладки 2 и пишет её предел.
+    const pair = await waitForServerPair(tab1, { cashback: initial.cashback, maxSpend: nextMaxSpend });
     mark("tab1 перезагружена");
-    await expect(tab1.getByLabel(/Кэшбэк/)).toHaveValue(String(initial.cashback), { timeout: 15000 });
-    await expect(tab1.getByLabel(/Списание бонусов до/)).toHaveValue(String(nextMaxSpend), { timeout: 15000 });
+    expect(pair.cashback).toBe(initial.cashback);
+    expect(pair.maxSpend).toBe(nextMaxSpend);
     mark("ПЕРЕЗАПИСЬ ПОДТВЕРЖДЕНА");
   } finally {
     try {

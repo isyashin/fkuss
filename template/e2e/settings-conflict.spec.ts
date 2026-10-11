@@ -7,13 +7,18 @@ import { loginAdminUi } from "./login-admin";
 
 const SECTION = "/admin/settings?section=payment";
 
-// router.refresh() админки прерывает goto — повторяем переход один раз.
+// router.refresh() админки прерывает goto — повторяем переход.
+// НЕ ждём networkidle: админка постоянно опрашивает /api/admin/events.
 async function gotoStable(page: Page, path: string) {
-  await page.goto(path, { waitUntil: "commit" }).catch(async () => {
-    await page.waitForLoadState("load").catch(() => {});
-    await page.goto(path, { waitUntil: "commit" });
-  });
-  await page.waitForLoadState("networkidle").catch(() => {});
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await page.goto(path, { timeout: 30_000, waitUntil: "load" });
+      return;
+    } catch (cause) {
+      if (attempt === 2) throw cause;
+      await page.waitForTimeout(500);
+    }
+  }
 }
 
 async function openPayment(page: Page) {

@@ -56,8 +56,8 @@ export function getSettingsRev(): number | null {
 }
 
 /** Серверная страница настроек кладёт актуальную версию сюда (обновляется при refresh).
-    Если вкладка нажала «Обновить» и свежие данные приехали — принимаем версию
-    и оповещаем редакторы о сбросе черновиков. */
+    Если вкладка нажала «Обновить» и refresh привёз ещё более свежую версию —
+    принимаем её и добампливаем эпоху (редакторы сбросятся повторно). */
 export function SettingsRevProvider({ rev, children }: { rev: number; children: ReactNode }) {
   useEffect(() => {
     latestRev = rev;
@@ -111,10 +111,15 @@ export function useSettingsSave<TInput = ContentSettings>(
     <SettingsConflictDialog
       onRefresh={() => {
         setConflict(false);
-        // Ждём свежие props: провайдер примет новую версию и бампнет эпоху,
-        // редакторы сбросят черновики к свежим данным (P1-2).
+        // «Обновить» принимает самую свежую известную версию и сразу сбрасывает
+        // редакторы к текущим props. Фоновый опрос мог уже привезти свежий rev
+        // до клика — тогда provider-effect не сработает повторно, поэтому бампим
+        // эпоху немедленно; если router.refresh() привезёт ещё свежее,
+        // SettingsRevProvider добампит (P1-2).
+        savedRev = latestRev;
         awaitingRefresh = true;
         router.refresh();
+        bumpEpoch();
       }}
       onOverwrite={() => {
         const next = lastNextRef.current;

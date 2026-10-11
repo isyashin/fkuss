@@ -31,7 +31,7 @@ test("админ платформы: дашборд, карточка сайта
   await page.getByLabel("Сумма корректировки").fill("500");
   await page.getByLabel("Комментарий").fill("E2E корректировка");
   await page.getByRole("button", { name: "Провести" }).click();
-  await expect(page.getByText("Ручная операция: E2E корректировка")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("Ручная операция: E2E корректировка").first()).toBeVisible({ timeout: 15000 });
   await expect(page.getByText("+500.00 ₽")).toBeVisible();
 
   // Запрос экспорта из карточки. Сценарий не идемпотентен между проектами

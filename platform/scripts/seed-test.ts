@@ -17,12 +17,31 @@ async function main() {
     create: {
       slug: "buxara",
       name: "Чайхана Бухара",
-      port: 3001,
+      port: 8101,
       domains: [],
       siteKey: "buxara-test-key",
       tariffId: tariff.id,
     },
     update: { tariffId: tariff.id },
+  });
+
+  await prisma.site.upsert({
+    where: { slug: "marco" },
+    create: {
+      slug: "marco",
+      name: "Пицца Марко",
+      port: 8102,
+      domains: [],
+      siteKey: "marco-test-key",
+      tariffId: tariff.id,
+    },
+    update: { tariffId: tariff.id },
+  });
+
+  await prisma.ownerAccount.upsert({
+    where: { email: "owner@marco.test" },
+    create: { email: "owner@marco.test", siteId: "marco" },
+    update: { siteId: "marco" },
   });
 
   for (const email of [

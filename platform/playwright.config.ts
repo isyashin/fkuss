@@ -6,8 +6,13 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1, // общий баланс сайта — прогоняем последовательно
   use: { baseURL: "http://localhost:3100" },
-  webServer: {
-    command: "npx next start -p 3100",
+  // PW_EXTERNAL_SERVER=1: сервер уже поднят снаружи (локальный Windows-стенд) —
+  // Playwright не управляет его жизнью, иначе на Windows зависает teardown
+  // (обёртка умирает, next-server выживает и держит порт — раннер висит бесконечно).
+  webServer: process.env.PW_EXTERNAL_SERVER
+    ? undefined
+    : {
+        command: "node node_modules/next/dist/bin/next start -p 3100",
     url: "http://localhost:3100",
     reuseExistingServer: false,
     timeout: 120_000,

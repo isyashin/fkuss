@@ -77,17 +77,21 @@ export function SettingsRevProvider({ rev, children }: { rev: number; children: 
 /** Сохранение секции с обнаружением конфликта вкладок (F04).
     Возвращает элемент диалога — его нужно отрендерить в дереве редактора.
     saveFn: по умолчанию saveSettings; можно передать другой версионируемый
-    action с любым входом (например, savePricing для правил цен). */
+    action с любым входом (например, savePricing для правил цен).
+    Action возвращает новую серверную ревизию — хук принимает её, чтобы
+    следующее сохранение этой же вкладки не конфликтовало ложно (P1, аудит 11.10). */
 export function useSettingsSave<TInput = ContentSettings>(
-  saveFn?: (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<"ok" | "conflict">,
+  saveFn?: (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<number | "conflict">,
 ) {
   const router = useRouter();
   const [conflict, setConflict] = useState(false);
   const lastNextRef = useRef<TInput | null>(null);
-  const actionRef = useRef(saveFn ?? (saveSettings as unknown as (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<"ok" | "conflict">));
+  const actionRef = useRef(saveFn ?? (saveSettings as unknown as (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<number | "conflict">));
 
   /** Сохраняет настройки. При конфликте показывает диалог, повторный вызов
-      с force=true — явная перезапись. */
+      с force=true — явная перезапись. После успеха принимает новую ревизию
+      и обновляет props (router.refresh), чтобы переключение разделов не
+      подхватывало устаревший закэшированный фрагмент с полным объектом. */
   async function save(next: TInput, force = false): Promise<"ok" | "conflict" | "error"> {
     lastNextRef.current = next;
     try {
@@ -96,7 +100,9 @@ export function useSettingsSave<TInput = ContentSettings>(
         setConflict(true);
         return "conflict";
       }
+      savedRev = result;
       setConflict(false);
+      router.refresh();
       return "ok";
     } catch (error) {
       if (isSettingsConflict(error)) {
@@ -112,11 +118,12 @@ export function useSettingsSave<TInput = ContentSettings>(
       onRefresh={() => {
         setConflict(false);
         // «Обновить» принимает самую свежую известную версию и сразу сбрасывает
-        // редакторы к текущим props. Фоновый опрос мог уже привезти свежий rev
-        // до клика — тогда provider-effect не сработает повторно, поэтому бампим
-        // эпоху немедленно; если router.refresh() привезёт ещё свежее,
-        // SettingsRevProvider добампит (P1-2).
-        savedRev = latestRev;
+        // редакторы к текущим props. Не опускаем savedRev ниже собственной
+        // ревизии: latestRev из props может отставать. Фоновый опрос мог уже
+        // привезти свежий rev до клика — тогда provider-effect не сработает
+        // повторно, поэтому бампим эпоху немедленно; если router.refresh()
+        // привезёт ещё свежее, SettingsRevProvider добампит (P1-2).
+        savedRev = Math.max(savedRev ?? 0, latestRev ?? 0);
         awaitingRefresh = true;
         router.refresh();
         bumpEpoch();

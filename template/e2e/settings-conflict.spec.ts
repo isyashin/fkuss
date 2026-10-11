@@ -126,6 +126,159 @@ test("F04-обновить: конфликт вкладок, «Обновить�
   }
 });
 
+test("F04-последовательные: две правки и два сохранения в одной вкладке без reload не конфликтуют", async ({ browser }, testInfo) => {
+  // P1, аудит 11.10: после успешной записи клиент обязан принять новую ревизию,
+  // иначе второе сохранение в той же вкладке ложно показывает диалог конфликта.
+  test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
+  test.setTimeout(240_000);
+  const t0 = Date.now();
+  const mark = (step: string) => console.log(`[conflict +${((Date.now() - t0) / 1000).toFixed(0)}s] ${step}`);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  let initial = { cashback: 5, maxSpend: 20 };
+  try {
+    await openPayment(page);
+    initial = await readPair(page);
+    const first = initial.cashback === 31 ? 32 : 31;
+    const second = initial.cashback === 33 ? 34 : 33;
+
+    await page.getByLabel(/Кэшбэк/).fill(String(first));
+    await page.getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    mark("первое сохранение принято");
+
+    await page.getByLabel(/Кэшбэк/).fill(String(second));
+    await page.getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    mark("второе сохранение принято");
+    await expect(page.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
+    mark("ложного конфликта нет");
+
+    const pair = await waitForServerPair(page, { cashback: second, maxSpend: initial.maxSpend });
+    expect(pair.cashback).toBe(second);
+    mark("ДВА ПОСЛЕДОВАТЕЛЬНЫХ СОХРАНЕНИЯ ПОДТВЕРЖДЕНЫ");
+  } finally {
+    try {
+      await gotoStable(page, SECTION);
+      await page.getByLabel(/Кэшбэк/).waitFor({ timeout: 15000 }).catch(() => {});
+      const now = await readPair(page);
+      if (now.cashback !== initial.cashback) await page.getByLabel(/Кэшбэк/).fill(String(initial.cashback));
+      const saveButton = page.getByRole("button", { name: "Сохранить" });
+      if (await saveButton.isVisible().catch(() => false)) {
+        await saveButton.click();
+        await page.waitForTimeout(1200);
+      }
+    } catch { /* восстановление лучшее усилие */ }
+    await context.close().catch(() => {});
+  }
+});
+
+test("F04-последовательные: двойное сохранение в разделе бронирования", async ({ browser }, testInfo) => {
+  // Тот же регресс в другом версионированном редакторе (saveSettings через хук).
+  test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
+  test.setTimeout(240_000);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  let initialGuests = 0;
+  try {
+    await gotoStable(page, "/admin/login");
+    if (await page.getByLabel("Логин").isVisible().catch(() => false)) {
+      await loginAdminUi(page);
+      await expect(page).toHaveURL(/\/admin$/, { timeout: 20_000 });
+    }
+    await gotoStable(page, "/admin/settings?section=booking");
+    const guests = page.getByLabel(/Гостей на слот, макс/);
+    await guests.waitFor({ timeout: 20000 });
+    initialGuests = Number(await guests.inputValue());
+    const first = initialGuests === 7 ? 8 : 7;
+    const second = initialGuests === 9 ? 10 : 9;
+
+    await guests.fill(String(first));
+    await page.getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await guests.fill(String(second));
+    await page.getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await expect(page.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
+
+    // Серверное значение после reload — второе сохранение.
+    const deadline = Date.now() + 20000;
+    let last = NaN;
+    while (Date.now() < deadline) {
+      await page.reload({ waitUntil: "load" }).catch(() => {});
+      await guests.waitFor({ timeout: 10000 }).catch(() => {});
+      last = Number(await guests.inputValue().catch(() => String(last)));
+      if (last === second) break;
+      await page.waitForTimeout(800);
+    }
+    expect(last).toBe(second);
+  } finally {
+    try {
+      await gotoStable(page, "/admin/settings?section=booking");
+      const guests = page.getByLabel(/Гостей на слот, макс/);
+      await guests.waitFor({ timeout: 15000 }).catch(() => {});
+      await guests.fill(String(initialGuests));
+      const saveButton = page.getByRole("button", { name: "Сохранить" });
+      if (await saveButton.isVisible().catch(() => false)) {
+        await saveButton.click();
+        await page.waitForTimeout(1200);
+      }
+    } catch { /* восстановление лучшее усилие */ }
+    await context.close().catch(() => {});
+  }
+});
+
+test("F04-разделы: сохранение в оплате не затирается после переключения разделов", async ({ browser }, testInfo) => {
+  // Аудит 11.10: переключение payment → booking → payment не должно подхватывать
+  // устаревший закэшированный фрагмент с полным объектом settings и затирать
+  // сохранённое поле при повторной записи.
+  test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
+  test.setTimeout(240_000);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  let initial = { cashback: 5, maxSpend: 20 };
+  try {
+    await openPayment(page);
+    initial = await readPair(page);
+    const first = initial.cashback === 41 ? 42 : 41;
+    const second = initial.cashback === 43 ? 44 : 43;
+
+    await page.getByLabel(/Кэшбэк/).fill(String(first));
+    await page.getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+
+    // Уходим в другой раздел и возвращаемся: редактор пересоздаётся из props.
+    await gotoStable(page, "/admin/settings?section=booking");
+    await page.getByRole("heading", { name: "Бронирование" }).waitFor({ timeout: 20000 });
+    await gotoStable(page, SECTION);
+    await page.getByLabel(/Кэшбэк/).waitFor({ timeout: 20000 });
+    await expect(page.getByLabel(/Кэшбэк/)).toHaveValue(String(first), { timeout: 15000 });
+
+    // Повторная правка после возвращения: полный объект записи не должен
+    // вернуть старое значение кэшбэка.
+    await page.getByLabel(/Кэшбэк/).fill(String(second));
+    await page.getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await expect(page.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
+
+    const pair = await waitForServerPair(page, { cashback: second, maxSpend: initial.maxSpend });
+    expect(pair.cashback).toBe(second);
+  } finally {
+    try {
+      await gotoStable(page, SECTION);
+      await page.getByLabel(/Кэшбэк/).waitFor({ timeout: 15000 }).catch(() => {});
+      const now = await readPair(page);
+      if (now.cashback !== initial.cashback) await page.getByLabel(/Кэшбэк/).fill(String(initial.cashback));
+      const saveButton = page.getByRole("button", { name: "Сохранить" });
+      if (await saveButton.isVisible().catch(() => false)) {
+        await saveButton.click();
+        await page.waitForTimeout(1200);
+      }
+    } catch { /* восстановление лучшее усилие */ }
+    await context.close().catch(() => {});
+  }
+});
+
 test("F04-перезаписать: явная перезапись затирает чужую правку", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
   test.setTimeout(300_000);

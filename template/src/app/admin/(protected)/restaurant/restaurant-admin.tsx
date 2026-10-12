@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
-import { saveRestaurant, afterLogoUpload } from "./actions";
+import { useRouter } from "next/navigation";
+import { saveRestaurant, refreshRestaurantSection, afterLogoUpload } from "./actions";
 import { useDirtyGuard } from "../admin-dirty";
 import type { WeeklySchedule, DaySchedule, DayException } from "@/lib/hours";
+import type { RestaurantEditInput, RestaurantSection } from "@/lib/restaurant-settings-write";
+import { SettingsConflictDialog } from "../settings/use-settings-save";
 import { contentAssetUrl } from "@/lib/assets";
 import styles from "./restaurant-admin.module.css";
 
@@ -19,21 +22,20 @@ const DAYS: { key: string; label: string }[] = [
 
 const DEFAULT_DAY: DaySchedule = { open: true, from: "12:00", to: "23:00" };
 
-interface FormState {
-  name: string;
-  phone: string;
-  email: string;
-  address: string;
-  socials: { telegram: string; max: string; whatsapp: string; vk: string };
-  schedule: WeeklySchedule;
-}
+type FormState = RestaurantEditInput;
 
-export function RestaurantAdmin({ initial, logoUrl = "", focus = "contacts" }: { initial: FormState; logoUrl?: string; focus?: "contacts" | "hours" }) {
+export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus = "contacts" }: {
+  initial: FormState; initialRevision: number; logoUrl?: string; focus?: RestaurantSection;
+}) {
+  const router = useRouter();
   const [form, setForm] = useState<FormState>(initial);
   const [currentLogo, setCurrentLogo] = useState(logoUrl);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [baseline, setBaseline] = useState(initial);
+  const [savedRevision, setSavedRevision] = useState(initialRevision);
+  const [conflict, setConflict] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   // F06: уход с несохранёнными правками спрашивает подтверждение (навигация
   // по секциям перехватывается через реестр грязных форм).
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
@@ -60,6 +62,43 @@ export function RestaurantAdmin({ initial, logoUrl = "", focus = "contacts" }: {
   function setException(index: number, patch: Partial<DayException>) {
     const exceptions = form.schedule.exceptions.map((e, i) => (i === index ? { ...e, ...patch } : e));
     setForm({ ...form, schedule: { ...form.schedule, exceptions } });
+  }
+
+  function persist(force = false) {
+    const next = form;
+    startTransition(async () => {
+      setSaveError(false);
+      try {
+        const result = await saveRestaurant(next, focus, savedRevision, force);
+        if (result === "conflict") {
+          setConflict(true);
+          return;
+        }
+        setSavedRevision(result);
+        setBaseline(next);
+        setConflict(false);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+        router.refresh();
+      } catch {
+        setSaveError(true);
+      }
+    });
+  }
+
+  async function acceptFresh() {
+    try {
+      const fresh = await refreshRestaurantSection(focus);
+      setForm(fresh.input);
+      setBaseline(fresh.input);
+      setSavedRevision(fresh.rev);
+      setConflict(false);
+      setSaveError(false);
+      setSaved(false);
+      router.refresh();
+    } catch {
+      setSaveError(true);
+    }
   }
 
   return (
@@ -223,20 +262,19 @@ export function RestaurantAdmin({ initial, logoUrl = "", focus = "contacts" }: {
       <div className={styles.actions}>
         <button
           disabled={pending}
-          onClick={() =>
-            startTransition(async () => {
-              await saveRestaurant(form);
-              setBaseline(form);
-              setSaved(true);
-              setTimeout(() => setSaved(false), 3000);
-            })
-          }
+          onClick={() => persist()}
           className={styles.saveButton}
         >
           {pending ? "Сохраняю…" : "Сохранить"}
         </button>
         {saved && <span className="text-green-600">Сохранено ✓</span>}
+        {saveError && <span role="alert" className="text-red-600">Не удалось сохранить. Попробуйте ещё раз.</span>}
       </div>
+      {conflict && <SettingsConflictDialog
+        onRefresh={() => { void acceptFresh(); }}
+        onOverwrite={() => persist(true)}
+        onClose={() => setConflict(false)}
+      />}
     </div>
   );
 }

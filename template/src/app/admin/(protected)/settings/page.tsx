@@ -27,6 +27,7 @@ import { TeamAdmin } from "../team/team-admin";
 import { BillingView } from "../billing/billing-view";
 import { fetchMyBilling } from "@/lib/platform";
 import { readSettingsRev } from "@/lib/admin-settings-version";
+import { readRestaurantSectionRev } from "@/lib/restaurant-settings-write";
 import { SettingsRevProvider } from "./use-settings-save";
 import { SettingsNavGuard } from "./nav-guard";
 import { SectionPicker } from "./section-picker";
@@ -53,10 +54,11 @@ async function SectionRestaurant({ focus }: { focus?: "contacts" | "hours" }) {
   return <div className={styles.legacyCard}>
     <h2>{hours ? "Часы работы" : "Данные и контакты"}</h2>
     <p className={styles.editorHint}>{hours ? "Расписание ресторана по дням недели и особые дни." : "Как гости узнают ресторан: название, способы связи, адрес и логотип."}</p>
-    <RestaurantAdmin initial={{
+    <RestaurantAdmin key={hours ? "hours" : "contacts"} initial={{
       name: restaurant.name, phone: restaurant.phone, email: restaurant.email,
       address: restaurant.address, socials: restaurant.socials, schedule: resolveSchedule(restaurant),
-    }} logoUrl={restaurant.logo ? contentAssetUrl(restaurant.logo) : ""} focus={hours ? "hours" : "contacts"} />
+    }} logoUrl={restaurant.logo ? contentAssetUrl(restaurant.logo) : ""} focus={hours ? "hours" : "contacts"}
+      initialRevision={readRestaurantSectionRev(restaurant, hours ? "hours" : "contacts")} />
   </div>;
 }
 

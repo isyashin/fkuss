@@ -53,6 +53,42 @@ test("S01/S02: две вкладки не теряют название при �
   }
 });
 
+test("S01/S02: одна вкладка сохраняет обе секции подряд без ложного конфликта", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Последовательность секций проверяется в одном проекте");
+  await page.goto("/admin/login");
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.goto("/admin/settings?section=restaurant");
+  const originalName = await page.getByLabel("Название", { exact: true }).inputValue();
+  const changedName = `${originalName} QA`;
+  let originalTime = "";
+  let timeLabel = "";
+  try {
+    await page.getByLabel("Название", { exact: true }).fill(changedName);
+    await save(page);
+    await page.getByRole("link", { name: "Часы работы" }).click();
+    await expect(page).toHaveURL(/section=hours/);
+    const start = page.locator('input[type="time"]:not(:disabled)').first();
+    timeLabel = (await start.getAttribute("aria-label")) ?? "";
+    if (!timeLabel) throw new Error("Нет доступного рабочего дня");
+    originalTime = await start.inputValue();
+    await start.fill(originalTime === "11:00" ? "11:15" : "11:00");
+    await save(page);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("link", { name: "Данные и контакты" }).click();
+    await expect(page.getByLabel("Название", { exact: true })).toHaveValue(changedName);
+  } finally {
+    await page.goto("/admin/settings?section=hours");
+    if (timeLabel && originalTime && await page.getByLabel(timeLabel).inputValue() !== originalTime) {
+      await page.getByLabel(timeLabel).fill(originalTime);
+      await save(page);
+    }
+    await page.goto("/admin/settings?section=restaurant");
+    await page.getByLabel("Название", { exact: true }).fill(originalName);
+    await save(page);
+  }
+});
+
 test("S01: устаревшая вкладка видит конфликт и принимает свежие данные", async ({ page, context }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Конфликт вкладок проверяется в одном проекте");
   await page.goto("/admin/login");

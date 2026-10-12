@@ -54,7 +54,7 @@ async function SectionRestaurant({ focus }: { focus?: "contacts" | "hours" }) {
   return <div className={styles.legacyCard}>
     <h2>{hours ? "Часы работы" : "Данные и контакты"}</h2>
     <p className={styles.editorHint}>{hours ? "Расписание ресторана по дням недели и особые дни." : "Как гости узнают ресторан: название, способы связи, адрес и логотип."}</p>
-    <RestaurantAdmin initial={{
+    <RestaurantAdmin key={hours ? "hours" : "contacts"} initial={{
       name: restaurant.name, phone: restaurant.phone, email: restaurant.email,
       address: restaurant.address, socials: restaurant.socials, schedule: resolveSchedule(restaurant),
     }} logoUrl={restaurant.logo ? contentAssetUrl(restaurant.logo) : ""} focus={hours ? "hours" : "contacts"}

@@ -90,7 +90,7 @@ export async function writeRestaurantSection(
 ): Promise<number | "conflict"> {
   if (section !== "contacts" && section !== "hours") throw new Error("Invalid restaurant section");
   if (!Number.isInteger(expectedRev) || expectedRev < 0) throw new Error("Invalid restaurant revision");
-  return updateRestaurantRow(db, (current) => {
+  return updateRestaurantRow<number | "conflict">(db, (current) => {
     const rev = readRestaurantSectionRev(current, section);
     if (!force && rev !== expectedRev) return { value: null, result: "conflict" as const };
     const nextRev = rev + 1;

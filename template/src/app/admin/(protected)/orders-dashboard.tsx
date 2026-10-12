@@ -216,7 +216,13 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
     </section>
     <section className={styles.detailPanel} aria-label="Детали заказа">{selected ? (
       openingOrderId === selected.id && initialSelectedId !== openingOrderId
-        ? <div className={styles.detailInner}><p className={styles.muted} role="status">Открываем заказ…</p></div>
+        ? <div className={styles.detailInner}>
+          <div className={styles.orderDetailBar}>
+            <button type="button" className={styles.backButton} aria-label="Назад к заказам" onClick={closeDetail}>←</button>
+            <strong>Заказ № {selected.number}</strong>
+          </div>
+          <p className={styles.muted} role="status">Открываем заказ…</p>
+        </div>
         : <OrderCard key={`${selected.id}:${selected.updatedAt.toISOString()}`} order={selected} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} guestContact={guestContact} timeZone={timeZone} onBack={closeDetail}/>
     ) : <div className={styles.detailInner}><p className={styles.empty}>Выберите заказ.</p></div>}</section>
   </div>;

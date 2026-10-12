@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { GuestCabinetSettings } from "@/lib/guest-cabinet";
+import { acceptSettingsRev } from "./use-settings-save";
 import styles from "./settings-admin.module.css";
 import { AdminIcon } from "../admin-icon";
 
@@ -22,7 +23,9 @@ export function GuestCabinetSettings({ initial }: { initial: GuestCabinetSetting
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Не удалось сохранить");
-      setCabinet(data as GuestCabinetSettings);
+      setCabinet(data.cabinet as GuestCabinetSettings);
+      // Своя запись бампнула _rev — принимаем ревизию (аудит 12.10).
+      if (typeof data.rev === "number") acceptSettingsRev(data.rev);
       setMessage("Сохранено");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Ошибка сохранения");

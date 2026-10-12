@@ -6,7 +6,7 @@ test("ПМ-01: админ настраивает визитку и скачив�
   await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
-  await page.goto("/admin/print-materials");
+  await page.goto("/admin/settings?section=print");
   await expect(page.getByRole("heading", { name: "Печатные материалы" })).toBeVisible();
   await expect(page.getByRole("tab", { name: /Визитка/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tab", { name: /Магнит/ })).toBeVisible();

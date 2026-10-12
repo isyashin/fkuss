@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Рабочая админка — макет</title>
+  <style>
+    :root {
+      font-family: "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
+      color: #202723;
+      background: #fff;
+      font-synthesis: none;
+      --ink: #202723;
+      --muted: #68716a;
+      --line: #e2e4df;
+      --nav: #202924;
+      --nav-text: #bbc6bd;
+      --rail: #f5f6f2;
+      --soft: #f7f8f5;
+      --accent: #ad573b;
+      --accent-dark: #8f4029;
+      --green: #30694a;
+      --amber: #9a6423;
+      --red: #a3473b;
+    }
+    * { box-sizing: border-box; }
+    body { min-width: 320px; margin: 0; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: default; opacity: .5; }
+    [hidden] { display: none !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .shell { display: grid; grid-template-columns: 174px minmax(0,1fr); min-height: 100vh; }
+    .primary { position: sticky; top: 0; height: 100vh; padding: 28px 13px 20px; color: #fff; background: var(--nav); }
+    .brand { display: flex; align-items: baseline; gap: 1px; padding: 1px 13px 40px; white-space: nowrap; }
+    .brand strong { font: italic 27px Georgia, serif; letter-spacing: -.07em; }
+    .brand i { color: #e29372; font: normal 29px Georgia, serif; }
+    .global-nav { display: grid; gap: 4px; }
+    .global-link { position: relative; width: 100%; min-height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border: 0; border-radius: 5px; background: transparent; color: var(--nav-text); text-align: left; text-decoration: none; font-size: 13px; font-weight: 520; }
+    .global-link:hover { color: #fff; background: #ffffff12; }
+    .global-link svg { flex: none; width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .global-link[aria-current="page"] { color: #fff; background: #ffffff14; }
+    .global-link[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: #dc8e6b; }
+    .global-link em { min-width: 20px; height: 20px; display: grid; place-items: center; margin-left: auto; padding: 0 4px; border-radius: 10px; background: #a95038; color: #fff; font-size: 10px; font-style: normal; font-weight: 700; }
+    .primary-rule { height: 1px; margin: 15px 12px; background: #ffffff1f; }
+    .workspace { min-width: 0; }
+    .mobile-top, .mobile-bottom { display: none; }
+    .screen { min-height: 100vh; }
+    .queue-layout { display: grid; grid-template-columns: minmax(340px,405px) minmax(0,1fr); min-height: 100vh; }
+    .queue-pane { position: sticky; top: 0; height: 100vh; overflow-y: auto; border-right: 1px solid var(--line); background: var(--rail); scrollbar-width: thin; }
+    .queue-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 38px 27px 25px; }
+    .queue-head h1 { margin: 0; font-size: 29px; line-height: 1.15; font-weight: 620; letter-spacing: -.05em; }
+    .tabs { display: flex; gap: 4px; padding: 0 16px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+    .tabs button { position: relative; flex: none; min-height: 48px; padding: 0 11px; border: 0; background: transparent; color: #68766b; font-size: 12.5px; font-weight: 560; }
+    .tabs button:hover { color: var(--ink); }
+    .tabs button[aria-selected="true"] { color: var(--ink); font-weight: 700; }
+    .tabs button[aria-selected="true"]::after { content: ""; position: absolute; right: 9px; bottom: -1px; left: 9px; height: 2px; background: var(--accent); }
+    .tabs span { margin-left: 3px; color: #88928a; font-size: 11px; font-weight: 500; }
+    .queue-tools { display: grid; grid-template-columns: minmax(0,1fr) 132px; gap: 8px; padding: 19px 27px 16px; }
+    .queue-tools.single { grid-template-columns: minmax(0,1fr); }
+    .search, select, .field input, .field textarea { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid #cdd3cc; border-radius: 6px; background: #fff; color: var(--ink); font-size: 13px; }
+    .search::placeholder, .field input::placeholder, .field textarea::placeholder { color: #9aa39a; }
+    .queue-tools select { padding-right: 27px; }
+    .queue-list { padding-bottom: 24px; }
+    .orders-mobile-list, .order-detail-bar, .order-mobile-summary, .order-mobile-action, .order-mobile-cancel { display: none; }
+    .queue-row { width: 100%; min-height: 103px; display: grid; gap: 6px; padding: 18px 27px 18px 24px; border: 0; border-bottom: 1px solid var(--line); border-left: 3px solid transparent; background: transparent; color: var(--ink); text-align: left; }
+    .queue-row:hover { background: #eef1ec; }
+    .queue-row[aria-current="true"] { border-left-color: var(--accent); background: #fff; }
+    .queue-row:disabled { opacity: 1; cursor: default; }
+    .queue-row:disabled:hover { background: transparent; }
+    .queue-row[aria-current="true"]:disabled:hover { background: #fff; }
+    .row-top, .row-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+    .row-top strong { font-size: 13.5px; font-weight: 680; }
+    .row-top time, .row-bottom { color: var(--muted); font-size: 12px; }
+    .row-top time { margin-left: 6px; font-weight: 450; }
+    .row-person { overflow: hidden; font-size: 14px; font-weight: 590; text-overflow: ellipsis; white-space: nowrap; }
+    .row-bottom span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row-bottom b { flex: none; color: #3a463d; font-weight: 650; white-space: nowrap; }
+    .day-divider { padding: 17px 27px 8px; color: #77847a; font-size: 11px; font-weight: 700; letter-spacing: .045em; text-transform: uppercase; }
+    #screen-bookings .queue-row { min-height: 88px; }
+    .status { display: inline-flex; align-items: center; gap: 6px; min-height: 25px; padding: 3px 8px; border-radius: 4px; background: #ebefea; color: #47614d; font-size: 11px; line-height: 1.15; font-weight: 660; white-space: nowrap; }
+    .status::before { content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor; }
+    .status[data-tone="new"] { background: #f9e9df; color: #a64d32; }
+    .status[data-tone="working"] { background: #f4eddc; color: #916322; }
+    .status[data-tone="ready"], .status[data-tone="done"] { background: #e7eee7; color: #376749; }
+    .status[data-tone="off"] { background: #f2ebe9; color: #9a5146; }
+    .status[data-tone="source"] { background: #eef0eb; color: #657064; }
+    .detail-pane { min-width: 0; background: #fff; }
+    .detail-inner { max-width: 880px; margin: 0 auto; padding: 55px clamp(32px,5vw,72px) 90px; }
+    .back-button { display: none; }
+    .detail-head { padding-bottom: 25px; border-bottom: 1px solid var(--line); }
+    .detail-title { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 15px; }
+    .detail-title h2 { margin: 0; font-size: clamp(26px,2.7vw,34px); line-height: 1.15; font-weight: 620; letter-spacing: -.05em; }
+    .detail-subtitle { margin: 9px 0 0; color: var(--muted); font-size: 12.5px; }
+    .detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 25px; }
+    .primary-button, .secondary-button, .text-button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 17px; border: 1px solid #cbd1ca; border-radius: 6px; background: #fff; color: #344039; text-decoration: none; font-size: 12.5px; font-weight: 650; }
+    .primary-button { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .primary-button:hover { border-color: var(--accent-dark); background: var(--accent-dark); }
+    .secondary-button:hover { border-color: #89978c; background: #f7f9f6; }
+    .text-button { padding-inline: 9px; border-color: transparent; background: transparent; color: #617065; }
+    .text-button:hover { background: var(--soft); color: var(--ink); }
+    .text-button.danger { color: var(--red); }
+    .detail-section { padding: 29px 0; border-bottom: 1px solid var(--line); }
+    .detail-section:last-child { border-bottom: 0; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 18px; }
+    .section-title h3 { margin: 0; font-size: 15px; font-weight: 680; letter-spacing: -.015em; }
+    .contact-name { margin: 0 0 11px; font-size: 19px; font-weight: 610; letter-spacing: -.025em; }
+    .contact-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .contact-actions a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 13px; border: 1px solid var(--line); border-radius: 6px; color: #39493d; text-decoration: none; font-size: 12.5px; font-weight: 600; }
+    .contact-actions a:hover { background: var(--soft); }
+    .facts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 19px 24px; }
+    .fact { min-width: 0; display: grid; align-content: start; gap: 5px; }
+    .fact span { color: #7b887c; font-size: 11.5px; }
+    .fact strong { overflow-wrap: anywhere; font-size: 13.5px; line-height: 1.45; font-weight: 590; }
+    .note { margin: 17px 0 0; padding: 13px 15px; border-left: 2px solid #d5aa76; background: #fbf8f2; color: #594e3e; font-size: 12.5px; line-height: 1.5; }
+    .item-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 18px; padding: 13px 0; border-bottom: 1px solid #edf0eb; font-size: 13px; }
+    .item-row:last-child { border-bottom: 0; }
+    .item-row strong { font-weight: 590; }
+    .item-row small { grid-column: 1; color: var(--muted); font-size: 11.5px; }
+    .item-row b { grid-column: 2; grid-row: 1/3; align-self: center; font-weight: 650; white-space: nowrap; }
+    .sum-lines { display: grid; gap: 10px; margin-top: 22px; padding-top: 17px; border-top: 1px solid var(--line); }
+    .sum-line { display: flex; justify-content: space-between; gap: 15px; color: var(--muted); font-size: 12.5px; }
+    .sum-line b { color: var(--ink); font-weight: 600; }
+    .sum-line.total { color: var(--ink); font-size: 17px; font-weight: 650; }
+    .sum-line.total b { font-weight: 700; }
+    .empty { padding: 28px 27px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .edit-line { display: grid; grid-template-columns: minmax(0,1fr) 124px auto; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+    .edit-line strong { font-size: 13px; font-weight: 610; }
+    .edit-line small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .quantity { display: grid; grid-template-columns: 44px 36px 44px; align-items: center; }
+    .quantity button { min-width: 44px; min-height: 44px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-size: 17px; }
+    .quantity span { text-align: center; font-size: 13px; }
+    .field { min-width: 0; display: grid; gap: 7px; color: #3b473f; font-size: 12.5px; font-weight: 610; }
+    .field textarea { min-height: 87px; resize: vertical; line-height: 1.5; }
+    .field small, .form-note { color: var(--muted); font-size: 11.5px; line-height: 1.5; font-weight: 400; }
+    .form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .full { grid-column: 1/-1; }
+    .add-line { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; margin-top: 18px; }
+    .add-line select { min-height: 44px; }
+    .preview-total { display: flex; justify-content: space-between; margin: 22px 0 6px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 15px; font-weight: 650; }
+    .menu-layout { display: grid; grid-template-columns: minmax(340px,405px) minmax(0,1fr); min-height: 100vh; }
+    .menu-list-pane .queue-head { align-items: center; }
+    .menu-list-pane .queue-head .primary-button { flex: none; padding-inline: 13px; }
+    .menu-tools { display: grid; gap: 10px; padding: 0 27px 17px; }
+    .menu-filter-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+    .menu-filter-row select { min-width: 0; }
+    .category-add { width: max-content; padding-left: 0; border: 0; background: transparent; color: #58695b; }
+    .menu-row { width: 100%; min-height: 78px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 3px 13px; padding: 14px 27px 14px 24px; border: 0; border-bottom: 1px solid var(--line); border-left: 3px solid transparent; background: transparent; color: var(--ink); text-align: left; }
+    .menu-row.has-photo { min-height: 91px; grid-template-columns: 54px minmax(0,1fr) auto; }
+    .menu-row:hover { background: #eef1ec; }
+    .menu-row[aria-current="true"] { border-left-color: var(--accent); background: #fff; }
+    .menu-row:disabled { opacity: 1; cursor: default; }
+    .menu-row .dish-photo { grid-row: 1/3; }
+    .menu-row .dish-copy { align-self: end; }
+    .menu-row .dish-price { align-self: end; }
+    .menu-row .status { grid-column: 1/3; justify-self: start; align-self: start; margin-top: 3px; }
+    .menu-row.has-photo .status { grid-column: 2/4; }
+    .dish-photo { width: 56px; height: 56px; display: block; overflow: hidden; border: 1px solid #e7e9e3; border-radius: 5px; background: #eceee9; }
+    .dish-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .dish-photo.empty { display: grid; place-items: center; border-style: dashed; color: #78857a; font-size: 11px; }
+    .dish-copy { min-width: 0; }
+    .dish-copy strong { display: block; overflow: hidden; font-size: 13.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .dish-copy small { display: block; overflow: hidden; margin-top: 5px; color: var(--muted); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+    .dish-price { font-size: 13px; font-weight: 650; white-space: nowrap; }
+    .menu-detail-inner { max-width: 820px; }
+    .menu-detail-inner .detail-head { padding-bottom: 23px; }
+    .menu-detail-inner .detail-subtitle { margin-top: 10px; }
+    .menu-editor { display: grid; gap: 25px; }
+    .photo-control { display: flex; align-items: center; gap: 17px; padding: 24px 0; border-bottom: 1px solid var(--line); }
+    .photo-control .dish-photo { width: 86px; height: 86px; flex: none; }
+    .photo-control .form-note { display: block; margin-top: 7px; }
+    .menu-fields { display: grid; gap: 20px; padding-bottom: 28px; }
+    .menu-fields .field { font-size: 13px; }
+    .menu-fields .field input, .menu-fields .field select, .menu-fields .field textarea { font-size: 14px; }
+    .menu-fields .field input[readonly] { background: #f4f6f2; color: #59665d; }
+    .menu-price-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .menu-savebar { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 calc(-1 * clamp(32px,5vw,72px)); padding: 13px clamp(32px,5vw,72px); border-top: 1px solid var(--line); background: #fffffff2; }
+    .menu-savebar span { color: #81512c; font-size: 12px; font-weight: 620; }
+    .menu-savebar div { display: flex; gap: 8px; }
+    .menu-delete { justify-self: start; margin: 8px 0 0 -9px; }
+    .menu-status-action { margin-top: 20px; }
+    .file-button { position: relative; width: max-content; }
+    .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .file-button:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+    dialog { padding: 0; border: 0; border-radius: 8px; box-shadow: 0 18px 65px #17221b33; color: var(--ink); }
+    dialog::backdrop { background: #17241d77; }
+    .confirm-dialog { width: min(410px,calc(100vw - 32px)); padding: 26px; }
+    .confirm-dialog h2 { margin: 0 0 10px; font-size: 19px; }
+    .confirm-dialog p { margin: 0 0 23px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .confirm-actions { display: flex; justify-content: flex-end; gap: 9px; }
+    .toast { position: fixed; right: 24px; bottom: 24px; z-index: 40; max-width: 350px; padding: 13px 17px; border-radius: 6px; background: var(--nav); color: #fff; box-shadow: 0 8px 26px #1d281d2b; font-size: 12.5px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .2s, transform .2s; }
+    .toast.show { opacity: 1; transform: none; }
+    @media (max-width: 1160px) {
+      .shell { grid-template-columns: 70px minmax(0,1fr); }
+      .primary { padding-inline: 8px; }
+      .brand { justify-content: center; padding-inline: 0; }
+      .brand strong { font-size: 0; }
+      .brand strong::before { content: "ф"; font: italic 29px Georgia,serif; }
+      .brand i { font-size: 24px; }
+      .global-link { justify-content: center; padding: 0; }
+      .global-link span { display: none; }
+      .global-link em { position: absolute; top: 3px; right: 1px; min-width: 16px; height: 16px; font-size: 9px; }
+    }
+    @media (max-width: 970px) {
+      .queue-layout { grid-template-columns: minmax(300px,350px) minmax(0,1fr); }
+      .detail-inner { padding-inline: 29px; }
+      .menu-layout { grid-template-columns: minmax(300px,350px) minmax(0,1fr); }
+      .menu-savebar { margin-inline: -29px; padding-inline: 29px; }
+    }
+    @media (min-width: 761px) and (max-width: 900px) {
+      .menu-price-row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .shell { display: block; }
+      .primary { display: none; }
+      .mobile-top { display: flex; align-items: center; justify-content: space-between; min-height: 56px; padding: 0 20px; border-bottom: 1px solid var(--line); }
+      .mobile-top strong { font: italic 23px Georgia,serif; letter-spacing: -.07em; }
+      .mobile-top i { color: var(--accent); font: normal 24px Georgia,serif; }
+      .mobile-top small { color: #8b958b; font-size: 11px; }
+      .mobile-bottom { position: fixed; right: 0; bottom: 0; left: 0; z-index: 25; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); min-height: 64px; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid var(--line); background: #fff; }
+      .mobile-link { position: relative; display: grid; place-content: center; justify-items: center; gap: 3px; min-height: 64px; border: 0; background: transparent; color: #78847a; text-decoration: none; font-size: 10px; }
+      .mobile-link svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+      .mobile-link[aria-current="page"] { color: var(--accent); font-weight: 700; }
+      .mobile-link em { position: absolute; top: 4px; left: calc(50% + 9px); min-width: 16px; height: 16px; display: grid; place-items: center; padding: 0 3px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 9px; font-style: normal; }
+      .screen { min-height: calc(100vh - 56px); padding-bottom: 64px; }
+      .queue-layout { display: block; min-height: 0; }
+      .queue-pane { position: static; height: auto; min-height: calc(100vh - 120px); overflow: visible; border-right: 0; }
+      .queue-head { padding: 30px 20px 21px; }
+      .queue-head h1 { font-size: 28px; }
+      .tabs { padding-inline: 10px; }
+      .queue-tools { padding: 16px 20px; }
+      .queue-row { padding-inline: 17px 20px; }
+      .day-divider { padding-inline: 20px; }
+      .detail-pane { display: none; }
+      .screen.mobile-detail .queue-pane { display: none; }
+      .screen.mobile-detail .detail-pane { display: block; }
+      .detail-inner { padding: 15px 20px 110px; }
+      .back-button { display: inline-flex; min-height: 44px; align-items: center; margin: 0 0 18px -8px; padding: 0 8px; border: 0; background: transparent; color: #526353; font-size: 12.5px; font-weight: 650; }
+      .detail-title h2 { font-size: 27px; }
+      .detail-actions { align-items: stretch; }
+      .detail-actions .primary-button { flex: 1 1 100%; }
+      .facts { gap: 17px; }
+      .menu-layout { display: block; }
+      .menu-tools { padding-inline: 20px; }
+      .menu-row { padding-inline: 17px 20px; }
+      .menu-detail-inner { padding-bottom: 150px; }
+      .menu-savebar { position: fixed; right: 0; bottom: 64px; left: 0; margin: 0; padding: 10px 20px; box-shadow: 0 -5px 22px #20272310; }
+      .menu-savebar span { display: none; }
+      .menu-savebar div { width: 100%; }
+      .menu-savebar div button { flex: 1; }
+      .toast { right: 12px; bottom: 78px; left: 12px; max-width: none; }
+      body.order-detail-open { overflow: hidden; }
+      body.order-detail-open .mobile-top, body.order-detail-open .mobile-bottom { display: none; }
+      #screen-orders .queue-pane { background: #f6f7f3; }
+      #screen-orders .queue-head { padding-bottom: 17px; }
+      #screen-orders .queue-tools { padding-bottom: 10px; }
+      #screen-orders .orders-desktop-list { display: none; }
+      #screen-orders .orders-mobile-list { display: block; padding: 0 14px 24px; }
+      .order-group { margin-top: 16px; }
+      .order-group-toggle { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px; border: 0; background: transparent; color: var(--ink); text-align: left; font-size: 17px; font-weight: 670; }
+      .order-group-count { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; font-weight: 550; }
+      .order-group-count::after { content: ""; width: 8px; height: 8px; margin-right: 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); }
+      .order-group-toggle[aria-expanded="true"] .order-group-count::after { transform: rotate(225deg) translateY(-2px); }
+      .order-mobile-card { overflow: hidden; margin: 6px 0 10px; border: 1px solid #dde3da; border-radius: 10px; background: #fff; }
+      .order-mobile-card[data-tone="new"] { border-color: #d9ad9c; }
+      .order-card-open { width: 100%; min-height: 94px; display: grid; gap: 7px; padding: 15px 16px; border: 0; background: transparent; color: var(--ink); text-align: left; }
+      .order-card-open:active { background: #f8f3ef; }
+      .order-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .order-card-top strong { font-size: 18px; letter-spacing: -.025em; }
+      .order-card-top time { color: var(--muted); font-size: 13px; }
+      .order-card-meta { color: #46554a; font-size: 14px; }
+      .order-card-route { color: var(--muted); font-size: 13px; }
+      .order-card-action { width: calc(100% - 24px); min-height: 48px; margin: 0 12px 12px; border: 1px solid var(--accent); border-radius: 7px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 680; }
+      .order-card-action:active { background: var(--accent-dark); }
+      #screen-orders.mobile-detail .detail-pane { position: fixed; inset: 0; z-index: 30; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
+      #screen-orders.mobile-detail .order-detail-bar { position: sticky; top: 0; z-index: 2; min-height: 62px; display: flex; align-items: center; gap: 7px; padding: 0 16px; border-bottom: 1px solid var(--line); background: #fff; }
+      .order-detail-bar .back-button { width: 44px; height: 44px; flex: none; justify-content: center; margin: 0; padding: 0; color: var(--accent); font-size: 27px; font-weight: 400; }
+      .order-detail-bar strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 680; }
+      #orders-detail .detail-inner { padding: 19px 18px calc(114px + env(safe-area-inset-bottom)); }
+      #orders-detail .detail-head { padding-bottom: 20px; }
+      #orders-detail .detail-title h2 { display: none; }
+      #orders-detail .detail-title .status { font-size: 12px; }
+      #orders-detail .detail-subtitle { margin-top: 13px; font-size: 13px; }
+      #orders-detail .order-mobile-summary { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 5px 12px; margin: 15px 0 0; }
+      .order-mobile-summary strong { font-size: 23px; letter-spacing: -.035em; }
+      .order-mobile-summary span { color: var(--muted); font-size: 13px; }
+      #orders-detail .detail-head .detail-actions, #orders-detail .order-editor-actions { display: none; }
+      #orders-detail .detail-section { padding: 20px 0; }
+      #orders-detail .section-title h3 { font-size: 16px; }
+      #orders-detail .fact span { font-size: 12.5px; }
+      #orders-detail .fact strong, #orders-detail .item-row strong, #orders-detail .item-row b { font-size: 15px; }
+      #orders-detail .item-row strong { overflow-wrap: anywhere; }
+      #orders-detail .item-row small, #orders-detail .sum-line { font-size: 13px; }
+      #orders-detail .sum-line.total { font-size: 18px; }
+      #orders-detail .order-mobile-cancel { display: inline-flex; min-height: 44px; align-items: center; margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--red); font-size: 13px; font-weight: 630; }
+      #orders-detail .order-mobile-action { position: fixed; right: 0; bottom: 0; left: 0; z-index: 3; display: block; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: #fff; }
+      .order-mobile-action .primary-button { width: 100%; min-height: 52px; font-size: 15px; }
+      body.order-detail-open .toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
+    }
+    @media (max-width: 420px) {
+      .queue-tools { grid-template-columns: minmax(0,1fr) 113px; }
+      .facts, .form-grid { grid-template-columns: 1fr; }
+      .full { grid-column: 1; }
+      .edit-line { grid-template-columns: minmax(0,1fr) 124px; }
+      .edit-line .text-button { grid-column: 1/-1; justify-self: start; }
+      .menu-price-row { grid-template-columns: 1fr; }
+      .photo-control { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <svg class="sr-only" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="ico-orders" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2zM8 8h8M8 12h6"/></symbol>
+    <symbol id="ico-bookings" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 15h3"/></symbol>
+    <symbol id="ico-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h12"/></symbol>
+    <symbol id="ico-settings" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="9" cy="18" r="2"/></symbol>
+  </svg>
+  <div class="shell">
+    <aside class="primary" aria-label="Основная навигация">
+      <div class="brand" aria-label="Фкусс"><strong>фкусс</strong><i>.</i></div>
+      <nav class="global-nav" aria-label="Разделы админки">
+        <button class="global-link" type="button" data-view="orders" aria-label="Заказы"><svg aria-hidden="true"><use href="#ico-orders"/></svg><span>Заказы</span><em data-count="orders"></em></button>
+        <button class="global-link" type="button" data-view="bookings" aria-label="Брони"><svg aria-hidden="true"><use href="#ico-bookings"/></svg><span>Брони</span><em data-count="bookings"></em></button>
+        <button class="global-link" type="button" data-view="menu" aria-label="Меню"><svg aria-hidden="true"><use href="#ico-menu"/></svg><span>Меню</span></button>
+        <div class="primary-rule" role="presentation"></div>
+        <a class="global-link" href="settings-redesign-preview.html" aria-label="Настройки — макет владельца"><svg aria-hidden="true"><use href="#ico-settings"/></svg><span>Настройки</span></a>
+      </nav>
+    </aside>
+    <main class="workspace">
+      <div class="mobile-top"><div><strong>фкусс</strong><i>.</i></div><small>Локальный макет</small></div>
+      <section class="screen" id="screen-orders" aria-label="Заказы">
+        <div class="queue-layout">
+          <div class="queue-pane">
+            <div class="queue-head"><h1>Заказы</h1></div>
+            <div class="tabs" role="tablist" aria-label="Состояние заказов">
+              <button type="button" role="tab" data-order-filter="current">Текущие <span id="orders-current-count"></span></button>
+              <button type="button" role="tab" data-order-filter="new">Новые <span id="orders-new-count"></span></button>
+              <button type="button" role="tab" data-order-filter="history">История</button>
+            </div>
+            <div class="queue-tools"><input class="search" id="order-search" type="search" placeholder="№, имя или телефон" aria-label="Поиск заказа"><select id="order-type" aria-label="Тип заказа"><option value="all">Все типы</option><option value="delivery">Доставка</option><option value="pickup">Самовывоз</option></select></div>
+            <div class="queue-list" id="orders-list"></div>
+          </div>
+          <div class="detail-pane" id="orders-detail" aria-label="Выбранный заказ"></div>
+        </div>
+      </section>
+      <section class="screen" id="screen-bookings" aria-label="Брони" hidden>
+        <div class="queue-layout">
+          <div class="queue-pane">
+            <div class="queue-head"><h1>Брони</h1></div>
+            <div class="tabs" role="tablist" aria-label="Состояние броней">
+              <button type="button" role="tab" data-booking-filter="upcoming">Предстоящие <span id="bookings-upcoming-count"></span></button>
+              <button type="button" role="tab" data-booking-filter="new">Ожидают <span id="bookings-new-count"></span></button>
+              <button type="button" role="tab" data-booking-filter="history">История</button>
+            </div>
+            <div class="queue-tools single"><input class="search" id="booking-search" type="search" placeholder="Имя или телефон" aria-label="Поиск брони"></div>
+            <div class="queue-list" id="bookings-list"></div>
+          </div>
+          <div class="detail-pane" id="bookings-detail" aria-label="Выбранная бронь"></div>
+        </div>
+      </section>
+      <section class="screen" id="screen-menu" aria-label="Меню" hidden>
+        <div class="menu-layout">
+          <div class="queue-pane menu-list-pane">
+            <div class="queue-head"><h1>Меню</h1><button class="primary-button" type="button" data-action="add-dish">+ Блюдо</button></div>
+            <div class="menu-tools">
+              <input class="search" id="menu-search" type="search" placeholder="Найти блюдо" aria-label="Поиск блюда">
+              <div class="menu-filter-row"><select id="menu-category" aria-label="Категория меню"></select><select id="menu-availability" aria-label="Доступность блюд"><option value="all">Все блюда</option><option value="available">В меню</option><option value="unavailable">Недоступны</option></select></div>
+              <button class="text-button category-add" type="button" data-action="add-category">+ Категория</button>
+            </div>
+            <div class="queue-list" id="menu-list"></div>
+          </div>
+          <div class="detail-pane" id="menu-detail" aria-label="Выбранное блюдо"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <nav class="mobile-bottom" aria-label="Мобильная навигация">
+    <button class="mobile-link" type="button" data-view="orders"><svg aria-hidden="true"><use href="#ico-orders"/></svg><span>Заказы</span><em data-count="orders"></em></button>
+    <button class="mobile-link" type="button" data-view="bookings"><svg aria-hidden="true"><use href="#ico-bookings"/></svg><span>Брони</span><em data-count="bookings"></em></button>
+    <button class="mobile-link" type="button" data-view="menu"><svg aria-hidden="true"><use href="#ico-menu"/></svg><span>Меню</span></button>
+    <a class="mobile-link" href="settings-redesign-preview.html" aria-label="Настройки — макет владельца"><svg aria-hidden="true"><use href="#ico-settings"/></svg><span>Настройки</span></a>
+  </nav>
+  <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title"></h2><p id="confirm-copy"></p><div class="confirm-actions"><button class="secondary-button" type="button" id="confirm-cancel">Отмена</button><button class="primary-button" type="button" id="confirm-accept"></button></div></dialog>
+  <dialog class="confirm-dialog" id="category-dialog" aria-labelledby="category-title"><form id="category-form"><h2 id="category-title">Новая категория</h2><label class="field">Название<input id="category-name" name="name" maxlength="120" required autocomplete="off"></label><div class="confirm-actions" style="margin-top:24px"><button class="secondary-button" type="button" id="category-cancel">Отмена</button><button class="primary-button" type="submit">Добавить</button></div></form></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    (() => {
+      "use strict";
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+      const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+      const money = (value) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
+      const guestWord = (count) => { const form = new Intl.PluralRules("ru-RU").select(count); return form === "one" ? "гость" : form === "few" ? "гостя" : "гостей"; };
+      const categories = ["Хинкали", "Хачапури", "Мангал", "Напитки"];
+      const dishes = [
+        { id: "d1", name: "Хинкали с бараниной", category: "Хинкали", price: 320, yandexPrice: 320, priceMode: "inherit", weight: "300 г", description: "5 штук, насыщенный бульон внутри", composition: "Баранина, тесто, зелень", image: "", manualAvailable: true, sourceAvailable: true },
+        { id: "d2", name: "Хинкали с сыром", category: "Хинкали", price: 290, yandexPrice: 290, priceMode: "inherit", weight: "280 г", description: "5 штук, сулугуни и имеретинский сыр", composition: "Сыр, тесто", image: "", manualAvailable: true, sourceAvailable: true },
+        { id: "d3", name: "Хинкали с грибами", category: "Хинкали", price: 270, yandexPrice: 270, priceMode: "inherit", weight: "280 г", description: "Шампиньоны и лук", composition: "Шампиньоны, лук, тесто", image: "", manualAvailable: false, sourceAvailable: true },
+        { id: "d4", name: "Хачапури по-аджарски", category: "Хачапури", price: 490, yandexPrice: 490, priceMode: "inherit", weight: "400 г", description: "Лодочка с сыром, маслом и желтком", composition: "Сыр, тесто, масло, яйцо", image: "", manualAvailable: true, sourceAvailable: true },
+        { id: "d5", name: "Шашлык из курицы", category: "Мангал", price: 420, yandexPrice: 420, priceMode: "inherit", weight: "200 г", description: "Куриное филе на углях", composition: "Курица, специи", image: "", manualAvailable: true, sourceAvailable: true },
+        { id: "d6", name: "Лимонад домашний", category: "Напитки", price: 150, yandexPrice: 150, priceMode: "inherit", weight: "0,5 л", description: "Лимон, мята, газированная вода", composition: "Лимон, мята, сахар", image: "", manualAvailable: true, sourceAvailable: false },
+      ];
+      const orders = [
+        { id: "o1", number: 384, time: "14:18", desired: "15:15", type: "delivery", status: "new", customer: "Анна Смирнова", phone: "+79990000001", address: "ул. Цветочная, 12, кв. 24", zone: "Центр", paymentMethod: "cash", paid: false, comment: "Без лука, пожалуйста", delivery: 220, bonus: 0, items: [{ name: "Хинкали с бараниной", unit: 320, quantity: 2 }, { name: "Шашлык из курицы", unit: 420, quantity: 1 }, { name: "Лимонад домашний", unit: 150, quantity: 2 }] },
+        { id: "o2", number: 383, time: "14:09", desired: "14:50", type: "pickup", status: "new", customer: "Михаил Орлов", phone: "+79990000002", address: "", zone: "", paymentMethod: "cash", paid: false, comment: "", delivery: 0, bonus: 0, items: [{ name: "Хачапури по-аджарски", unit: 490, quantity: 1 }, { name: "Лимонад домашний", unit: 150, quantity: 1 }] },
+        { id: "o3", number: 382, time: "13:46", desired: "14:40", type: "delivery", status: "accepted", customer: "Елена Кузнецова", phone: "+79990000003", address: "ул. Мира, 8", zone: "Центр", paymentMethod: "online", paid: true, comment: "Позвонить у подъезда", delivery: 220, bonus: 0, items: [{ name: "Хинкали с сыром", unit: 290, quantity: 2 }, { name: "Шашлык из курицы", unit: 420, quantity: 1 }] },
+        { id: "o4", number: 381, time: "13:32", desired: "14:25", type: "pickup", status: "ready", customer: "Денис Романов", phone: "+79990000004", address: "", zone: "", paymentMethod: "cash", paid: false, comment: "", delivery: 0, bonus: 0, items: [{ name: "Хачапури по-аджарски", unit: 490, quantity: 2 }] },
+        { id: "o5", number: 380, time: "12:58", desired: "14:00", type: "delivery", status: "handed_to_courier", customer: "Ирина Волкова", phone: "+79990000005", address: "ул. Садовая, 5", zone: "Центр", paymentMethod: "cash", paid: false, comment: "", delivery: 220, bonus: 100, items: [{ name: "Хинкали с бараниной", unit: 320, quantity: 2 }, { name: "Хинкали с сыром", unit: 290, quantity: 1 }] },
+        { id: "o6", number: 379, time: "12:20", desired: "13:30", type: "pickup", status: "issued", customer: "Олег Матвеев", phone: "+79990000006", address: "", zone: "", paymentMethod: "cash", paid: false, comment: "", delivery: 0, bonus: 0, items: [{ name: "Шашлык из курицы", unit: 420, quantity: 1 }] },
+      ];
+      const bookings = [
+        { id: "b1", day: 0, time: "18:30", guests: 4, status: "new", customer: "Мария Петрова", phone: "+79990000007", comment: "Нужен детский стул" },
+        { id: "b2", day: 0, time: "20:00", guests: 2, status: "confirmed", customer: "Алексей Громов", phone: "+79990000008", comment: "" },
+        { id: "b3", day: 1, time: "13:00", guests: 6, status: "new", customer: "Наталья Белова", phone: "+79990000009", comment: "У окна, если будет свободно" },
+        { id: "b4", day: -1, time: "19:00", guests: 3, status: "confirmed", customer: "Ольга Денисова", phone: "+79990000010", comment: "" },
+        { id: "b5", day: 1, time: "17:00", guests: 2, status: "rejected", customer: "Павел Морозов", phone: "+79990000011", comment: "" },
+      ];
+      const orderLabels = { new: "Новый", accepted: "Принят", cooking: "Готовится", ready: "Готов", handed_to_courier: "Передан курьеру", delivered: "Доставлен", issued: "Выдан", cancelled: "Отменён" };
+      const bookingLabels = { new: "Новая", confirmed: "Подтверждена", rejected: "Отклонена", cancelled: "Отменена" };
+      const orderChains = { delivery: ["new", "accepted", "cooking", "ready", "handed_to_courier", "delivered"], pickup: ["new", "accepted", "cooking", "ready", "issued"] };
+      const nextLabels = { accepted: "Принять заказ", cooking: "Начать готовить", ready: "Отметить готовым", handed_to_courier: "Передать курьеру", delivered: "Отметить доставленным", issued: "Отметить выданным" };
+      let view = "orders";
+      let orderFilter = "current";
+      let bookingFilter = "upcoming";
+      let menuCategory = "all";
+      let selectedDish = "d1";
+      let menuCreating = false;
+      let menuDirty = false;
+      let menuInitial = "";
+      let menuImageObjectUrl = null;
+      let selectedOrder = "o1";
+      let orderListScrollY = 0;
+      let orderReturnFilter = "current";
+      const collapsedOrderGroups = new Set();
+      let selectedBooking = "b1";
+      let orderEditing = false;
+      let orderDraft = null;
+      let pendingConfirm = null;
+      let toastTimer = null;
+      let nextDishId = 7;
+      const dayText = (day) => day === 0 ? "Сегодня" : day === 1 ? "Завтра" : new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(new Date(Date.now() + day * 86400000));
+      const statusTone = (status) => status === "new" ? "new" : status === "ready" || status === "confirmed" ? "ready" : ["cancelled", "rejected"].includes(status) ? "off" : ["delivered", "issued"].includes(status) ? "done" : "working";
+      const orderItemsTotal = (order) => order.items.reduce((sum, item) => sum + item.unit * item.quantity, 0);
+      const orderTotal = (order) => orderItemsTotal(order) + order.delivery - order.bonus;
+      function toast(message) { const el = $("#toast"); el.textContent = message; el.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 3200); }
+      function ask(title, copy, action, acceptLabel = title.replace(/\?$/, "")) { pendingConfirm = action; $("#confirm-title").textContent = title; $("#confirm-copy").textContent = copy; $("#confirm-accept").textContent = acceptLabel; $("#confirm-dialog").showModal(); }
+      $("#confirm-cancel").addEventListener("click", () => $("#confirm-dialog").close());
+      $("#confirm-accept").addEventListener("click", () => { const action = pendingConfirm; $("#confirm-dialog").close(); if (action) action(); });
+      $("#confirm-dialog").addEventListener("close", () => { pendingConfirm = null; });
+      function updateBadges() {
+        const counts = { orders: orders.filter((order) => order.status === "new").length, bookings: bookings.filter((booking) => booking.status === "new").length };
+        $$('[data-count]').forEach((badge) => { const count = counts[badge.dataset.count]; badge.textContent = count || ""; badge.hidden = !count; });
+      }
+      function showView(next, updateUrl = true) {
+        if (next !== view && orderEditing && JSON.stringify(orderDraft) !== JSON.stringify(orders.find((order) => order.id === selectedOrder)?.items)) {
+          ask("Отменить правки?", "Изменения состава заказа не сохранятся.", () => { orderEditing = false; orderDraft = null; showView(next); }, "Не сохранять");
+          return;
+        }
+        if (next !== view && menuDirty) {
+          ask("Отменить правки?", "Изменения блюда не сохранятся.", () => { menuDirty = false; menuCreating = false; showView(next); }, "Не сохранять");
+          return;
+        }
+        if (next !== view && view === "menu") menuCreating = false;
+        view = next;
+        orderEditing = false;
+        document.body.classList.remove("order-detail-open");
+        if (updateUrl) history.replaceState(null, "", `#${next}`);
+        $$('[data-view]').forEach((button) => { if (button.dataset.view === next) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current"); });
+        $$('.screen').forEach((screen) => { screen.hidden = screen.id !== `screen-${next}`; screen.classList.remove("mobile-detail"); });
+        document.title = `${{ orders: "Заказы", bookings: "Брони", menu: "Меню" }[next]} — рабочая админка`;
+        if (next === "orders") renderOrders();
+        if (next === "bookings") renderBookings();
+        if (next === "menu") renderMenu();
+        window.scrollTo(0, 0);
+      }
+      $$('[data-view]').forEach((button) => button.addEventListener("click", () => showView(button.dataset.view)));
+      $$('a[href="settings-redesign-preview.html"]').forEach((link) => link.addEventListener("click", (event) => {
+        const dirtyOrder = orderEditing && JSON.stringify(orderDraft) !== JSON.stringify(orders.find((order) => order.id === selectedOrder)?.items);
+        if (!menuDirty && !dirtyOrder) return;
+        event.preventDefault();
+        ask("Отменить правки?", "Несохранённые изменения не сохранятся.", () => { menuDirty = false; orderEditing = false; window.location.href = link.href; }, "Не сохранять");
+      }));
+      window.addEventListener("beforeunload", (event) => {
+        const dirtyOrder = orderEditing && JSON.stringify(orderDraft) !== JSON.stringify(orders.find((order) => order.id === selectedOrder)?.items);
+        if (!menuDirty && !dirtyOrder) return;
+        event.preventDefault();
+        event.returnValue = "";
+      });
+      $$('.tabs').forEach((group) => group.addEventListener("keydown", (event) => {
+        const tabs = $$('[role="tab"]', group);
+        const current = tabs.indexOf(document.activeElement);
+        if (current < 0) return;
+        const next = event.key === "ArrowRight" ? (current + 1) % tabs.length : event.key === "ArrowLeft" ? (current - 1 + tabs.length) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
+        if (next < 0) return;
+        event.preventDefault(); tabs[next].focus(); tabs[next].click();
+      }));
+      function visibleOrders() {
+        const needle = $("#order-search").value.trim().toLocaleLowerCase("ru-RU");
+        const type = $("#order-type").value;
+        return orders.filter((order) => {
+          const current = !["delivered", "issued", "cancelled"].includes(order.status);
+          if (orderFilter === "current" && !current) return false;
+          if (orderFilter === "new" && order.status !== "new") return false;
+          if (orderFilter === "history" && current) return false;
+          if (type !== "all" && order.type !== type) return false;
+          return !needle || [String(order.number), order.customer, order.phone].some((part) => part.toLocaleLowerCase("ru-RU").includes(needle));
+        }).sort((a,b) => orderFilter === "history" ? Number(b.number) - Number(a.number) : (a.status === "new" ? 0 : 1) - (b.status === "new" ? 0 : 1) || Number(a.number) - Number(b.number));
+      }
+      const dishWord = (count) => { const form = new Intl.PluralRules("ru-RU").select(count); return form === "one" ? "блюдо" : form === "few" ? "блюда" : "блюд"; };
+      function renderMobileOrderGroups(visible) {
+        const groups = orderFilter === "history"
+          ? [["done", "Выполнены", (order) => ["delivered", "issued"].includes(order.status)], ["cancelled", "Отменённые", (order) => order.status === "cancelled"]]
+          : [["new", "Новые", (order) => order.status === "new"], ["accepted", "Приняты", (order) => order.status === "accepted"], ["cooking", "Готовятся", (order) => order.status === "cooking"], ["ready", "Ждут выдачи", (order) => order.status === "ready"], ["courier", "Переданы курьеру", (order) => order.status === "handed_to_courier"]];
+        return groups.map(([key, label, matches]) => {
+          const items = visible.filter(matches);
+          if (!items.length) return "";
+          const collapsed = collapsedOrderGroups.has(key);
+          return `<section class="order-group" aria-label="${label}"><button class="order-group-toggle" type="button" data-order-group="${key}" aria-expanded="${!collapsed}" aria-controls="order-group-${key}"><span>${label}</span><span class="order-group-count">${items.length}</span></button><div id="order-group-${key}" ${collapsed ? "hidden" : ""}>${items.map((order) => {
+            const count = order.items.reduce((sum, item) => sum + item.quantity, 0);
+            const next = orderNext(order);
+            const quickAction = next && ["new", "ready"].includes(order.status);
+            return `<article class="order-mobile-card" data-tone="${statusTone(order.status)}"><button class="order-card-open" type="button" data-order-id="${order.id}" aria-current="${order.id === selectedOrder}" aria-label="Открыть заказ № ${order.number}, ${money(orderTotal(order))}, ${count} ${dishWord(count)}, ${order.type === "delivery" ? "доставка" : "самовывоз"} к ${esc(order.desired)}"><span class="order-card-top"><strong>№ ${order.number}</strong><time>${esc(order.time)}</time></span><span class="order-card-meta">${money(orderTotal(order))} · ${count} ${dishWord(count)}</span><span class="order-card-route">${order.type === "delivery" ? "Доставка" : "Самовывоз"} · к ${esc(order.desired)}</span></button>${quickAction ? `<button class="order-card-action" type="button" data-order-quick-id="${order.id}">${nextLabels[next]}</button>` : ""}</article>`;
+          }).join("")}</div></section>`;
+        }).join("");
+      }
+      function renderOrders() {
+        updateBadges();
+        $("#orders-current-count").textContent = orders.filter((order) => !["delivered", "issued", "cancelled"].includes(order.status)).length;
+        $("#orders-new-count").textContent = orders.filter((order) => order.status === "new").length;
+        $$('[data-order-filter]').forEach((tab) => { const active = tab.dataset.orderFilter === orderFilter; tab.setAttribute("aria-selected", String(active)); tab.tabIndex = active ? 0 : -1; });
+        const visible = visibleOrders();
+        if (!visible.some((order) => order.id === selectedOrder)) { selectedOrder = visible[0]?.id ?? null; orderEditing = false; closeOrderDetail(); }
+        const empty = '<p class="empty">Заказов по этим условиям нет.</p>';
+        const desktopRows = visible.map((order) => `<button class="queue-row" type="button" data-order-id="${order.id}" aria-current="${order.id === selectedOrder}"><span class="row-top"><span><strong>№ ${order.number}</strong><time>${esc(order.time)}</time></span><span class="status" data-tone="${statusTone(order.status)}">${orderLabels[order.status]}</span></span><span class="row-person">${esc(order.customer)}</span><span class="row-bottom"><span>${order.type === "delivery" ? "Доставка" : "Самовывоз"} · к ${esc(order.desired)}</span><b>${money(orderTotal(order))}</b></span></button>`).join("");
+        $("#orders-list").innerHTML = `<div class="orders-desktop-list">${visible.length ? desktopRows : empty}</div><div class="orders-mobile-list">${visible.length ? renderMobileOrderGroups(visible) : empty}</div>`;
+        renderOrderDetail();
+      }
+      function orderNext(order) { const chain = orderChains[order.type]; const index = chain.indexOf(order.status); return index >= 0 && index < chain.length - 1 ? chain[index + 1] : null; }
+      function renderOrderDetail() {
+        const order = orders.find((item) => item.id === selectedOrder);
+        if (!order) { setOrderQueueLocked(false); $("#orders-detail").innerHTML = '<div class="detail-inner"><p class="empty">Выберите заказ.</p></div>'; return; }
+        if (orderEditing) { renderOrderEditor(order); return; }
+        setOrderQueueLocked(false);
+        const next = orderNext(order);
+        const canEdit = ["new", "accepted", "cooking", "ready", "handed_to_courier"].includes(order.status) && order.paymentMethod === "cash" && !order.paid;
+        const canCancel = !!next;
+        const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+        $("#orders-detail").innerHTML = `<div class="order-detail-bar"><button class="back-button" type="button" data-action="back-order" aria-label="Назад к заказам">←</button><strong id="order-detail-heading" tabindex="-1">Заказ № ${order.number}</strong></div><div class="detail-inner">
+          <div class="detail-head"><div class="detail-title"><h2>Заказ № ${order.number}</h2><span class="status" data-tone="${statusTone(order.status)}">${orderLabels[order.status]}</span></div><p class="detail-subtitle">${order.type === "delivery" ? "Доставка" : "Самовывоз"} · сегодня, ${esc(order.time)}</p>
+            <p class="order-mobile-summary"><strong>${money(orderTotal(order))}</strong><span>${itemCount} ${dishWord(itemCount)} · к ${esc(order.desired)}</span></p>
+            ${next ? `<div class="detail-actions"><button class="primary-button" type="button" data-action="advance-order">${nextLabels[next]}</button>${canCancel ? '<button class="text-button danger" type="button" data-action="cancel-order">Отменить</button>' : ""}</div>` : ""}
+          </div>
+          <section class="detail-section"><h3 class="contact-name">${esc(order.customer)}</h3><div class="contact-actions"><a href="tel:${esc(order.phone)}">Позвонить · ${esc(order.phone)}</a></div></section>
+          <section class="detail-section"><div class="facts"><div class="fact"><span>${order.type === "delivery" ? "Доставить к" : "Забрать к"}</span><strong>${esc(order.desired)}</strong></div>${order.type === "delivery" ? `<div class="fact"><span>Адрес</span><strong>${esc(order.address)}</strong></div><div class="fact"><span>Зона доставки</span><strong>${esc(order.zone)}</strong></div>` : ""}<div class="fact"><span>Оплата</span><strong>${order.paymentMethod === "online" ? "Онлайн · оплачено" : "При получении"}</strong></div></div>${order.comment ? `<p class="note">${esc(order.comment)}</p>` : ""}</section>
+          <section class="detail-section"><div class="section-title"><h3>Состав</h3>${canEdit ? '<button class="text-button" type="button" data-action="edit-order">Изменить</button>' : ""}</div>${order.items.map((item) => `<div class="item-row"><strong>${esc(item.name)}</strong><small>${item.quantity} × ${money(item.unit)}</small><b>${money(item.unit * item.quantity)}</b></div>`).join("")}
+            <div class="sum-lines"><div class="sum-line"><span>Блюда</span><b>${money(orderItemsTotal(order))}</b></div>${order.type === "delivery" ? `<div class="sum-line"><span>Доставка</span><b>${money(order.delivery)}</b></div>` : ""}${order.bonus ? `<div class="sum-line"><span>Бонусы</span><b>−${money(order.bonus)}</b></div>` : ""}<div class="sum-line total"><span>Итого</span><b>${money(orderTotal(order))}</b></div></div>
+          </section>
+          ${canCancel ? '<button class="order-mobile-cancel" type="button" data-action="cancel-order">Отменить заказ</button>' : ""}
+        </div>${next ? `<div class="order-mobile-action"><button class="primary-button" type="button" data-action="advance-order">${nextLabels[next]}</button></div>` : ""}`;
+      }
+      function renderOrderEditor(order) {
+        setOrderQueueLocked(true);
+        $("#orders-detail").innerHTML = `<div class="order-detail-bar"><button class="back-button" type="button" data-action="close-order-edit" aria-label="Назад к заказу">←</button><strong id="order-detail-heading" tabindex="-1">Состав заказа № ${order.number}</strong></div><div class="detail-inner"><div class="detail-head"><div class="detail-title"><h2>Состав заказа № ${order.number}</h2></div><p class="detail-subtitle">Изменения сохраняются только в этом заказе.</p></div>
+          <section class="detail-section">${orderDraft.map((item, index) => `<div class="edit-line"><div><strong>${esc(item.name)}</strong><small>${money(item.unit)} за шт.</small></div><div class="quantity"><button type="button" data-action="qty" data-index="${index}" data-delta="-1" aria-label="Уменьшить количество: ${esc(item.name)}" ${item.quantity <= 1 ? "disabled" : ""}>−</button><span>${item.quantity}</span><button type="button" data-action="qty" data-index="${index}" data-delta="1" aria-label="Увеличить количество: ${esc(item.name)}" ${item.quantity >= 99 ? "disabled" : ""}>+</button></div><button class="text-button danger" type="button" data-action="remove-item" data-index="${index}">Убрать</button></div>`).join("")}
+            <div class="add-line"><select id="order-add-dish" aria-label="Добавить блюдо"><option value="">Выберите блюдо</option>${dishes.filter((dish) => dish.manualAvailable && dish.sourceAvailable).map((dish) => `<option value="${dish.id}">${esc(dish.name)} · ${money(dish.price)}</option>`).join("")}</select><button class="secondary-button" type="button" data-action="add-order-item">Добавить</button></div>
+            <div class="preview-total"><span>Блюда предварительно</span><strong>${money(orderDraft.reduce((sum, item) => sum + item.unit * item.quantity, 0))}</strong></div><p class="form-note">Доставка и бонусы будут учтены после сохранения.</p>
+          </section><div class="detail-actions order-editor-actions"><button class="primary-button" type="button" data-action="save-order-edit">Сохранить состав</button><button class="secondary-button" type="button" data-action="close-order-edit">Отмена</button></div></div><div class="order-mobile-action"><button class="primary-button" type="button" data-action="save-order-edit">Сохранить состав</button></div>`;
+      }
+      function closeOrderDetail(updateUrl = true, focusList = true, restoreFilter = false) {
+        const screen = $("#screen-orders");
+        const wasOpen = screen.classList.contains("mobile-detail");
+        screen.classList.remove("mobile-detail");
+        document.body.classList.remove("order-detail-open");
+        if (updateUrl && location.hash.startsWith("#orders/")) history.replaceState(null, "", "#orders");
+        if (wasOpen && restoreFilter && orderFilter !== orderReturnFilter) { orderFilter = orderReturnFilter; renderOrders(); }
+        if (wasOpen) requestAnimationFrame(() => {
+          window.scrollTo(0, orderListScrollY);
+          if (focusList) ($(`.orders-mobile-list [data-order-id="${selectedOrder}"]`) ?? $("#order-search")).focus({ preventScroll: true });
+        });
+      }
+      function openOrderDetail(id, pushEntry = true) {
+        const mobile = window.matchMedia("(max-width: 760px)").matches;
+        if (mobile && !$("#screen-orders").classList.contains("mobile-detail")) { orderListScrollY = window.scrollY; orderReturnFilter = orderFilter; }
+        selectedOrder = id;
+        orderEditing = false;
+        if (mobile) {
+          $("#screen-orders").classList.add("mobile-detail");
+          document.body.classList.add("order-detail-open");
+          if (pushEntry) history.pushState({ orderId: id }, "", `#orders/${id}`);
+        }
+        renderOrders();
+        if (mobile) {
+          $("#orders-detail").scrollTop = 0;
+          $("#order-detail-heading")?.focus({ preventScroll: true });
+        }
+      }
+      function advanceOrder(order) {
+        const next = orderNext(order);
+        if (!next) return;
+        order.status = next;
+        if ($("#screen-orders").classList.contains("mobile-detail")) {
+          if (["delivered", "issued"].includes(next)) orderFilter = "history";
+          else if (orderFilter === "new") orderFilter = "current";
+        }
+        toast(`Заказ № ${order.number}: ${orderLabels[next].toLocaleLowerCase("ru-RU")}`);
+        renderOrders();
+      }
+      function setOrderQueueLocked(locked) { $("#order-search").disabled = locked; $("#order-type").disabled = locked; $$('[data-order-filter], #orders-list [data-order-id], #orders-list [data-order-quick-id]').forEach((button) => { button.disabled = locked; }); }
+      $$('[data-order-filter]').forEach((tab) => tab.addEventListener("click", () => { orderFilter = tab.dataset.orderFilter; renderOrders(); }));
+      $("#order-search").addEventListener("input", renderOrders);
+      $("#order-type").addEventListener("change", renderOrders);
+      $("#orders-list").addEventListener("click", (event) => {
+        const group = event.target.closest('[data-order-group]');
+        if (group) { const key = group.dataset.orderGroup; if (collapsedOrderGroups.has(key)) collapsedOrderGroups.delete(key); else collapsedOrderGroups.add(key); renderOrders(); $(`[data-order-group="${key}"]`)?.focus({ preventScroll: true }); return; }
+        const quick = event.target.closest('[data-order-quick-id]');
+        if (quick) { const order = orders.find((item) => item.id === quick.dataset.orderQuickId); if (order) advanceOrder(order); return; }
+        const button = event.target.closest('[data-order-id]');
+        if (button) openOrderDetail(button.dataset.orderId);
+      });
+      $("#orders-detail").addEventListener("click", (event) => {
+        const button = event.target.closest('[data-action]'); if (!button) return;
+        const action = button.dataset.action;
+        const order = orders.find((item) => item.id === selectedOrder); if (!order) return;
+        if (action === "back-order") { if (history.state?.orderId === selectedOrder && location.hash === `#orders/${selectedOrder}`) history.back(); else closeOrderDetail(true, true, true); }
+        if (action === "advance-order") advanceOrder(order);
+        if (action === "cancel-order") ask("Отменить заказ?", `Заказ № ${order.number} перейдёт в историю.`, () => { order.status = "cancelled"; if ($("#screen-orders").classList.contains("mobile-detail")) orderFilter = "history"; toast(`Заказ № ${order.number} отменён`); renderOrders(); });
+        if (action === "edit-order") { orderDraft = order.items.map((item) => ({ ...item })); orderEditing = true; renderOrderDetail(); $("#orders-detail").scrollTop = 0; $("#order-detail-heading")?.focus({ preventScroll: true }); }
+        if (action === "close-order-edit") { const close = () => { orderEditing = false; orderDraft = null; renderOrderDetail(); }; if (JSON.stringify(orderDraft) !== JSON.stringify(order.items)) ask("Отменить правки?", "Изменения состава заказа не сохранятся.", close, "Не сохранять"); else close(); }
+        if (action === "qty") { const item = orderDraft[Number(button.dataset.index)]; item.quantity = Math.max(1, Math.min(99, item.quantity + Number(button.dataset.delta))); renderOrderDetail(); }
+        if (action === "remove-item") { orderDraft.splice(Number(button.dataset.index),1); renderOrderDetail(); }
+        if (action === "add-order-item") { const dish = dishes.find((item) => item.id === $("#order-add-dish").value); if (!dish) { toast("Выберите блюдо"); return; } const existing = orderDraft.find((item) => item.name === dish.name && item.unit === dish.price); if (existing) existing.quantity = Math.min(99, existing.quantity + 1); else orderDraft.push({ name: dish.name, unit: dish.price, quantity: 1 }); renderOrderDetail(); }
+        if (action === "save-order-edit") { if (!orderDraft.length) { toast("В заказе должно остаться хотя бы одно блюдо"); return; } order.items = orderDraft; orderEditing = false; orderDraft = null; toast("Состав изменён в макете"); renderOrders(); }
+      });
+      function isUpcoming(booking) { return booking.day >= 0 && ["new", "confirmed"].includes(booking.status); }
+      function visibleBookings() {
+        const needle = $("#booking-search").value.trim().toLocaleLowerCase("ru-RU");
+        return bookings.filter((booking) => {
+          if (bookingFilter === "upcoming" && !isUpcoming(booking)) return false;
+          if (bookingFilter === "new" && !(isUpcoming(booking) && booking.status === "new")) return false;
+          if (bookingFilter === "history" && isUpcoming(booking)) return false;
+          return !needle || [booking.customer, booking.phone].some((part) => part.toLocaleLowerCase("ru-RU").includes(needle));
+        }).sort((a,b) => bookingFilter === "history" ? b.day - a.day || b.time.localeCompare(a.time) : a.day - b.day || a.time.localeCompare(b.time));
+      }
+      function renderBookings() {
+        updateBadges();
+        $("#bookings-upcoming-count").textContent = bookings.filter(isUpcoming).length;
+        $("#bookings-new-count").textContent = bookings.filter((booking) => isUpcoming(booking) && booking.status === "new").length;
+        $$('[data-booking-filter]').forEach((tab) => { const active = tab.dataset.bookingFilter === bookingFilter; tab.setAttribute("aria-selected", String(active)); tab.tabIndex = active ? 0 : -1; });
+        const visible = visibleBookings();
+        if (!visible.some((booking) => booking.id === selectedBooking)) { selectedBooking = visible[0]?.id ?? null; $("#screen-bookings").classList.remove("mobile-detail"); }
+        let lastDay = null;
+        $("#bookings-list").innerHTML = visible.length ? visible.map((booking) => { const divider = booking.day !== lastDay ? `<div class="day-divider">${esc(dayText(booking.day))}</div>` : ""; lastDay = booking.day; return `${divider}<button class="queue-row" type="button" data-booking-id="${booking.id}" aria-current="${booking.id === selectedBooking}"><span class="row-top"><span><strong>${esc(booking.time)}</strong></span><span class="status" data-tone="${statusTone(booking.status)}">${bookingLabels[booking.status]}</span></span><span class="row-person">${esc(booking.customer)}</span><span class="row-bottom"><span>${booking.guests} ${guestWord(booking.guests)}</span></span></button>`; }).join("") : '<p class="empty">Броней по этим условиям нет.</p>';
+        renderBookingDetail();
+      }
+      function renderBookingDetail() {
+        const booking = bookings.find((item) => item.id === selectedBooking);
+        if (!booking) { $("#bookings-detail").innerHTML = '<div class="detail-inner"><p class="empty">Выберите бронь.</p></div>'; return; }
+        $("#bookings-detail").innerHTML = `<div class="detail-inner"><button class="back-button" type="button" data-action="back-bookings">← К броням</button><div class="detail-head"><div class="detail-title"><h2>${esc(booking.time)} · ${booking.guests} ${guestWord(booking.guests)}</h2><span class="status" data-tone="${statusTone(booking.status)}">${bookingLabels[booking.status]}</span></div><p class="detail-subtitle">${esc(dayText(booking.day))}</p>
+          ${booking.status === "new" ? '<div class="detail-actions"><button class="primary-button" type="button" data-action="confirm-booking">Подтвердить бронь</button><button class="text-button danger" type="button" data-action="reject-booking">Отклонить</button></div>' : booking.status === "confirmed" && booking.day >= 0 ? '<div class="detail-actions"><button class="text-button danger" type="button" data-action="cancel-booking">Отменить бронь</button></div>' : ""}</div>
+          <section class="detail-section"><h3 class="contact-name">${esc(booking.customer)}</h3><div class="contact-actions"><a href="tel:${esc(booking.phone)}">Позвонить · ${esc(booking.phone)}</a></div>${booking.comment ? `<p class="note">${esc(booking.comment)}</p>` : ""}</section></div>`;
+      }
+      $$('[data-booking-filter]').forEach((tab) => tab.addEventListener("click", () => { bookingFilter = tab.dataset.bookingFilter; renderBookings(); }));
+      $("#booking-search").addEventListener("input", renderBookings);
+      $("#bookings-list").addEventListener("click", (event) => { const button = event.target.closest('[data-booking-id]'); if (!button) return; selectedBooking = button.dataset.bookingId; $("#screen-bookings").classList.add("mobile-detail"); renderBookings(); window.scrollTo(0,0); });
+      $("#bookings-detail").addEventListener("click", (event) => {
+        const button = event.target.closest('[data-action]'); if (!button) return;
+        const booking = bookings.find((item) => item.id === selectedBooking); if (!booking) return;
+        const action = button.dataset.action;
+        if (action === "back-bookings") { $("#screen-bookings").classList.remove("mobile-detail"); window.scrollTo(0,0); }
+        if (action === "confirm-booking") { booking.status = "confirmed"; toast("Бронь подтверждена в макете"); renderBookings(); }
+        if (action === "reject-booking" || action === "cancel-booking") ask(action === "reject-booking" ? "Отклонить бронь?" : "Отменить бронь?", `${dayText(booking.day)}, ${booking.time} · ${booking.customer}`, () => { booking.status = action === "reject-booking" ? "rejected" : "cancelled"; toast("Бронь изменена в макете"); renderBookings(); });
+      });
+      function dishState(dish) {
+        if (!dish.manualAvailable && !dish.sourceAvailable) return { label: "Стоп · нет в источнике", tone: "off", action: "Снять ручной стоп" };
+        if (!dish.manualAvailable) return { label: "Стоп вручную", tone: "off", action: "Снять ручной стоп" };
+        if (!dish.sourceAvailable) return { label: "Нет в источнике", tone: "source", action: "На стоп" };
+        return { label: "В меню", tone: "done", action: "На стоп" };
+      }
+      function renderMenu() {
+        const categoryNames = ["Все блюда", ...categories];
+        $("#menu-category").innerHTML = categoryNames.map((name, index) => `<option value="${esc(index ? name : "all")}" ${menuCategory === (index ? name : "all") ? "selected" : ""}>${esc(index ? name : "Все категории")}</option>`).join("");
+        const needle = $("#menu-search").value.trim().toLocaleLowerCase("ru-RU");
+        const availability = $("#menu-availability").value;
+        const visible = dishes.filter((dish) => (menuCategory === "all" || dish.category === menuCategory) && (!needle || [dish.name, dish.description, dish.composition].some((part) => part.toLocaleLowerCase("ru-RU").includes(needle))) && (availability === "all" || (availability === "available" ? dish.manualAvailable && dish.sourceAvailable : !(dish.manualAvailable && dish.sourceAvailable))));
+        if (!menuDirty && !menuCreating && !visible.some((dish) => dish.id === selectedDish)) { selectedDish = visible[0]?.id ?? null; $("#screen-menu").classList.remove("mobile-detail"); }
+        let previousCategory = null;
+        $("#menu-list").innerHTML = visible.length ? visible.map((dish) => {
+          const divider = menuCategory === "all" && dish.category !== previousCategory ? `<div class="day-divider">${esc(dish.category)}</div>` : "";
+          previousCategory = dish.category;
+          const state = dishState(dish);
+          return `${divider}<button class="menu-row ${dish.image ? "has-photo" : ""}" type="button" data-menu-id="${dish.id}" aria-current="${dish.id === selectedDish && !menuCreating}">${dish.image ? `<span class="dish-photo"><img src="${esc(dish.image)}" alt="" loading="lazy"></span>` : ""}<span class="dish-copy"><strong>${esc(dish.name)}</strong><small>${esc(dish.weight)}</small></span><strong class="dish-price">${money(dish.price)}</strong><span class="status" data-tone="${state.tone}">${state.label}</span></button>`;
+        }).join("") : '<p class="empty">Блюд по этим условиям нет.</p>';
+        setMenuQueueLocked(menuDirty || menuCreating);
+        if (!menuDirty) renderMenuDetail();
+      }
+      $("#menu-category").addEventListener("change", (event) => { menuCategory = event.target.value; renderMenu(); });
+      $("#menu-search").addEventListener("input", renderMenu);
+      $("#menu-availability").addEventListener("change", renderMenu);
+      $("#menu-list").addEventListener("click", (event) => {
+        const button = event.target.closest('[data-menu-id]');
+        if (!button) return;
+        const select = () => { menuDirty = false; menuCreating = false; selectedDish = button.dataset.menuId; renderMenu(); $("#screen-menu").classList.add("mobile-detail"); window.scrollTo(0,0); };
+        if (menuDirty) ask("Отменить правки?", "Изменения блюда не сохранятся.", select, "Не сохранять"); else select();
+      });
+      function setMenuQueueLocked(locked) {
+        $("#menu-search").disabled = locked;
+        $("#menu-category").disabled = locked;
+        $("#menu-availability").disabled = locked;
+        $$('[data-action="add-dish"], [data-action="add-category"], #menu-list .menu-row').forEach((button) => { button.disabled = locked; });
+      }
+      function menuFormSnapshot(form) {
+        return JSON.stringify([...new FormData(form).entries()].map(([key, value]) => [key, typeof value === "string" ? value : value.name]));
+      }
+      function updateMenuDirty() {
+        const form = $("#menu-editor");
+        if (!form) return;
+        menuDirty = menuFormSnapshot(form) !== menuInitial || !!$("#dish-image", form).files?.length;
+        const savebar = $("#menu-savebar", form);
+        savebar.hidden = !menuDirty && !menuCreating;
+        const statusButton = $('[data-toggle-selected]', form);
+        if (statusButton) statusButton.disabled = menuDirty;
+        setMenuQueueLocked(menuDirty || menuCreating);
+      }
+      function updatePriceControls(form, dish) {
+        const mode = $('[name="priceMode"]', form);
+        const price = $('[name="price"]', form);
+        const coefficient = $('[name="coefficient"]', form);
+        if (!mode) return;
+        price.readOnly = mode.value !== "manual";
+        if (coefficient) { coefficient.closest(".field").hidden = mode.value !== "coefficient"; coefficient.disabled = mode.value !== "coefficient"; }
+        if (mode.value === "yandex" && dish.yandexPrice !== null) price.value = dish.yandexPrice;
+        if (mode.value === "coefficient" && dish.yandexPrice !== null) price.value = Math.round(dish.yandexPrice * (1 + Number(coefficient.value || 0) / 100));
+        if (mode.value === "inherit") price.value = dish.price;
+      }
+      function renderMenuDetail() {
+        if (menuImageObjectUrl) { URL.revokeObjectURL(menuImageObjectUrl); menuImageObjectUrl = null; }
+        const dish = menuCreating ? null : dishes.find((item) => item.id === selectedDish);
+        if (!dish && !menuCreating) {
+          $("#menu-detail").innerHTML = '<div class="detail-inner menu-detail-inner"><p class="empty">Выберите блюдо или добавьте новое.</p></div>';
+          setMenuQueueLocked(false);
+          return;
+        }
+        const state = dish ? dishState(dish) : null;
+        const selectedCategory = dish?.category ?? (menuCategory === "all" ? categories[0] : menuCategory);
+        $("#menu-detail").innerHTML = `<div class="detail-inner menu-detail-inner">
+          <button class="back-button" type="button" data-menu-action="back">← К меню</button>
+          <div class="detail-head"><div class="detail-title"><h2>${dish ? esc(dish.name) : "Новое блюдо"}</h2>${state ? `<span class="status" data-tone="${state.tone}">${state.label}</span>` : ""}</div></div>
+          <form class="menu-editor" id="menu-editor">
+            <div class="photo-control"><span class="dish-photo ${dish?.image ? "" : "empty"}" id="menu-photo">${dish?.image ? `<img src="${esc(dish.image)}" alt="">` : "Нет фото"}</span><div><label class="file-button secondary-button">${dish?.image ? "Заменить фото" : "Добавить фото"}<input id="dish-image" type="file" accept="image/png,image/jpeg,image/webp"></label><small class="form-note" id="photo-name"></small></div></div>
+            <div class="menu-fields">
+              <label class="field">Название<input name="name" value="${esc(dish?.name ?? "")}" maxlength="120" required autocomplete="off"></label>
+              <div class="form-grid"><label class="field">Категория<select name="category">${categories.map((category) => `<option value="${esc(category)}" ${category === selectedCategory ? "selected" : ""}>${esc(category)}</option>`).join("")}</select></label><label class="field">Вес / объём<input name="weight" value="${esc(dish?.weight ?? "")}" maxlength="50"></label></div>
+              <div class="menu-price-row">${dish ? `<label class="field">Режим цены<select name="priceMode"><option value="inherit" ${dish.priceMode === "inherit" ? "selected" : ""}>Общая настройка</option><option value="yandex" ${dish.priceMode === "yandex" ? "selected" : ""} ${dish.yandexPrice === null ? "disabled" : ""}>Цена Яндекс.Еды</option><option value="manual" ${dish.priceMode === "manual" ? "selected" : ""}>Ручная цена</option><option value="coefficient" ${dish.priceMode === "coefficient" ? "selected" : ""} ${dish.yandexPrice === null ? "disabled" : ""}>Яндекс ± %</option></select></label>` : ""}<label class="field">Цена на сайте, ₽<input name="price" type="number" min="0" max="1000000" step="1" value="${dish?.price ?? ""}" required></label></div>
+              ${dish ? `<label class="field" hidden>Яндекс ± %<input name="coefficient" type="number" min="-100" max="500" step="1" value="${dish.coefficientPercent ?? 0}"></label>` : ""}
+              <label class="field">Описание<textarea name="description" maxlength="2000" rows="3">${esc(dish?.description ?? "")}</textarea></label>
+              <label class="field">Состав<textarea name="composition" maxlength="2000" rows="3">${esc(dish?.composition ?? "")}</textarea></label>
+              ${dish ? `<div class="menu-status-action"><button class="secondary-button" type="button" data-toggle-selected>${state.action}</button>${!dish.sourceAvailable ? '<p class="form-note">В источнике блюдо недоступно. Ручной стоп не изменит это состояние.</p>' : ""}</div>` : ""}
+              ${dish ? '<button class="text-button danger menu-delete" type="button" data-menu-action="delete">Удалить блюдо</button>' : ""}
+            </div>
+            <div class="menu-savebar" id="menu-savebar" ${dish ? "hidden" : ""}><span ${menuCreating ? "hidden" : ""}>Несохранённые изменения</span><div><button class="secondary-button" type="button" data-menu-action="reset">Отмена</button><button class="primary-button" type="submit">${dish ? "Сохранить" : "Добавить блюдо"}</button></div></div>
+          </form>
+        </div>`;
+        const form = $("#menu-editor");
+        if (dish) updatePriceControls(form, dish);
+        menuInitial = menuFormSnapshot(form);
+        menuDirty = false;
+        setMenuQueueLocked(menuCreating);
+      }
+      $("#menu-detail").addEventListener("input", (event) => {
+        const form = event.target.closest("#menu-editor");
+        if (!form) return;
+        const dish = dishes.find((item) => item.id === selectedDish);
+        if (event.target.name === "coefficient" && dish) updatePriceControls(form, dish);
+        updateMenuDirty();
+      });
+      $("#menu-detail").addEventListener("change", (event) => {
+        const form = event.target.closest("#menu-editor");
+        if (!form) return;
+        const dish = dishes.find((item) => item.id === selectedDish);
+        if (event.target.name === "priceMode" && dish) updatePriceControls(form, dish);
+        if (event.target.id === "dish-image") {
+          const file = event.target.files?.[0];
+          if (menuImageObjectUrl) URL.revokeObjectURL(menuImageObjectUrl);
+          menuImageObjectUrl = file ? URL.createObjectURL(file) : null;
+          $("#photo-name").textContent = file?.name ?? "";
+          if (file) $("#menu-photo").innerHTML = `<img src="${esc(menuImageObjectUrl)}" alt="">`;
+        }
+        updateMenuDirty();
+      });
+      $("#menu-detail").addEventListener("submit", (event) => {
+        if (event.target.id !== "menu-editor") return;
+        event.preventDefault();
+        const form = event.target;
+        const fields = new FormData(form);
+        const name = String(fields.get("name")).trim();
+        const value = Number(fields.get("price"));
+        if (!name || !Number.isInteger(value) || value < 0 || value > 1000000) { toast("Проверьте название и цену"); return; }
+        const oldDish = menuCreating ? null : dishes.find((item) => item.id === selectedDish);
+        const target = oldDish ?? { id: `d${nextDishId++}`, yandexPrice: null, manualAvailable: true, sourceAvailable: true, image: "" };
+        const mode = oldDish ? String(fields.get("priceMode")) : "manual";
+        target.name = name;
+        target.category = String(fields.get("category"));
+        target.weight = String(fields.get("weight")).trim();
+        target.description = String(fields.get("description")).trim();
+        target.composition = String(fields.get("composition")).trim();
+        target.priceMode = mode;
+        target.coefficientPercent = mode === "coefficient" ? Number(fields.get("coefficient")) : null;
+        target.price = mode === "yandex" && target.yandexPrice !== null ? target.yandexPrice : mode === "coefficient" && target.yandexPrice !== null ? Math.round(target.yandexPrice * (1 + target.coefficientPercent / 100)) : mode === "inherit" && oldDish ? oldDish.price : value;
+        if ($("#dish-image").files?.[0] && menuImageObjectUrl) { target.image = menuImageObjectUrl; menuImageObjectUrl = null; }
+        if (!oldDish) dishes.push(target);
+        selectedDish = target.id;
+        menuCreating = false;
+        menuDirty = false;
+        menuCategory = target.category;
+        $("#menu-search").value = "";
+        $("#menu-availability").value = "all";
+        renderMenu();
+        toast(oldDish ? "Блюдо изменено в макете" : "Блюдо добавлено в макет");
+      });
+      $("#menu-detail").addEventListener("click", (event) => {
+        const button = event.target.closest('[data-menu-action], [data-toggle-selected]');
+        if (!button) return;
+        const action = button.dataset.menuAction;
+        const dish = dishes.find((item) => item.id === selectedDish);
+        if (button.hasAttribute("data-toggle-selected") && dish && !menuDirty) { dish.manualAvailable = !dish.manualAvailable; renderMenu(); toast(dish.manualAvailable ? (dish.sourceAvailable ? "Блюдо возвращено в меню макета" : "Ручной стоп снят. Блюдо всё ещё недоступно в источнике") : "Блюдо поставлено на стоп в макете"); return; }
+        if (action === "reset") { const wasCreating = menuCreating; menuDirty = false; menuCreating = false; renderMenu(); if (wasCreating) $("#screen-menu").classList.remove("mobile-detail"); return; }
+        if (action === "back") {
+          const goBack = () => { menuDirty = false; menuCreating = false; renderMenu(); $("#screen-menu").classList.remove("mobile-detail"); window.scrollTo(0,0); };
+          if (menuDirty) ask("Отменить правки?", "Изменения блюда не сохранятся.", goBack, "Не сохранять"); else goBack();
+        }
+        if (action === "delete" && dish) ask("Удалить блюдо?", `${menuDirty ? "Несохранённые изменения будут потеряны. " : ""}«${dish.name}» исчезнет из каталога.`, () => { dishes.splice(dishes.indexOf(dish),1); selectedDish = null; menuDirty = false; menuCreating = false; renderMenu(); $("#screen-menu").classList.remove("mobile-detail"); toast("Блюдо удалено из макета"); });
+      });
+      $$('[data-action="add-dish"]').forEach((button) => button.addEventListener("click", () => { menuCreating = true; menuDirty = false; renderMenu(); $("#screen-menu").classList.add("mobile-detail"); window.scrollTo(0,0); }));
+      $$('[data-action="add-category"]').forEach((button) => button.addEventListener("click", () => { $("#category-name").value = ""; $("#category-dialog").showModal(); $("#category-name").focus(); }));
+      $("#category-cancel").addEventListener("click", () => $("#category-dialog").close());
+      $("#category-form").addEventListener("submit", (event) => { event.preventDefault(); const name = $("#category-name").value.trim(); if (!name) return; if (categories.some((category) => category.toLocaleLowerCase("ru-RU") === name.toLocaleLowerCase("ru-RU"))) { toast("Такая категория уже есть"); return; } categories.push(name); menuCategory = name; $("#category-dialog").close(); renderMenu(); toast("Категория добавлена в макет"); });
+      function showOrderFromHash(id) {
+        const order = orders.find((item) => item.id === id);
+        if (!order) return false;
+        selectedOrder = id;
+        orderFilter = ["delivered", "issued", "cancelled"].includes(order.status) ? "history" : "current";
+        $("#order-search").value = "";
+        $("#order-type").value = "all";
+        if (view !== "orders") showView("orders", false);
+        openOrderDetail(id, false);
+        return true;
+      }
+      window.addEventListener("popstate", () => {
+        const orderId = window.location.hash.match(/^#orders\/(o\d+)$/)?.[1];
+        if (orderEditing && $("#screen-orders").classList.contains("mobile-detail") && !orderId) {
+          history.pushState({ orderId: selectedOrder }, "", `#orders/${selectedOrder}`);
+          const backToOrder = () => { orderEditing = false; orderDraft = null; renderOrderDetail(); $("#orders-detail").scrollTop = 0; $("#order-detail-heading")?.focus({ preventScroll: true }); };
+          if (JSON.stringify(orderDraft) !== JSON.stringify(orders.find((order) => order.id === selectedOrder)?.items)) ask("Отменить правки?", "Изменения состава заказа не сохранятся.", backToOrder, "Не сохранять");
+          else backToOrder();
+          return;
+        }
+        if (orderId && showOrderFromHash(orderId)) return;
+        closeOrderDetail(false, true, true);
+        const next = window.location.hash.slice(1);
+        if (["orders", "bookings", "menu"].includes(next) && next !== view) showView(next, false);
+      });
+      const initialOrderId = window.location.hash.match(/^#orders\/(o\d+)$/)?.[1];
+      if (initialOrderId && orders.some((order) => order.id === initialOrderId)) { showView("orders", false); showOrderFromHash(initialOrderId); }
+      else showView(["orders", "bookings", "menu"].includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : "orders");
+    })();
+  </script>
+</body>
+</html>

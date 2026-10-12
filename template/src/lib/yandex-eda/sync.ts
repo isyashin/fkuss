@@ -10,6 +10,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getContentDir } from "../content-dir";
 import { syncSources, type SyncSource } from "../multi-menu";
+import { isSyncLockStale } from "./sync-lock";
 import sharp from "sharp";
 
 type PrismaLike = Pick<PrismaClient, "dish" | "category" | "modifierGroup" | "modifier" | "settings" | "$transaction">;
@@ -26,7 +27,9 @@ export interface SyncResult {
 const SYNC_KEY = "syncState";
 const SETTINGS_KEY = "settings";
 
-/** Атомарный захват блокировки: true, если удалось встать running=true */
+/** Атомарный захват блокировки: true, если удалось встать running=true.
+    Блокировка считается свободной, если процесс умер и не отпустил её
+    (running=true давно — F05: синхронизация не должна зависать навсегда). */
 async function acquireLock(prisma: PrismaLike): Promise<boolean> {
   const attempt = new Date().toISOString();
   // Читаем предыдущее состояние, чтобы не потерять lastSuccess/lastStatus
@@ -34,6 +37,18 @@ async function acquireLock(prisma: PrismaLike): Promise<boolean> {
     | Record<string, unknown>
     | undefined;
   const value = JSON.parse(JSON.stringify({ ...(previous ?? {}), running: true, lastAttempt: attempt }));
+  // F05: блокировка, которую процесс не отпустил (упал), отбирается по давности.
+  if (previous?.running === true) {
+    if (!isSyncLockStale(previous, new Date())) return false;
+    const taken = typeof previous.lastAttempt === "string"
+      ? await prisma.settings.updateMany({
+          // атомарный захват: меняем только если lastAttempt не изменился
+          where: { key: SYNC_KEY, value: { path: ["lastAttempt"], equals: previous.lastAttempt } },
+          data: { value },
+        })
+      : await prisma.settings.updateMany({ where: { key: SYNC_KEY }, data: { value } });
+    return taken.count > 0;
+  }
   const updatedFree = await prisma.settings.updateMany({
     where: { key: SYNC_KEY, NOT: { value: { path: ["running"], equals: true } } },
     data: { value },

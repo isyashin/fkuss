@@ -129,7 +129,7 @@ export async function getSitePromos(): Promise<{ promos: Promo[] }> {
     // откатываемся на JSON (иначе удалённые промо «воскресают»)
     return {
       promos: rows
-        .filter((p) => (!p.activeFrom || p.activeFrom <= today) && (!p.activeTo || p.activeTo >= today))
+        .filter((p) => p.enabled && (!p.activeFrom || p.activeFrom <= today) && (!p.activeTo || p.activeTo >= today))
         .map((p) => ({
           id: p.id,
           title: p.title,

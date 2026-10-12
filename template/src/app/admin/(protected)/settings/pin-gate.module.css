@@ -2,7 +2,7 @@
   background: var(--admin-surface); border: 1px solid var(--admin-line); border-radius: var(--admin-radius, 15px);
   box-shadow: var(--admin-shadow); }
 .pinEyebrow { color: var(--admin-accent); font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-.pinPage h1 { margin: 8px 0 6px; font: 26px Georgia, serif; }
+.pinPage h1 { margin: 8px 0 6px; font: 600 26px var(--rd-font, "Segoe UI", sans-serif); }
 .pinLead { margin: 0 0 20px; color: var(--admin-muted); font-size: 13px; line-height: 1.5; }
 
 .pinDots { display: flex; justify-content: center; gap: 12px; margin-bottom: 22px; min-height: 16px; }

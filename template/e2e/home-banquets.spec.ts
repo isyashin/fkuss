@@ -36,7 +36,7 @@ test("UI-04: админ включает банкеты → страница и 
   await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
-  await page.goto("/admin/banquets");
+  await page.goto("/admin/settings?section=banquets");
   await page.getByLabel(/Раздел «Банкеты» включён/).check();
   await page.getByRole("button", { name: "Сохранить настройки" }).click();
   await expect(page.getByText("Сохранено ✓")).toBeVisible({ timeout: 15000 });
@@ -56,7 +56,7 @@ test("UI-04: админ включает банкеты → страница и 
   await expect(page.getByRole("link", { name: "Банкеты" })).toBeVisible();
 
   // Убираем за собой: выключаем раздел и удаляем зал
-  await page.goto("/admin/banquets");
+  await page.goto("/admin/settings?section=banquets");
   await page.getByLabel(/Раздел «Банкеты» включён/).uncheck();
   await page.getByRole("button", { name: "Сохранить настройки" }).click();
   page.once("dialog", (d) => d.accept());

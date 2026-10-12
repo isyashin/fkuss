@@ -21,14 +21,16 @@ export function DeliveryTabs({
 
   return (
     <div>
-      <div className="flex gap-2 mb-4" role="tablist" aria-label="Доставка">
+      <div className="flex gap-1 mb-5 border-b border-[var(--rd-line)]" role="tablist" aria-label="Доставка">
         <button
           type="button"
           role="tab"
           aria-selected={tab === "zones"}
           onClick={() => setTab("zones")}
-          className={`min-h-11 px-5 rounded-full text-sm font-medium ${
-            tab === "zones" ? "bg-accent text-white" : "bg-card border border-foreground/15"
+          className={`relative min-h-12 px-3 text-[13px] font-semibold ${
+            tab === "zones" ? "text-[var(--rd-text)]" : "text-[var(--rd-muted)] hover:text-[var(--rd-text)]"
+          } after:absolute after:right-2 after:left-2 after:-bottom-px after:h-0.5 ${
+            tab === "zones" ? "after:bg-[var(--rd-accent)]" : "after:bg-transparent"
           }`}
         >
           Зоны на карте
@@ -38,8 +40,10 @@ export function DeliveryTabs({
           role="tab"
           aria-selected={tab === "options"}
           onClick={() => setTab("options")}
-          className={`min-h-11 px-5 rounded-full text-sm font-medium ${
-            tab === "options" ? "bg-accent text-white" : "bg-card border border-foreground/15"
+          className={`relative min-h-12 px-3 text-[13px] font-semibold ${
+            tab === "options" ? "text-[var(--rd-text)]" : "text-[var(--rd-muted)] hover:text-[var(--rd-text)]"
+          } after:absolute after:right-2 after:left-2 after:-bottom-px after:h-0.5 ${
+            tab === "options" ? "after:bg-[var(--rd-accent)]" : "after:bg-transparent"
           }`}
         >
           Варианты доставки

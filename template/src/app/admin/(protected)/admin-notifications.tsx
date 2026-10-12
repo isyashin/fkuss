@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { playAdminSound } from "@/lib/admin-audio";
+import { anyDirty } from "./admin-dirty";
 import styles from "./admin-redesign.module.css";
 import { AdminIcon } from "./admin-icon";
 import {
@@ -19,6 +20,7 @@ import {
 } from "./admin-notifications-store";
 
 const DEFAULT_HINT = "Включите звук нажатием кнопки — браузер требует вашего действия.";
+const refreshBlocked = () => anyDirty() || (window.matchMedia("(max-width: 760px)").matches && document.querySelector("[data-order-detail-open]") !== null);
 
 /**
  * Колокольчик новых событий. Оболочка рендерит ДВА экземпляра (rail + topbar) —
@@ -41,13 +43,26 @@ export function AdminNotifications({ actorId, initialOrders, initialBookings }: 
   const enabled = useSyncExternalStore(subscribeSoundEnabled, readSoundEnabled, () => false);
   const hint = state.error ?? (enabled ? "Звук включён для этой вкладки." : DEFAULT_HINT);
   const lastRefreshTick = useRef(state.refreshTick);
+  const deferredRefresh = useRef(false);
 
   useEffect(() => {
     if (state.refreshTick !== lastRefreshTick.current) {
       lastRefreshTick.current = state.refreshTick;
-      router.refresh();
+      // Новые события остаются в колокольчике, но обновление RSC во время
+      // мобильной детали или грязной формы сбрасывает URL и черновик.
+      if (refreshBlocked()) deferredRefresh.current = true;
+      else router.refresh();
     }
   }, [state.refreshTick, router]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (!deferredRefresh.current || refreshBlocked()) return;
+      deferredRefresh.current = false;
+      router.refresh();
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [router]);
 
   async function enableSound() {
     try {

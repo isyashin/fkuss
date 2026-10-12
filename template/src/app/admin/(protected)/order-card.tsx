@@ -45,7 +45,7 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
   const dishes = new Map(catalog.flatMap((category) => category.dishes).map((dish) => [dish.id, dish]));
   const run = (status: string) => startTransition(async () => {
     setError("");
-    try { await setOrderStatus(order.id, status); router.refresh(); }
+    try { await setOrderStatus(order.id, status); router.replace(`${window.location.pathname}${window.location.search}`, { scroll: false }); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось изменить статус"); }
   });
 

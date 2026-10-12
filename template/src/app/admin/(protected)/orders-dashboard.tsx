@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import type { Order, OrderItem } from "@/generated/prisma/client";
 import { orderActionsFor, orderStatusLabel } from "@/lib/order-status";
@@ -30,6 +30,9 @@ function statusTone(status: string): "new" | "success" | "danger" | "warn" {
   return "warn";
 }
 const dishWord = (count: number) => { const form = new Intl.PluralRules("ru-RU").select(count); return form === "one" ? "блюдо" : form === "few" ? "блюда" : "блюд"; };
+const subscribeHydration = () => () => {};
+const hydratedSnapshot = () => true;
+const serverSnapshot = () => false;
 
 /** D05: позиция списка — в модульном состоянии (без ref внутри компонента:
     react-hooks/refs запрещает чтение ref'ов даже в обработчиках JSX). */
@@ -60,6 +63,9 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   // F10: прямая ссылка ?selected= на телефоне сразу открывает деталь вместо списка.
   const [mobileDetail, setMobileDetail] = useState(() => Boolean(initialSelectedId));
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  // SSR показывает очередь до гидратации. Не принимаем нажатия, пока у её
+  // кнопок и формы поиска нет обработчиков: первый ввод иначе может пропасть.
+  const hydrated = useSyncExternalStore(subscribeHydration, hydratedSnapshot, serverSnapshot);
   const router = useRouter();
   const [quickPending, startQuickTransition] = useTransition();
   // D05: «проваливание» в деталь сохраняет позицию списка, возврат — восстанавливает.
@@ -133,7 +139,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
           : []),
       ];
 
-  return <div className={`${styles.dashboard} ${mobileDetail ? styles.mobileDetail : ""}`} data-order-detail-open={mobileDetail ? "" : undefined}>
+  return <div className={`${styles.dashboard} ${mobileDetail ? styles.mobileDetail : ""}`} data-order-detail-open={mobileDetail ? "" : undefined} inert={!hydrated} aria-busy={!hydrated}>
     <section className={styles.ordersPanel} aria-label="Список заказов">
       <div className={styles.queueHead}><h1>Заказы</h1></div>
       {/* F19: вкладки с клавиатурной навигацией (стрелки, Home, End) */}

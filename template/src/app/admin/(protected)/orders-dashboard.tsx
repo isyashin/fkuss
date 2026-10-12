@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import type { Order, OrderItem } from "@/generated/prisma/client";
 import { orderActionsFor, orderStatusLabel } from "@/lib/order-status";
@@ -30,6 +30,9 @@ function statusTone(status: string): "new" | "success" | "danger" | "warn" {
   return "warn";
 }
 const dishWord = (count: number) => { const form = new Intl.PluralRules("ru-RU").select(count); return form === "one" ? "блюдо" : form === "few" ? "блюда" : "блюд"; };
+const subscribeHydration = () => () => {};
+const hydratedSnapshot = () => true;
+const serverSnapshot = () => false;
 
 /** D05: позиция списка — в модульном состоянии (без ref внутри компонента:
     react-hooks/refs запрещает чтение ref'ов даже в обработчиках JSX). */
@@ -60,6 +63,9 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   // F10: прямая ссылка ?selected= на телефоне сразу открывает деталь вместо списка.
   const [mobileDetail, setMobileDetail] = useState(() => Boolean(initialSelectedId));
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  // SSR показывает очередь до гидратации. Не принимаем нажатия, пока у её
+  // кнопок и формы поиска нет обработчиков: первый ввод иначе может пропасть.
+  const hydrated = useSyncExternalStore(subscribeHydration, hydratedSnapshot, serverSnapshot);
   const router = useRouter();
   const [quickPending, startQuickTransition] = useTransition();
   // D05: «проваливание» в деталь сохраняет позицию списка, возврат — восстанавливает.
@@ -91,7 +97,10 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       const isMobile = window.matchMedia("(max-width: 760px)").matches;
       if (isMobile) {
         const base = href(query);
-        window.history.pushState({ orderDetail: id }, "", `${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`);
+        // Деталь уже выбрана в локальном состоянии. Перехват pushState роутером
+        // Next запускает повторный рендер страницы и сбрасывает черновик заказа.
+        // Сохраняем внутренние поля history.state для корректной системной Back.
+        History.prototype.pushState.call(window.history, { ...window.history.state, orderDetail: id }, "", `${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`);
       } else {
         const base = href(query);
         router.replace(`${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`, { scroll: false });
@@ -130,7 +139,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
           : []),
       ];
 
-  return <div className={`${styles.dashboard} ${mobileDetail ? styles.mobileDetail : ""}`} data-order-detail-open={mobileDetail ? "" : undefined}>
+  return <div className={`${styles.dashboard} ${mobileDetail ? styles.mobileDetail : ""}`} data-order-detail-open={mobileDetail ? "" : undefined} inert={!hydrated} aria-busy={!hydrated}>
     <section className={styles.ordersPanel} aria-label="Список заказов">
       <div className={styles.queueHead}><h1>Заказы</h1></div>
       {/* F19: вкладки с клавиатурной навигацией (стрелки, Home, End) */}
@@ -153,7 +162,16 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       >
         {QUEUE_MODES.map((mode) => <Link key={mode} prefetch={false} role="tab" tabIndex={query.mode === mode ? 0 : -1} aria-selected={query.mode === mode} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{mode === "current" ? "Текущие" : mode === "new" ? "Новые" : "История"} <span className={styles.count}>{counts.byMode[mode]}</span></Link>)}
       </div>
-      <form key={`${query.mode}|${query.sort}|${query.q}`} className={styles.queueTools} role="search" action="/admin" method="get">
+      <form key={`${query.mode}|${query.sort}|${query.q}`} className={styles.queueTools} role="search" action="/admin" method="get" onSubmit={(event) => {
+        // Сохраняем ввод до фонового router.refresh(): нативный GET в WebKit
+        // иногда проигрывал навигации от оповещений и возвращал пустой поиск.
+        event.preventDefault();
+        const params = new URLSearchParams();
+        for (const [name, value] of new FormData(event.currentTarget)) {
+          if (typeof value === "string") params.set(name, value);
+        }
+        router.push(`/admin?${params.toString()}`);
+      }}>
         {query.mode !== "all" && query.mode !== "current" && <input type="hidden" name="mode" value={query.mode} />}
         {query.sort !== "desc" && <input type="hidden" name="sort" value={query.sort} />}
         <input className={styles.searchInput} type="search" name="q" defaultValue={query.q} placeholder="№, имя или телефон" maxLength={60} aria-label="Поиск заказа" />

@@ -25,7 +25,7 @@ const DEFAULT_HINT = "Включите звук нажатием кнопки �
  * все данные (события, счётчики, звук, бейдж) живут в общем сторе на вкладку
  * (admin-notifications-store), экземпляры лишь отображают одно и то же.
  */
-export function AdminNotifications({ actorId }: { actorId: string }) {
+export function AdminNotifications({ actorId, initialOrders, initialBookings }: { actorId: string; initialOrders: number; initialBookings: number }) {
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -33,7 +33,7 @@ export function AdminNotifications({ actorId }: { actorId: string }) {
   // Корректировка состояния во время рендера (react-compiler: не setState в эффекте).
   const [panelPath, setPanelPath] = useState(pathname);
   if (panelPath !== pathname) { setPanelPath(pathname); setOpen(false); }
-  const subscribe = useCallback((listener: () => void) => subscribeNotifications(actorId, listener), [actorId]);
+  const subscribe = useCallback((listener: () => void) => subscribeNotifications(actorId, { orders: initialOrders, bookings: initialBookings }, listener), [actorId, initialOrders, initialBookings]);
   const getSnapshot = useCallback(() => getNotificationsSnapshot(actorId), [actorId]);
   const state = useSyncExternalStore(subscribe, getSnapshot, getEmptyNotificationsSnapshot);
   // sessionStorage — источник истины: серверный снапшот false совпадает с SSR,

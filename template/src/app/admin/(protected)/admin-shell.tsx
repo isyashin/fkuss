@@ -108,7 +108,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
       <Link href="/admin" className={styles.brand} aria-label={`${restaurantName}: заказы`}>{brand}</Link>
       <nav className={styles.primaryNav} aria-label="Главная навигация">{navLinks("rail")}</nav>
       <div className={styles.railFoot}>
-        <AdminNotifications actorId={actor.id} />
+        <AdminNotifications actorId={actor.id} initialOrders={newOrdersCount} initialBookings={newBookingsCount} />
         <div className={styles.popWrap}>
           <button type="button" className={styles.footButton} onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}>
             <AdminIcon name="settings" size={20} />
@@ -134,7 +134,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
       <header className={styles.topbar}>
         <span className={styles.logo}>{logo && !logoFailed ? <Image src={logo} width={34} height={34} alt="" unoptimized onError={() => setLogoFailed(true)} /> : restaurantName.slice(0, 1)}</span>
         <strong>{restaurantName}</strong>
-        <AdminNotifications actorId={actor.id} />
+        <AdminNotifications actorId={actor.id} initialOrders={newOrdersCount} initialBookings={newBookingsCount} />
         <div className={styles.popWrap}>
           <button type="button" className={styles.footButton} onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}>
             <span className={styles.footBadge} style={{ background: "rgba(255,255,255,.16)", color: "#fff" }}>{initials}</span>

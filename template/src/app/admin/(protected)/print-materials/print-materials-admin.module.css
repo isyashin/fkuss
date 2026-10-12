@@ -1,4 +1,10 @@
 .editor { display:grid; gap:14px; min-width:0; }
+/* D10: на широком экране редактор и живой макет — рядом, макет закреплён */
+.layoutGrid { display: grid; gap: 24px; align-items: start; }
+@media (min-width: 1024px) {
+  .layoutGrid { grid-template-columns: minmax(0, 1fr) minmax(320px, 380px); }
+  .previewAside { position: sticky; top: 20px; }
+}
 .tabs { display:flex; flex-wrap:wrap; gap:8px; }
 .tab,.activeTab { min-height:44px; padding:0 12px; border:1px solid var(--admin-line); border-radius:9px; background:var(--admin-surface); color:var(--admin-text); font-size:12px; }
 .activeTab { border-color:var(--admin-accent); background:var(--admin-accent-soft); color:var(--admin-accent); }

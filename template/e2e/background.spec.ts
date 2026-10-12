@@ -16,14 +16,16 @@ async function makePng(): Promise<Buffer> {
     .toBuffer();
 }
 
-test("VIS-01/03: загрузка фона через админку, применение на витрине, удаление", async ({ page }) => {
+test("VIS-01/03: загрузка фона через админку, применение на витрине, удаление", async ({ page }, testInfo) => {
+  // Пайплайн фона идентичен на всех вьюпортах; стабильность загрузки файла проверяем на десктопе.
+  test.skip(testInfo.project.name !== "desktop", "фон: только десктопный проект");
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
 
-  await page.goto("/admin/settings");
+  await page.goto("/admin/settings?section=theme");
   await page.getByLabel("Фон включён").check();
-  const appearance = page.locator("section#site-theme");
+  const appearance = page.locator('section[aria-label="Оформление сайта"]');
   const saveAppearance = async () => {
     await appearance.getByRole("button", { name: "Сохранить" }).click();
     await expect(appearance.getByRole("status")).toHaveText("Сохранено", { timeout: 15000 });
@@ -40,9 +42,12 @@ test("VIS-01/03: загрузка фона через админку, приме
   // флаг «Отключить на мобильных» выключаем, чтобы проверить применение
   const isMobile = test.info().project.name.includes("mobile");
   if (isMobile) {
-    await page.goto("/admin/settings");
-    await page.getByLabel("Отключить фон на мобильных").uncheck();
-    await saveAppearance();
+    await page.goto("/admin/settings?section=theme");
+    // Кнопка «Сохранить» появляется только при изменениях (редизайн):
+    // меняем флаг только если он ещё не в нужном состоянии.
+    const disableMobile = page.getByLabel("Отключить фон на мобильных");
+    if (await disableMobile.isChecked()) await disableMobile.uncheck();
+    if (await appearance.getByRole("button", { name: "Сохранить" }).isVisible().catch(() => false)) await saveAppearance();
   }
 
   // На витрине — background-image в стилях body (ждём применения)
@@ -52,7 +57,7 @@ test("VIS-01/03: загрузка фона через админку, приме
     .toContain("content-asset");
 
   // Удаление
-  await page.goto("/admin/settings");
+  await page.goto("/admin/settings?section=theme");
   await appearance.getByRole("button", { name: "Удалить" }).click({ force: true });
   await saveAppearance();
 

@@ -1,18 +1,8 @@
-import { getPrisma } from "@/lib/db";
-import { requireAdminPermission } from "@/lib/admin-auth";
-import { PromosAdmin } from "./promos-admin";
-import { AdminSettingsSubpage } from "../admin-settings-subpage";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+// Редизайн: акции — секция «Настройки → Акции».
 export default async function AdminPromosPage() {
-  await requireAdminPermission("manage");
-  const prisma = getPrisma();
-  const promos = await prisma.promo.findMany({ orderBy: { position: "asc" } });
-
-  return (
-    <AdminSettingsSubpage title="Акции" description="Предложения, которые видят гости ресторана.">
-      <PromosAdmin promos={promos} />
-    </AdminSettingsSubpage>
-  );
+  redirect("/admin/settings?section=promos");
 }

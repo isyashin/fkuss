@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { addGalleryImage, deleteGalleryImage } from "../content-actions";
+import { addGalleryImage, deleteGalleryImage, saveGalleryAlt } from "../content-actions";
 import { dishImageUrl } from "@/lib/assets";
 import type { GalleryImage } from "@/generated/prisma/client";
 
@@ -18,11 +18,26 @@ export function GalleryAdmin({ images }: { images: GalleryImage[] }) {
             <div className="relative aspect-square rounded-[var(--radius)] overflow-hidden bg-foreground/5">
               <img src={dishImageUrl(img.image, "sm")} alt={img.alt} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
             </div>
+            {/* F18: содержательная alt-подпись хранится в БД (GalleryImage.alt) */}
+            <label className="mt-1 block text-xs text-muted">
+              Подпись (alt)
+              <input
+                defaultValue={img.alt}
+                placeholder="Описание фото для гостей и поиска"
+                aria-label={`Подпись фото ${img.id}`}
+                className="w-full min-h-11 px-2 rounded-[9px] border border-foreground/15 bg-card text-sm"
+                onBlur={(event) => {
+                  const value = event.target.value.trim();
+                  if (value === img.alt) return;
+                  startTransition(() => saveGalleryAlt(img.id, value));
+                }}
+              />
+            </label>
             <button
               disabled={pending}
               onClick={() => startTransition(() => deleteGalleryImage(img.id))}
               className="absolute top-2 right-2 min-w-11 min-h-11 rounded-full bg-black/60 text-white"
-              aria-label="Удалить"
+              aria-label={`Удалить фото ${img.alt || img.id}`}
             >
               ×
             </button>

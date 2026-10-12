@@ -27,36 +27,42 @@ export async function saveAllAdminSettings(input: AdminSettingsInput): Promise<v
   for (const path of ["/admin/settings", "/admin/menu", "/", "/menu", "/booking"]) revalidatePath(path);
 }
 
-export async function saveSettings(settings: ContentSettings): Promise<void> {
+export async function saveSettings(settings: ContentSettings, expectedRev?: number | null, force = false): Promise<number | "conflict"> {
   await guard();
   const parsed = validateSettingsMutation(settings);
   const prisma = getPrisma();
-  await prisma.settings.upsert({
-    where: { key: "settings" },
-    create: { key: "settings", value: JSON.parse(JSON.stringify(parsed)) },
-    update: { value: JSON.parse(JSON.stringify(parsed)) },
-  });
+  // F04: версионирование — параллельная вкладка с устаревшими данными не молча
+  // перезаписывает чужие правки. Конфликт возвращаем значением: сообщения
+  // ошибок server actions на клиент не передаются (React их редактирует).
+  // Успех возвращаем новой ревизией — клиент обязан её принять, иначе его
+  // следующее сохранение ложно конфликтует (P1, аудит 11.10).
+  const { writeSettingsVersioned } = await import("@/lib/admin-settings-version");
+  const rev = await writeSettingsVersioned(prisma, () => parsed as unknown as Record<string, unknown>, expectedRev ?? null, force);
+  if (rev === "conflict") return "conflict";
   revalidatePath("/admin/settings");
   revalidatePath("/menu");
   revalidatePath("/booking");
+  return rev;
 }
 
-export async function saveGuestContactChannels(input: { whatsapp: boolean; telegram: boolean }): Promise<void> {
+export async function saveGuestContactChannels(input: { whatsapp: boolean; telegram: boolean }): Promise<number> {
   await guard();
   const guestContact = guestContactSchema.parse(input);
   const prisma = getPrisma();
   const fallback = await getSiteSettings();
-  await prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('guest-contact-settings'))`;
-    const row = await tx.settings.findUnique({ where: { key: "settings" } });
-    const current = (row?.value ?? fallback) as Record<string, unknown>;
-    const value = JSON.parse(JSON.stringify({ ...current, guestContact }));
-    await tx.settings.upsert({ where: { key: "settings" }, create: { key: "settings", value }, update: { value } });
-  });
+  // Единая точка записи строки settings: общая блокировка и обязательный
+  // бамп _rev — иначе правка не будет замечена версионированными вкладками
+  // и будет тихо затёрта их полным объектом (P1, аудит 11.10). Возвращаем
+  // ревизию: вкладка, сделавшая запись, обязана принять её, иначе её же
+  // следующее сохранение ложно конфликтует (аудит 12.10).
+  const { writeSettingsVersioned } = await import("@/lib/admin-settings-version");
+  const rev = await writeSettingsVersioned(prisma, (current) => ({ ...fallback, ...current, guestContact }), null);
+  if (rev === "conflict") throw new Error("CONFLICT_WITHOUT_CHECK");
   revalidatePath("/admin/settings");
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
   revalidatePath("/");
+  return rev;
 }
 
 export async function saveTheme(theme: { preset: string; accent: string }): Promise<void> {
@@ -118,21 +124,20 @@ const pricingSchema = z.object({
   globalPercent: z.number().min(-100).max(500),
 });
 
-export async function savePricing(pricing: { globalMode: string; globalPercent: number }): Promise<void> {
+export async function savePricing(pricing: { globalMode: string; globalPercent: number }, expectedRev?: number | null, force = false): Promise<number | "conflict"> {
   await guard();
   const parsed = pricingSchema.parse(pricing);
   const prisma = getPrisma();
-  const row = await prisma.settings.findUnique({ where: { key: "settings" } });
-  const current = (row?.value ?? {}) as Record<string, unknown>;
-  await prisma.settings.upsert({
-    where: { key: "settings" },
-    create: { key: "settings", value: JSON.parse(JSON.stringify({ ...current, pricing: parsed })) },
-    update: { value: JSON.parse(JSON.stringify({ ...current, pricing: parsed })) },
-  });
+  // F04: та же защита версий, что у saveSettings; атомарная запись и возврат
+  // новой ревизии — по замечанию аудита 11.10.
+  const { writeSettingsVersioned } = await import("@/lib/admin-settings-version");
+  const rev = await writeSettingsVersioned(prisma, (current) => ({ ...current, pricing: parsed }), expectedRev ?? null, force);
+  if (rev === "conflict") return "conflict";
   const { recomputePrices } = await import("@/lib/order/recompute");
   await recomputePrices(prisma);
   revalidatePath("/admin/settings");
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
   revalidatePath("/");
+  return rev;
 }

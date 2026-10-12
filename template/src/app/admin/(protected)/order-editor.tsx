@@ -8,6 +8,8 @@ import type { OrderEditInput } from "@/lib/admin-order-edit";
 import { adminDraftItemsTotal, adminDraftLineUnit } from "@/lib/admin-draft-preview";
 import { saveOrderItems } from "./actions";
 import { AdminIcon } from "./admin-icon";
+import { useDirtyGuard } from "./admin-dirty";
+import { draftLineKey } from "@/lib/order/draft-line-key";
 import type { CatalogCategory, CatalogDish, DeliveryOptionChoice, DeliveryZoneChoice } from "./order-editor-types";
 import styles from "./order-editor.module.css";
 
@@ -17,16 +19,17 @@ type DraftLine =
 
 const rub = (value: number) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
 
-export function OrderEditor({ order, catalog, deliveryOptions, deliveryZones, onClose }: {
+export function OrderEditor({ order, catalog, deliveryOptions, deliveryZones, onClose, pickerOpen = false, onPickerOpen, onPickerClose }: {
   order: Order & { items: OrderItem[] }; catalog: CatalogCategory[];
   deliveryOptions: DeliveryOptionChoice[]; deliveryZones: DeliveryZoneChoice[]; onClose: () => void;
+  pickerOpen?: boolean; onPickerOpen?: () => void; onPickerClose?: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [lines, setLines] = useState<DraftLine[]>(order.items.map((item) => ({ kind: "existing", key: item.id, itemId: item.id, quantity: item.quantity, item })));
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const [pickerCategory, setPickerCategory] = useState("all");
+  const setPickerOpen = (open: boolean) => { if (open) onPickerOpen?.(); else onPickerClose?.(); };
   const [deliveryChoice, setDeliveryChoice] = useState(
     order.type === "pickup" ? "" : order.deliveryOptionName
       ? (() => { const matches = deliveryOptions.filter((option) => option.name === order.deliveryOptionName); return matches.length === 1 ? `option:${matches[0].id}` : ""; })()
@@ -35,11 +38,14 @@ export function OrderEditor({ order, catalog, deliveryOptions, deliveryZones, on
   const [error, setError] = useState("");
   const dishes = catalog.flatMap((category) => category.dishes);
   const dishMap = new Map(dishes.map((dish) => [dish.id, dish]));
+  // F06/F07: черновик состава защищён от случайного ухода; отмена — только явная.
+  const draftDirty = lines.length !== order.items.length || lines.some((line) => line.kind === "new" || line.quantity !== line.item.quantity);
+  useDirtyGuard(draftDirty);
   const setQuantity = (key: string, quantity: number) => setLines((current) => current.map((line) => line.key === key ? { ...line, quantity } : line));
   const remove = (key: string) => setLines((current) => current.filter((line) => line.key !== key));
   const add = (dishId: string) => {
     if (!dishMap.has(dishId)) return;
-    setLines((current) => [...current, { kind: "new", key: crypto.randomUUID(), dishId, quantity: 1, modifierIds: [] }]);
+    setLines((current) => [...current, { kind: "new", key: draftLineKey(), dishId, quantity: 1, modifierIds: [] }]);
     setPickerOpen(false);
     setPickerQuery("");
   };
@@ -101,6 +107,10 @@ export function OrderEditor({ order, catalog, deliveryOptions, deliveryZones, on
       : deliveryZones.map((zone) => <option key={zone.name} value={`zone:${zone.name}`}>{zone.name}</option>)}</select></div>}
     {error && <p className={styles.error} role="alert">{error}</p>}
     <div className={styles.footer}><button type="button" onClick={onClose} disabled={pending}>Отменить правки</button><button type="submit" disabled={pending || lines.length === 0}>{pending ? "Сохраняем…" : "Сохранить состав"}</button></div>
+    <div className={styles.mobileFooter}>
+      <button type="button" className={styles.mobileCancel} onClick={onClose} disabled={pending}>Отменить правки</button>
+      <button type="submit" className={styles.mobileSubmit} disabled={pending || lines.length === 0}>{pending ? "Сохраняем…" : "Сохранить состав"}</button>
+    </div>
     {pickerOpen && <div className={styles.modalBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setPickerOpen(false); }}><div className={styles.picker} role="dialog" aria-modal="true" aria-label="Добавить блюдо в заказ">
       <div className={styles.pickerHead}><h3>Добавить блюдо</h3><button type="button" onClick={() => setPickerOpen(false)} aria-label="Закрыть окно"><AdminIcon name="close"/></button></div>
       <input className={styles.pickerSearch} type="search" value={pickerQuery} onChange={(event) => setPickerQuery(event.target.value)} placeholder="Поиск по меню" aria-label="Поиск по меню"/>

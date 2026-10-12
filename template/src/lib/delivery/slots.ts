@@ -59,6 +59,12 @@ function addDays(date: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Доступен ли вариант доставки «сегодня» (дни недели и исключения, F03). */
+export function isOptionAvailableOn(rule: DeliveryOptionRule, now: Date, tz: string): boolean {
+  const local = restaurantLocal(now, tz);
+  return rule.days.includes(local.day) && !rule.exceptions.includes(local.date);
+}
+
 function slotsForDate(rule: DeliveryOptionRule, date: string, afterMinutes: number): DeliveryWindow[] {
   if (!rule.enabled) return [];
   if (rule.exceptions.includes(date)) return [];

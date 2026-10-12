@@ -167,7 +167,7 @@ export function PrintMaterialsAdmin({
         ))}
       </div>
 
-      <div className="grid gap-6 items-start">
+      <div className={styles.layoutGrid}>
         <div className="space-y-5 min-w-0">
           <section className={styles.section}>
             <div>
@@ -299,7 +299,7 @@ export function PrintMaterialsAdmin({
           </section>
         </div>
 
-        <aside className="space-y-3 min-w-0">
+        <aside className={`space-y-3 min-w-0 ${styles.previewAside}`}>
           <div className="bg-card rounded-[var(--radius)] p-4">
             <div className="flex flex-wrap justify-between gap-2 mb-3 text-sm">
               <p className="font-medium">Предпросмотр</p>

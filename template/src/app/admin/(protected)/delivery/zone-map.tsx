@@ -77,7 +77,7 @@ export function ZoneMap({
   const ymapsRef = useRef<YMapsApi | null>(null);
   const mapRef = useRef<YMap | null>(null);
   const polygonsRef = useRef<Map<number, YPolygon>>(new Map());
-  /** Индекс зоны в режиме свободного рисования («карандаш») */
+  const lastRaisedRef = useRef<number | null>(null);  /** Индекс зоны в режиме свободного рисования («карандаш») */
   const drawingIndexRef = useRef<number | null>(null);
   /** Индекс зоны в режиме правки (drag тела/вершин) */
   const editingIndexRef = useRef<number | null>(null);
@@ -267,11 +267,19 @@ export function ZoneMap({
           polygonsRef.current.set(i, polygon);
         });
 
-        // Подсветка выбранной зоны
+        // Подсветка выбранной зоны + вывод её поверх остальных:
+        // новая зона создаётся внутри существующих и без этого её нельзя перетащить.
         polygonsRef.current.forEach((polygon, i) => {
           polygon.options.set("strokeWidth", i === selectedIndex ? 4 : 2);
           polygon.options.set("fillOpacity", i === selectedIndex ? 0.5 : 0.3);
+          polygon.options.set("zIndex", i === selectedIndex ? 100 : i);
         });
+        const selectedPolygon = selectedIndex !== null ? polygonsRef.current.get(selectedIndex) : undefined;
+        if (selectedPolygon && lastRaisedRef.current !== selectedIndex) {
+          lastRaisedRef.current = selectedIndex;
+          map.geoObjects.remove(selectedPolygon);
+          map.geoObjects.add(selectedPolygon);
+        }
 
         // Кадр — как в Яндекс.Еде: все зоны всегда целиком в видимой области
         if (fitKey !== fittedKeyRef.current) {

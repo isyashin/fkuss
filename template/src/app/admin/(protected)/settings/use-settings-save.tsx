@@ -179,7 +179,7 @@ export function useSettingsSave<TInput = ContentSettings>(
   return { save, control };
 }
 
-function SettingsConflictDialog({ onRefresh, onOverwrite, onClose }: {
+export function SettingsConflictDialog({ onRefresh, onOverwrite, onClose }: {
   onRefresh: () => void;
   onOverwrite: () => void;
   onClose: () => void;

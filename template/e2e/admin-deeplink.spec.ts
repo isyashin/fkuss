@@ -119,3 +119,24 @@ test("ссылка события в панели уведомлений отк�
   await expect(link).toBeVisible({ timeout: 30_000 });
   await expect(link).toHaveAttribute("href", new RegExp(`^/admin\\?selected=${order.id}$`));
 });
+
+test("после выхода и повторного входа колокольчик не показывает события прежней сессии", async ({ page, request }) => {
+  test.skip(!process.env.DATABASE_URL, "нужен DATABASE_URL тестовой БД");
+  const order = await createPickupOrder(request);
+
+  await page.goto("/admin/login");
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
+  const bell = page.getByRole("button", { name: /Оповещения/ }).first();
+  await bell.click();
+  const eventName = new RegExp(`Заказ №\\s*${order.number}`);
+  await expect(page.getByRole("region", { name: "Новые события" }).getByRole("link", { name: eventName })).toBeVisible({ timeout: 30_000 });
+
+  await page.getByRole("button", { name: /Профиль/ }).click();
+  await page.getByRole("button", { name: "Выйти" }).click();
+  await expect(page).toHaveURL(/\/admin\/login$/);
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.getByRole("button", { name: /Оповещения/ }).first().click();
+  await expect(page.getByRole("region", { name: "Новые события" }).getByRole("link", { name: eventName })).toHaveCount(0);
+});

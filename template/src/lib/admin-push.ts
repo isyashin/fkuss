@@ -80,12 +80,16 @@ export function getVapidConfig(env: Record<string, string | undefined> = process
   };
 }
 
-const PUSH_ENDPOINT_BLOCKED_HOSTNAMES = new Set(["localhost", "0.0.0.0", "metadata.google.internal"]);
+// PushSubscription.endpoint выдаёт служба браузера. Принимать произвольный
+// HTTPS-хост опасно: его DNS может указывать на внутренний адрес или измениться
+// после регистрации. Домены ниже принадлежат push-службам поддерживаемых браузеров.
+const PUSH_ENDPOINT_EXACT_HOSTNAMES = new Set(["fcm.googleapis.com"]);
+const PUSH_ENDPOINT_HOST_SUFFIXES = ["push.services.mozilla.com", "push.apple.com", "notify.windows.com", "wns.windows.com"];
 
 /**
  * Push-endpoint — это URL службы доставки браузера/ОС (только https). Принимаем
- * публичные адреса: запрет на http и очевидно внутренние сети защищает сервер от
- * SSRF-подобных подписок (job шлёт серверные запросы на этот хост).
+ * домены известных push-служб. Запрет произвольных DNS-имён важен: проверка
+ * IP при регистрации не защищает от смены DNS до фоновой отправки.
  */
 export function isAllowedPushEndpoint(raw: string): boolean {
   let url: URL;
@@ -94,22 +98,11 @@ export function isAllowedPushEndpoint(raw: string): boolean {
   } catch {
     return false;
   }
-  if (url.protocol !== "https:") return false;
-  let host = url.hostname.toLowerCase();
-  if (host.startsWith("[") && host.endsWith("]")) host = host.slice(1, -1);
-  if (PUSH_ENDPOINT_BLOCKED_HOSTNAMES.has(host) || host === "::1" || host === "::") return false;
-  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (ipv4) {
-    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
-    if (a === 0 || a === 10 || a === 127 || a >= 224) return false; // loopback/private/multicast/reserved
-    if (a === 169 && b === 254) return false; // link-local (в т.ч. облачные metadata)
-    if (a === 172 && b >= 16 && b <= 31) return false; // private
-    if (a === 192 && (b === 168 || b === 0)) return false; // private/документация
-    if (a === 100 && b >= 64 && b <= 127) return false; // CGNAT
-  }
-  // IPv6: только литералы с двоеточиями (fc/fd — ULA, fe80 — link-local)
-  if (host.includes(":") && (host.startsWith("fe80:") || host.startsWith("fc") || host.startsWith("fd"))) return false;
-  return true;
+  if (url.protocol !== "https:" || url.username || url.password || url.hash || url.port) return false;
+  const host = url.hostname.toLowerCase();
+  if (host.endsWith(".")) return false;
+  return PUSH_ENDPOINT_EXACT_HOSTNAMES.has(host) ||
+    PUSH_ENDPOINT_HOST_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
 }
 
 /** Таймаут запроса к push-провайдеру: меньше срока повторного захвата
@@ -131,6 +124,8 @@ export function createWebPushTransport(): PushTransport {
   };
   return {
     async send(subscription, payload) {
+      // Повторяем проверку для уже сохранённых подписок и фоновой доставки.
+      if (!isAllowedPushEndpoint(subscription.endpoint)) throw new Error("Invalid push endpoint");
       const webpush = await ensure();
       await webpush.sendNotification(
         { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },

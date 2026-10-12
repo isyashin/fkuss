@@ -360,6 +360,17 @@ Seed пишет PWA-иконки в `content/icons` каталога `CONTENT_DI
   дописывает только полностью отсутствующие ключи, неполную пару заменяет целиком,
   значения не выводятся. После него — `docker compose up -d` в каталогах сайтов
   (или штатный `update.sh`).
+- На новом dev, где сайты лежат в `/home/ilya/deploy/<slug>/.env`, передайте
+  `RESTO_SITE_ENV_DIR=/home/ilya/deploy` и перечислите только tenant-slug:
+  `RESTO_SITE_ENV_DIR=/home/ilya/deploy bash scripts/backfill-vapid-keys.sh buxara marco kunak`.
+  Если локальное имя образа шаблона отличается от `resto-template:latest`, задайте
+  `VAPID_IMAGE` с именем уже собранного образа. `platform` при обходе всех каталогов
+  пропускается. Перед рестартом убедитесь, что compose каждого tenant читает этот
+  `.env`; старый `update.sh` рассчитан на дерево `~/resto/sites` и на новом dev
+  без отдельной адаптации не применяется.
+- Endpoint подписки принимается только на HTTPS-доменах push-служб Google,
+  Mozilla, Apple и Microsoft; проверка повторяется при доставке. Это исключает
+  отправку на произвольный DNS-хост из сохранённой подписки.
 - Cron: `* * * * *` → `POST /api/jobs/push-delivery` (ставит
   `install-site-jobs.sh`, переустановка — через `update.sh`).
 - HTTPS обязателен: на LAN-стенде (`http://192.168.x.x`) интерфейс проверяется,

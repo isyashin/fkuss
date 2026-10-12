@@ -5,10 +5,13 @@
 #
 # Использование: scripts/backfill-vapid-keys.sh            # все сайты реестра
 #                scripts/backfill-vapid-keys.sh <slug> ... # конкретные сайты
+# RESTO_SITE_ENV_DIR=/home/ilya/deploy — новый dev с deploy/<slug>/.env
+# VAPID_IMAGE=<образ-шаблона> — если имя образа отличается от штатного
 set -euo pipefail
 
 BASE="${RESTO_BASE:-$HOME/resto}"
-IMAGE="resto-template:latest"
+SITE_ENV_DIR="${RESTO_SITE_ENV_DIR:-$BASE/sites}"
+IMAGE="${VAPID_IMAGE:-resto-template:latest}"
 
 gen_vapid_pair() {
   # ECDH P-256 как у web-push generate-vapid-keys; только node:crypto внутри образа.
@@ -17,7 +20,7 @@ gen_vapid_pair() {
 
 fill_one() {
   local slug="$1"
-  local env_file="$BASE/sites/$slug/.env"
+  local env_file="$SITE_ENV_DIR/$slug/.env"
   if [ ! -f "$env_file" ]; then
     echo "SKIP $slug: .env не найден" >&2
     return 0
@@ -55,8 +58,9 @@ fill_one() {
 if [ "$#" -gt 0 ]; then
   for slug in "$@"; do fill_one "$slug"; done
 else
-  for dir in "$BASE"/sites/*; do
+  for dir in "$SITE_ENV_DIR"/*; do
     [ -d "$dir" ] || continue
+    [ "$(basename "$dir")" = "platform" ] && continue
     fill_one "$(basename "$dir")"
   done
 fi

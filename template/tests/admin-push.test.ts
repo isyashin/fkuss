@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { buildPushTarget, isAllowedPushEndpoint, isPushConfigured, pushBackoffMs, pushErrorCode } from "@/lib/admin-push";
+import { buildPushTarget, createWebPushTransport, isAllowedPushEndpoint, isPushConfigured, pushBackoffMs, pushErrorCode } from "@/lib/admin-push";
 
 describe("push endpoint — только публичные https-адреса служб доставки", () => {
   it("принимает реальные push-сервисы", () => {
     expect(isAllowedPushEndpoint("https://fcm.googleapis.com/fcm/send/abc-123")).toBe(true);
-    expect(isAllowedPushEndpoint("https://push.mozilla.com/v1/gAAAAABx")).toBe(true);
+    expect(isAllowedPushEndpoint("https://updates.push.services.mozilla.com/wpush/v2/gAAAAABx")).toBe(true);
+    expect(isAllowedPushEndpoint("https://web.push.apple.com/abc")).toBe(true);
+    expect(isAllowedPushEndpoint("https://wns2-blu2p.notify.windows.com/w/?token=abc")).toBe(true);
   });
 
   it("отклоняет http, localhost и внутренние сети (SSRF-гигиена)", () => {
     expect(isAllowedPushEndpoint("http://fcm.googleapis.com/fcm/send/x")).toBe(false);
     expect(isAllowedPushEndpoint("https://localhost/x")).toBe(false);
+    expect(isAllowedPushEndpoint("https://localhost./x")).toBe(false);
     expect(isAllowedPushEndpoint("https://LOCALHOST:8443/x")).toBe(false);
     expect(isAllowedPushEndpoint("https://127.0.0.1/x")).toBe(false);
     expect(isAllowedPushEndpoint("https://10.0.0.5/x")).toBe(false);
@@ -17,8 +20,20 @@ describe("push endpoint — только публичные https-адреса �
     expect(isAllowedPushEndpoint("https://172.16.0.1/x")).toBe(false);
     expect(isAllowedPushEndpoint("https://169.254.169.254/latest/meta-data")).toBe(false);
     expect(isAllowedPushEndpoint("https://[::1]/x")).toBe(false);
+    expect(isAllowedPushEndpoint("https://[::ffff:127.0.0.1]/x")).toBe(false);
     expect(isAllowedPushEndpoint("https://[fd00::1]/x")).toBe(false);
+    expect(isAllowedPushEndpoint("https://public-looking.example/push")).toBe(false);
+    expect(isAllowedPushEndpoint("https://fcm.googleapis.com.evil.example/fcm/send/x")).toBe(false);
+    expect(isAllowedPushEndpoint("https://fcm.googleapis.com:444/fcm/send/x")).toBe(false);
+    expect(isAllowedPushEndpoint("https://user@fcm.googleapis.com/fcm/send/x")).toBe(false);
     expect(isAllowedPushEndpoint("not-a-url")).toBe(false);
+  });
+
+  it("не отправляет на ранее сохранённый неподдерживаемый endpoint", async () => {
+    await expect(createWebPushTransport().send(
+      { endpoint: "https://localhost./push", p256dh: "key", auth: "key" },
+      { eventId: "test", kind: "test", reference: "", label: "Проверка" },
+    )).rejects.toThrow("Invalid push endpoint");
   });
 });
 

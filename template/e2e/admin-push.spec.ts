@@ -130,8 +130,8 @@ test.describe("PWA админки", () => {
       }
       Object.defineProperty(window, "Notification", { value: FakeNotification, configurable: true });
       const subscription = {
-        endpoint: "https://push.test/e2e-device",
-        toJSON: () => ({ endpoint: "https://push.test/e2e-device", keys: { p256dh: "key-p", auth: "key-a" } }),
+        endpoint: "https://fcm.googleapis.com/fcm/send/e2e-device",
+        toJSON: () => ({ endpoint: "https://fcm.googleapis.com/fcm/send/e2e-device", keys: { p256dh: "key-p", auth: "key-a" } }),
         unsubscribe: async () => true,
       };
       // Реальная регистрация: register() возвращает её, панель ждёт active
@@ -163,6 +163,11 @@ test.describe("PWA админки", () => {
     await dialog.getByRole("button", { name: "Включить уведомления" }).click();
     await expect(dialog.getByText("Уведомления включены на этом устройстве.").first()).toBeVisible({ timeout: 15_000 });
 
+    await page.route("**/api/admin/push/test", (route) => route.abort("failed"));
+    await dialog.getByRole("button", { name: "Проверить" }).click();
+    await expect(dialog.getByRole("alert")).toContainText("Проверьте соединение и повторите");
+    await page.unroute("**/api/admin/push/test");
+
     await dialog.getByRole("button", { name: "Выключить" }).click();
     await expect(dialog.getByRole("button", { name: "Включить уведомления" })).toBeVisible({ timeout: 15_000 });
   });
@@ -170,7 +175,7 @@ test.describe("PWA админки", () => {
   test("выход из админки отзывает подписку этого устройства (cookie installId)", async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "мок PushManager стабилен только в Chromium");
     test.skip(!process.env.DATABASE_URL, "проверка отзыва требует DATABASE_URL тестовой БД");
-    const endpoint = `https://push.test/e2e-logout-${Date.now().toString(36)}`;
+    const endpoint = `https://fcm.googleapis.com/fcm/send/e2e-logout-${Date.now().toString(36)}`;
     await page.addInitScript((ep) => {
       class FakeNotification {
         static permission = "granted";

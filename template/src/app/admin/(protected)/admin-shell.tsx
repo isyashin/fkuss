@@ -9,6 +9,7 @@ import { setDirtyAsk } from "./admin-dirty";
 import { ConfirmDialog, type ConfirmRequest } from "./confirm-dialog";
 import type { AdminActor } from "@/lib/admin-users";
 import { AdminNotifications } from "./admin-notifications";
+import { resetNotificationsSession } from "./admin-notifications-store";
 import { AdminIcon } from "./admin-icon";
 import { ADMIN_PUSH_OPEN_EVENT } from "./admin-push";
 import styles from "./admin-redesign.module.css";
@@ -107,7 +108,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
       <Link href="/admin" className={styles.brand} aria-label={`${restaurantName}: заказы`}>{brand}</Link>
       <nav className={styles.primaryNav} aria-label="Главная навигация">{navLinks("rail")}</nav>
       <div className={styles.railFoot}>
-        <AdminNotifications />
+        <AdminNotifications actorId={actor.id} />
         <div className={styles.popWrap}>
           <button type="button" className={styles.footButton} onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}>
             <AdminIcon name="settings" size={20} />
@@ -121,7 +122,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
                 <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
                 <button type="button" onClick={() => { setProfileOpen(false); window.dispatchEvent(new CustomEvent(ADMIN_PUSH_OPEN_EVENT)); }}>Уведомления на этом устройстве</button>
                 <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
-                <form action={logoutAction}><button type="submit">Выйти</button></form>
+                <form action={logoutAction} onSubmit={resetNotificationsSession}><button type="submit">Выйти</button></form>
               </nav>
             </div>
           )}
@@ -133,7 +134,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
       <header className={styles.topbar}>
         <span className={styles.logo}>{logo && !logoFailed ? <Image src={logo} width={34} height={34} alt="" unoptimized onError={() => setLogoFailed(true)} /> : restaurantName.slice(0, 1)}</span>
         <strong>{restaurantName}</strong>
-        <AdminNotifications />
+        <AdminNotifications actorId={actor.id} />
         <div className={styles.popWrap}>
           <button type="button" className={styles.footButton} onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}>
             <span className={styles.footBadge} style={{ background: "rgba(255,255,255,.16)", color: "#fff" }}>{initials}</span>
@@ -146,7 +147,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
                 <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
                 <button type="button" onClick={() => { setProfileOpen(false); window.dispatchEvent(new CustomEvent(ADMIN_PUSH_OPEN_EVENT)); }}>Уведомления на этом устройстве</button>
                 <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
-                <form action={logoutAction}><button type="submit">Выйти</button></form>
+                <form action={logoutAction} onSubmit={resetNotificationsSession}><button type="submit">Выйти</button></form>
               </nav>
             </div>
           )}

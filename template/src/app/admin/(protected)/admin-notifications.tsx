@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { playAdminSound } from "@/lib/admin-audio";
 import styles from "./admin-redesign.module.css";
 import { AdminIcon } from "./admin-icon";
 import {
   getNotificationsSnapshot,
+  getEmptyNotificationsSnapshot,
   subscribeNotifications,
   pollNotificationsNow,
   readSoundEnabled,
@@ -24,7 +25,7 @@ const DEFAULT_HINT = "Включите звук нажатием кнопки �
  * все данные (события, счётчики, звук, бейдж) живут в общем сторе на вкладку
  * (admin-notifications-store), экземпляры лишь отображают одно и то же.
  */
-export function AdminNotifications() {
+export function AdminNotifications({ actorId }: { actorId: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -32,7 +33,9 @@ export function AdminNotifications() {
   // Корректировка состояния во время рендера (react-compiler: не setState в эффекте).
   const [panelPath, setPanelPath] = useState(pathname);
   if (panelPath !== pathname) { setPanelPath(pathname); setOpen(false); }
-  const state = useSyncExternalStore(subscribeNotifications, getNotificationsSnapshot, getNotificationsSnapshot);
+  const subscribe = useCallback((listener: () => void) => subscribeNotifications(actorId, listener), [actorId]);
+  const getSnapshot = useCallback(() => getNotificationsSnapshot(actorId), [actorId]);
+  const state = useSyncExternalStore(subscribe, getSnapshot, getEmptyNotificationsSnapshot);
   // sessionStorage — источник истины: серверный снапшот false совпадает с SSR,
   // после гидрации читается реальное значение (без рассинхрона #418).
   const enabled = useSyncExternalStore(subscribeSoundEnabled, readSoundEnabled, () => false);

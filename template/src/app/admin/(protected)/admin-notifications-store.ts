@@ -31,7 +31,7 @@ const DEFAULT_SOUND: PublicAdminSound = { selected: "standard1", customName: "",
 
 // НЕ мутируем объект: useSyncExternalStore сравнивает снапшот по ссылке —
 // новое состояние обязано быть новым объектом, иначе ре-рендера не будет.
-let state: AdminNotificationsState = {
+const EMPTY_STATE: AdminNotificationsState = {
   events: [],
   unread: 0,
   pending: { orders: 0, bookings: 0 },
@@ -40,6 +40,9 @@ let state: AdminNotificationsState = {
   latestId: null,
   refreshTick: 0,
 };
+let state = EMPTY_STATE;
+let activeActorId: string | null = null;
+let generation = 0;
 
 const listeners = new Set<() => void>();
 function emit(next: Partial<AdminNotificationsState>) {
@@ -47,11 +50,36 @@ function emit(next: Partial<AdminNotificationsState>) {
   for (const listener of listeners) listener();
 }
 
-export function getNotificationsSnapshot(): AdminNotificationsState {
-  return state;
+export function getNotificationsSnapshot(actorId: string): AdminNotificationsState {
+  return activeActorId === actorId ? state : EMPTY_STATE;
 }
 
-export function subscribeNotifications(listener: () => void): () => void {
+export function getEmptyNotificationsSnapshot(): AdminNotificationsState {
+  return EMPTY_STATE;
+}
+
+function resetState(): void {
+  generation += 1; // поздний ответ старого опроса не должен восстановить чужие события
+  state = EMPTY_STATE;
+  prevLatestId = undefined;
+  alertLoopActive = false;
+  alertLoop.remaining = 0;
+  alertLoop.kinds.clear();
+  clearFaviconBadge();
+  for (const listener of listeners) listener();
+}
+
+export function resetNotificationsSession(): void {
+  activeActorId = null;
+  resetState();
+  stopPolling();
+}
+
+export function subscribeNotifications(actorId: string, listener: () => void): () => void {
+  if (activeActorId !== actorId) {
+    activeActorId = actorId;
+    resetState();
+  }
   listeners.add(listener);
   startPolling();
   return () => {
@@ -112,7 +140,7 @@ type ResponseData = {
 };
 
 let timer: number | null = null;
-let busy = false;
+let busyGeneration: number | null = null;
 let started = false;
 let gestureBound = false;
 let prevLatestId: string | null | undefined = undefined;
@@ -191,12 +219,19 @@ function bindFirstGesture() {
 }
 
 async function poll(): Promise<void> {
-  if (busy) return;
-  busy = true;
+  if (activeActorId === null || busyGeneration === generation) return;
+  const currentGeneration = generation;
+  busyGeneration = currentGeneration;
   try {
     const response = await fetch("/api/admin/events", { cache: "no-store", headers: { "X-Admin-Tab": tabId() } });
+    if (currentGeneration !== generation) return;
+    if (response.status === 401 || response.status === 403) {
+      resetNotificationsSession();
+      return;
+    }
     if (!response.ok) return;
     const data = (await response.json()) as ResponseData;
+    if (currentGeneration !== generation) return;
     const known = new Set(state.events.map((event) => event.id));
     // Сервер отдаёт события по возрастанию createdAt; нам нужны НОВЫЕ сверху —
     // иначе при первом опросе пачкой (>10) панель навсегда показывала старые.
@@ -225,7 +260,7 @@ async function poll(): Promise<void> {
   } catch {
     // сеть/сервер недоступны — следующий тик попробует снова
   } finally {
-    busy = false;
+    if (busyGeneration === currentGeneration) busyGeneration = null;
   }
 }
 

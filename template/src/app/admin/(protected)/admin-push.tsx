@@ -247,6 +247,8 @@ export function AdminPushPanel() {
       } else {
         setMessage({ kind: "info", text: "Проверка отправлена. Если уведомление не появилось, проверьте звук, фокус-режим и разрешения телефона." });
       }
+    } catch {
+      setMessage({ kind: "error", text: "Не удалось отправить проверку. Проверьте соединение и повторите." });
     } finally {
       setBusy(false);
     }

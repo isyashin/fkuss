@@ -7,7 +7,7 @@ export default async function globalTeardown() {
     const pool = new Pool({ connectionString: databaseUrl });
     const client = await pool.connect();
     try {
-      const phones = ["+79990000003", "+79990000004", "+79990001133", "+79990001144"];
+      const phones = ["+79990000003", "+79990000004", "+79990000005", "+79990001133", "+79990001144"];
       await client.query("BEGIN");
       const customers = await client.query<{ id: string }>(
         `SELECT id FROM "Customer" WHERE email LIKE 'e2e-%'`,

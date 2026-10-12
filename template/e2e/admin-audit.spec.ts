@@ -115,7 +115,7 @@ test("F02: добавление блюда в состав заказа рабо
   await expect(detail.locator("[class*=lineItem] b").first()).toContainText("2 ×", { timeout: 15000 });
 });
 
-test("мобильный заказ: открытие, системная Back и прямая ссылка после reload", async ({ page }, testInfo) => {
+test("мобильный заказ: Back, сохранение состава и статус сохраняют прямую ссылку", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "мобильная навигация");
   const response = await page.request.post("/api/order", {
     headers: { "x-forwarded-for": "10.99.70.1" },
@@ -141,10 +141,69 @@ test("мобильный заказ: открытие, системная Back �
   await expect(card).toBeVisible();
 
   await card.click();
-  await page.reload();
   const detail = page.getByRole("region", { name: "Детали заказа" });
+  await expect(detail).toContainText(`Заказ № ${orderNumber}`);
+
+  await detail.getByRole("button", { name: "Изменить" }).click();
+  await detail.getByRole("button", { name: /Увеличить количество/ }).first().click();
+  await detail.getByRole("button", { name: "Сохранить состав" }).click();
+  await expect(detail.locator("[class*=lineItem] b").first()).toContainText("2 ×");
+  await expect(page).toHaveURL(/\?selected=/);
+  await detail.getByRole("button", { name: "Изменить" }).click();
+  await detail.getByRole("button", { name: /Увеличить количество/ }).first().click();
+  await detail.getByRole("button", { name: "Сохранить состав" }).click();
+  await expect(detail.locator("[class*=lineItem] b").first()).toContainText("3 ×");
+  await expect(page).toHaveURL(/\?selected=/);
+  await page.reload();
+  await expect(detail.locator("[class*=lineItem] b").first()).toContainText("3 ×");
+
+  await detail.locator("[class*=orderMobileAction] button").click();
+  await expect(page).toHaveURL(/\?selected=/);
+  await page.reload();
   await expect(detail).toContainText(`Заказ № ${orderNumber}`);
   await detail.getByRole("button", { name: "Назад к заказам" }).click();
   await expect(page).not.toHaveURL(/selected=/);
   await expect(card).toBeVisible();
+});
+
+test("мобильный заказ: новое событие не сбрасывает незавершённую правку", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "мобильный редактор");
+  test.setTimeout(90_000);
+  const createOrder = async (ip: string) => {
+    const response = await page.request.post("/api/order", {
+      headers: { "x-forwarded-for": ip },
+      data: {
+        items: [{ dishId: "khachapuri-adjarski", quantity: 1, modifierIds: [] }],
+        type: "pickup", zoneName: null, address: "", customerName: "E2E Mobile Notification",
+        customerPhone: "+79990000005", website: "",
+      },
+    });
+    expect(response.ok()).toBe(true);
+    return (await response.json() as { orderNumber: number }).orderNumber;
+  };
+  const orderNumber = await createOrder("10.99.71.1");
+  await page.goto("/admin/login");
+  const initialPoll = page.waitForResponse((response) => response.url().includes("/api/admin/events") && response.ok());
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
+  await initialPoll;
+  await page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) }).click();
+  const detail = page.getByRole("region", { name: "Детали заказа" });
+  await detail.getByRole("button", { name: "Изменить" }).click();
+  await detail.getByRole("button", { name: /Увеличить количество/ }).first().click();
+  await expect(detail.getByRole("button", { name: "Сохранить состав" })).toBeVisible();
+
+  const bell = page.locator('button[aria-label^="Оповещения"]').first();
+  const unreadBefore = Number((await bell.getAttribute("aria-label"))?.match(/\d+/)?.[0] ?? 0);
+  const nextOrderNumber = await createOrder("10.99.71.2");
+  // В полноэкранной детали навигация скрыта, но колокольчик остаётся в DOM.
+  await expect.poll(async () => Number((await bell.getAttribute("aria-label"))?.match(/\d+/)?.[0] ?? 0), { timeout: 30_000 }).toBeGreaterThan(unreadBefore);
+  // После обновления бейджа даём фоновому эффекту время на срабатывание.
+  await page.waitForTimeout(1500);
+  await expect(page).toHaveURL(/\?selected=/);
+  await expect(detail.getByRole("button", { name: "Сохранить состав" })).toBeVisible();
+  await expect(detail.getByRole("spinbutton", { name: /Количество:/ }).first()).toHaveValue("2");
+  await detail.getByRole("button", { name: "Отменить правки" }).click();
+  await detail.getByRole("button", { name: "Назад к заказам" }).click();
+  await expect(page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${nextOrderNumber}`) })).toBeVisible({ timeout: 15_000 });
 });

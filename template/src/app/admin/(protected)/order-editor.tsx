@@ -75,7 +75,10 @@ export function OrderEditor({ order, catalog, deliveryOptions, deliveryZones, on
             : { kind: "new", dishId: line.dishId, modifierIds: line.modifierIds, quantity: line.quantity }),
           deliveryChoice: choice });
         onClose();
-        router.refresh();
+        // Мобильная деталь добавляет ?selected= через нативный history, чтобы
+        // открытие не сбрасывало черновик. После записи синхронизируем URL с
+        // App Router и получаем свежие данные заказа одной навигацией.
+        router.replace(`${window.location.pathname}${window.location.search}`, { scroll: false });
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "Не удалось сохранить заказ");
       }

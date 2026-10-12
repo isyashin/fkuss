@@ -110,7 +110,12 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   const closeDetail = () => {
     // Если слой открыт через pushState — возврат системной кнопкой сохранит контекст списка.
     if (window.history.state?.orderDetail) window.history.back();
-    else setMobileDetail(false);
+    else {
+      // После reload или router.replace (сохранение/статус) Next может убрать
+      // нашу метку из history.state. Явно очищаем ссылку и при прямом входе.
+      setMobileDetail(false);
+      router.replace(href(query), { scroll: false });
+    }
     restoreListPosition();
   };
   const toggleGroup = (key: string) => setCollapsedGroups((current) => {

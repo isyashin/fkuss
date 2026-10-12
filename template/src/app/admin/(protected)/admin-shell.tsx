@@ -27,6 +27,9 @@ function subscribeTheme(callback: () => void) {
   return () => { window.removeEventListener("storage", callback); window.removeEventListener("restaurant-admin-theme-change", callback); };
 }
 const readTheme = () => localStorage.getItem("restaurant-admin-theme") === "dark";
+const subscribeHydration = () => () => {};
+const hydratedSnapshot = () => true;
+const serverSnapshot = () => false;
 
 function badgeFor(href: string, newOrdersCount: number, newBookingsCount: number) {
   if (href === "/admin" && newOrdersCount > 0) return newOrdersCount;
@@ -43,6 +46,8 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
   const [logoFailed, setLogoFailed] = useState(false);
   const [dirtyDialog, setDirtyDialog] = useState<ConfirmRequest | null>(null);
   const dirtyResolverRef = useRef<((proceed: boolean) => void) | null>(null);
+  // Профиль и навигация уже видны в SSR, но до гидратации нажатие пропадало.
+  const hydrated = useSyncExternalStore(subscribeHydration, hydratedSnapshot, serverSnapshot);
   // F06: единый диалог подтверждения потери правок для всех «грязных» форм.
   useEffect(() => {
     setDirtyAsk((message) => new Promise<boolean>((resolve) => {
@@ -103,7 +108,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
     </>
   );
 
-  return <div className={styles.shell} data-theme={dark ? "dark" : "light"}>
+  return <div className={styles.shell} data-theme={dark ? "dark" : "light"} inert={!hydrated} aria-busy={!hydrated}>
     <aside className={styles.rail} aria-label="Панель ресторана">
       <Link href="/admin" className={styles.brand} aria-label={`${restaurantName}: заказы`}>{brand}</Link>
       <nav className={styles.primaryNav} aria-label="Главная навигация">{navLinks("rail")}</nav>

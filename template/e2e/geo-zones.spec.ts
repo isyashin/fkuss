@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAdminUi } from "./login-admin";
+import { gotoAdmin, loginAdminUi } from "./login-admin";
 
 // Зоны на карте: geo-режим выключен по умолчанию; включение без ключа геокодера
 // даёт честные ответы (geocoder-error), заказ в geo-режиме — 503.
@@ -11,7 +11,7 @@ function ip(project: string, n: number) {
 }
 
 async function setGeoZones(page: import("@playwright/test").Page, enabled: boolean) {
-  await page.goto("/admin/settings?section=delivery");
+  await gotoAdmin(page, "/admin/settings?section=delivery");
   await page.getByRole("checkbox", { name: /Зоны на карте/ }).setChecked(enabled);
   await page.getByRole("button", { name: "Сохранить" }).first().click();
   await expect(page.getByText("Сохранено")).toBeVisible({ timeout: 15000 });
@@ -29,7 +29,7 @@ test("geo-режим: default выключен; без ключа геокоде
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
-  await page.goto("/admin/settings?section=delivery");
+  await gotoAdmin(page, "/admin/settings?section=delivery");
   await page.getByRole("tab", { name: "Варианты доставки" }).click();
   const optionCards = page.locator("[data-option-name]");
   for (let remaining = await optionCards.count(); remaining > 0; remaining--) {
@@ -74,7 +74,7 @@ test("geo-режим: default выключен; без ключа геокоде
   } finally {
     // 7. Возвращаем настройки и вариант «Курьер»
     await setGeoZones(page, false);
-    await page.goto("/admin/settings?section=delivery");
+    await gotoAdmin(page, "/admin/settings?section=delivery");
     await page.getByRole("tab", { name: "Варианты доставки" }).click();
     await page.getByRole("button", { name: "+ Вариант доставки" }).click();
     await page.getByLabel("Название").fill("Курьер");

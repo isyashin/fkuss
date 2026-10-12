@@ -43,6 +43,7 @@ const EMPTY_STATE: AdminNotificationsState = {
 let state = EMPTY_STATE;
 let activeActorId: string | null = null;
 let generation = 0;
+let initialPending = { orders: 0, bookings: 0 };
 
 const listeners = new Set<() => void>();
 function emit(next: Partial<AdminNotificationsState>) {
@@ -75,10 +76,11 @@ export function resetNotificationsSession(): void {
   stopPolling();
 }
 
-export function subscribeNotifications(actorId: string, listener: () => void): () => void {
+export function subscribeNotifications(actorId: string, pending: { orders: number; bookings: number }, listener: () => void): () => void {
   if (activeActorId !== actorId) {
     activeActorId = actorId;
     resetState();
+    initialPending = pending;
   }
   listeners.add(listener);
   startPolling();
@@ -241,9 +243,13 @@ async function poll(): Promise<void> {
     const total = data.pending.orders + data.pending.bookings;
     if (total > 0) void setFaviconBadge(total);
     else clearFaviconBadge();
-    // router.refresh() только когда реально что-то изменилось (как раньше):
-    // новые события или сдвинулся latestId — иначе бесконечный фоновый рефреш.
-    const shouldRefresh = fresh.length > 0 || (prevLatestId !== undefined && prevLatestId !== data.latestId);
+    // Первый опрос наполняет колокольчик. Перерисовываем страницу только если
+    // счётчики отличаются от серверной разметки: повторный рендер при входе
+    // перебивал первый поиск и переход в заказ. Новые события после этого
+    // опроса обновляют очередь как обычно.
+    const shouldRefresh = prevLatestId === undefined
+      ? data.pending.orders !== initialPending.orders || data.pending.bookings !== initialPending.bookings
+      : fresh.length > 0 || prevLatestId !== data.latestId;
     prevLatestId = data.latestId;
     emit({
       events,

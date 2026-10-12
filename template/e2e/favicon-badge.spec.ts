@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAdminUi } from "./login-admin";
+import { gotoAdmin, loginAdminUi } from "./login-admin";
 
 // Фавикон с живой индикацией: новая бронь → бейдж со счётом необработанных;
 // открытие колокольчика бейдж НЕ гасит — только обработка брони/заказа.
@@ -111,7 +111,7 @@ test("повторы сигнала настраиваются и отдаютс
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
-  await page.goto("/admin/settings?section=sound");
+  await gotoAdmin(page, "/admin/settings?section=sound");
   const repeats = page.getByLabel("Повторы сигнала");
   await expect(repeats).toBeVisible();
 

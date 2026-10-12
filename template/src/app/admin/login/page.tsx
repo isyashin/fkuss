@@ -1,13 +1,35 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getAdminActor } from "@/lib/admin-auth";
+import { validateAdminNext } from "@/lib/admin-next";
+import { getContentDir } from "@/lib/content-dir";
+import { getIconsVersion } from "@/lib/pwa-icons";
 import { LoginForm } from "./login-form";
+import { AdminPushManager } from "../(protected)/admin-push";
 import styles from "./login.module.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminLoginPage() {
+/** Страницы админки ссылаются на отдельный манифест установки админского приложения. */
+export async function generateMetadata(): Promise<Metadata> {
+  const version = (await getIconsVersion(getContentDir())) ?? "1";
+  return {
+    manifest: "/admin/manifest.webmanifest",
+    icons: {
+      icon: [
+        { url: `/api/site-icon?size=32&v=${version}`, type: "image/png", sizes: "32x32" },
+        { url: `/api/site-icon?size=48&v=${version}`, type: "image/png", sizes: "48x48" },
+      ],
+      apple: `/content-asset/icons/admin-apple-touch-icon.png?v=${version}`,
+    },
+  };
+}
+
+export default async function AdminLoginPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const rawNext = (await searchParams).next;
+  const next = validateAdminNext(typeof rawNext === "string" ? rawNext : null);
   if (await getAdminActor()) {
-    const { redirect } = await import("next/navigation");
-    redirect("/admin");
+    redirect(next ?? "/admin");
   }
 
   return (
@@ -17,8 +39,9 @@ export default async function AdminLoginPage() {
         <span className={styles.eyebrow}>ПАНЕЛЬ РЕСТОРАНА</span>
         <h1>Вход в админку</h1>
         <p>Введите личный логин и пароль сотрудника.</p>
-        <LoginForm />
+        <LoginForm next={next} />
       </div>
+      <AdminPushManager />
     </main>
   );
 }

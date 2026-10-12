@@ -120,6 +120,14 @@ export async function POST(request: Request) {
     // уведомления не должны ронять бронь
   }
 
+  // Web push сотрудникам — фоном, после ответа (дожим — job push-delivery)
+  try {
+    const { schedulePushAttempt } = await import("@/lib/admin-push");
+    schedulePushAttempt("booking", reservation.id);
+  } catch {
+    // push не должен ронять бронь
+  }
+
   // Мгновенный репорт метрик на платформу (fire-and-forget)
   try {
     const { runMetricsReport } = await import("@/lib/metrics-report");

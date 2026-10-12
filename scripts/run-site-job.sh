@@ -8,12 +8,12 @@ ENV_FILE="${2:-}"
 JOB="${3:-}"
 
 if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ ! -r "$ENV_FILE" ]; then
-  echo "Использование: run-site-job.sh <port> <site-env> <report-metrics|sync-menu>" >&2
+  echo "Использование: run-site-job.sh <port> <site-env> <report-metrics|sync-menu|push-delivery>" >&2
   exit 1
 fi
 
 case "$JOB" in
-  report-metrics|sync-menu) ;;
+  report-metrics|sync-menu|push-delivery) ;;
   *)
     echo "Неизвестная job: $JOB" >&2
     exit 1

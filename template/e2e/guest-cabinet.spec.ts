@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAdminUi } from "./login-admin";
+import { gotoAdmin, loginAdminUi } from "./login-admin";
 
 // Кабинет по умолчанию выключен; в E2E seed включает его (SEED_GUEST_CABINET=1).
 // Спека проверяет гейты при выключении и возвращает состояние обратно.
@@ -10,10 +10,10 @@ test("выключенный кабинет: гейты на витрине и �
 
   await page.request.patch("/api/admin/guest-cabinet", { data: { enabled: false } });
   try {
-    await page.goto("/");
+    await gotoAdmin(page, "/");
     await expect(page.getByRole("link", { name: "Кабинет" })).toHaveCount(0);
 
-    await page.goto("/account");
+    await gotoAdmin(page, "/account");
     await expect(page.getByText("Личный кабинет сейчас отключён")).toBeVisible();
 
     const codeResp = await page.request.post("/api/auth/request-code", { data: { email: "guest-off@example.com" } });

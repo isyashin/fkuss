@@ -2,21 +2,41 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { changeTeamUser, createTeamUser } from "./actions";
+import { changeTeamUser, createTeamUser, revokePushDevice } from "./actions";
 import type { AdminRole } from "@/lib/admin-users";
 import styles from "./team-admin.module.css";
 
-type TeamUser = { id: string; login: string; name: string; role: string; active: boolean; updatedAt: Date };
+type TeamDevice = { id: string; userAgent: string | null; lastSeenAt: Date; createdAt: Date };
+type TeamUser = { id: string; login: string; name: string; role: string; active: boolean; updatedAt: Date; devices: TeamDevice[] };
+
+function deviceLabel(device: TeamDevice): string {
+  const ua = device.userAgent ?? "";
+  const browser = /edg\//i.test(ua) ? "Edge" : /chrome|chromium|crios/i.test(ua) ? "Chrome" : /firefox|fxios/i.test(ua) ? "Firefox" : /safari/i.test(ua) ? "Safari" : "Браузер";
+  const os = /android/i.test(ua) ? "Android" : /iphone|ipados|ios/i.test(ua) ? "iOS" : /windows/i.test(ua) ? "Windows" : /mac os|macintosh/i.test(ua) ? "macOS" : /linux/i.test(ua) ? "Linux" : "";
+  return [browser, os].filter(Boolean).join(" · ") || "Устройство";
+}
 
 function TeamRow({ user }: { user: TeamUser }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [revokeError, setRevokeError] = useState("");
   const [name, setName] = useState(user.name);
   const [role, setRole] = useState<AdminRole>(user.role === "owner" ? "owner" : "staff");
   const [active, setActive] = useState(user.active);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const revoke = (subscriptionId: string) => {
+    setRevokeError("");
+    startTransition(async () => {
+      try {
+        await revokePushDevice(subscriptionId);
+        router.refresh();
+      } catch (cause) {
+        setRevokeError(cause instanceof Error ? cause.message : "Не удалось отключить устройство");
+      }
+    });
+  };
   const save = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(""); setSaved(false);
@@ -36,6 +56,21 @@ function TeamRow({ user }: { user: TeamUser }) {
     </div>
     <div className={styles.rowFooter}><label className={styles.check}><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} disabled={pending}/>Доступ разрешён</label><button type="submit" disabled={pending}>{pending ? "Сохраняем…" : "Сохранить"}</button></div>
     {error && <p className={styles.error} role="alert">{error}</p>}{saved && <p className={styles.success} role="status">Изменения сохранены</p>}
+    {user.devices.length > 0 && (
+      <div className={styles.devices}>
+        <h3>Устройства с уведомлениями</h3>
+        <ul>
+          {user.devices.map((device) => (
+            <li key={device.id}>
+              <span>{deviceLabel(device)}<small>Активно {new Date(device.lastSeenAt).toLocaleDateString("ru-RU")}</small></span>
+              <button type="button" disabled={pending} onClick={() => revoke(device.id)}>Отключить</button>
+            </li>
+          ))}
+        </ul>
+        <p className={styles.devicesHint}>Отключённое устройство перестанет получать уведомления о заказах и бронях.</p>
+        {revokeError && <p className={styles.error} role="alert">{revokeError}</p>}
+      </div>
+    )}
   </form>;
 }
 

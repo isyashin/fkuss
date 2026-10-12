@@ -12,7 +12,11 @@ describe("admin event delivery", () => {
   });
   it("records the event in the caller's transaction", async () => {
     const created: unknown[] = [];
-    const tx = { adminEvent: { create: async (args: unknown) => { created.push(args); } } } as unknown as PrismaClient;
+    const tx = {
+      adminEvent: { create: async (args: unknown) => { created.push(args); return { id: "event-1" }; } },
+      adminPushSubscription: { findMany: async () => [] },
+      adminPushDelivery: { createMany: async () => ({ count: 0 }) },
+    } as unknown as PrismaClient;
     await recordAdminEvent(tx, "order", "order-1", "Заказ №1");
     expect(created).toEqual([{ data: { kind: "order", reference: "order-1", label: "Заказ №1" } }]);
   });

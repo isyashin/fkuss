@@ -20,7 +20,8 @@ fi
 # Убираем только старые и новые строки этого сайта: чужие cron-задачи сохраняем.
 CURRENT_CRON=$(crontab -l 2>/dev/null || true)
 {
-  printf '%s\n' "$CURRENT_CRON" | grep -Ev "(# resto $SLUG (report-metrics|sync-menu)$|localhost:$PORT/api/jobs/(report-metrics|sync-menu))" || true
+  printf '%s\n' "$CURRENT_CRON" | grep -Ev "(# resto $SLUG (report-metrics|sync-menu|push-delivery)$|localhost:$PORT/api/jobs/(report-metrics|sync-menu|push-delivery))" || true
   printf '%s\n' "0 */6 * * * \"$RUNNER\" \"$PORT\" \"$ENV_FILE\" report-metrics >/dev/null 2>&1 # resto $SLUG report-metrics"
   printf '%s\n' "*/15 * * * * \"$RUNNER\" \"$PORT\" \"$ENV_FILE\" sync-menu >/dev/null 2>&1 # resto $SLUG sync-menu"
+  printf '%s\n' "* * * * * \"$RUNNER\" \"$PORT\" \"$ENV_FILE\" push-delivery >/dev/null 2>&1 # resto $SLUG push-delivery"
 } | crontab -

@@ -26,3 +26,14 @@ export async function changeTeamUser(userId: string, input: { name?: string; rol
   await updateAdminUser(getPrisma(), userId, input);
   revalidatePath("/admin/team");
 }
+
+/** Отзыв подписки конкретного устройства сотрудника (потерянный телефон). */
+export async function revokePushDevice(subscriptionId: string): Promise<void> {
+  await guard();
+  if (!subscriptionId || subscriptionId.length > 128) throw new Error("Неверное устройство");
+  const prisma = getPrisma();
+  const subscription = await prisma.adminPushSubscription.findUnique({ where: { id: subscriptionId }, select: { id: true } });
+  if (!subscription) throw new Error("Устройство не найдено");
+  await prisma.adminPushSubscription.updateMany({ where: { id: subscription.id, revokedAt: null }, data: { revokedAt: new Date() } });
+  revalidatePath("/admin/settings");
+}

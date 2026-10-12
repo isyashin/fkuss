@@ -92,6 +92,9 @@ export async function updateAdminUser(prisma: PrismaClient, userId: string, inpu
       select: { id: true, login: true, name: true, role: true, active: true } });
     if (role !== undefined || input.active !== undefined || passwordHash !== undefined) {
       await tx.adminSession.deleteMany({ where: { userId } });
+      // Телефоны сотрудника больше не должны получать push
+      const { revokeUserPushSubscriptions } = await import("./admin-push");
+      await revokeUserPushSubscriptions(tx, userId);
     }
     return updated;
   });

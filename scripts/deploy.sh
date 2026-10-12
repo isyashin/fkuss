@@ -114,17 +114,25 @@ networks:
     external: true
 EOF
 
-# 5. .env сайта: свои креды БД + пароль админки (не перезаписываем существующий)
+# 5. .env сайта: свои креды БД + пароль админки + ключи VAPID (не перезаписываем существующий)
 if [ ! -f "$SITE_DIR/.env" ]; then
   if [ "$DB_PASS" = "СМОТРИ-СУЩЕСТВУЮЩИЙ-.env" ]; then
     echo "ОШИБКА: база $SLUG существует, а .env нет — восстанови DATABASE_URL вручную" >&2
     exit 1
   fi
+  # Ключи VAPID (ECDH P-256) генерируем внутри образа приложения — только node:crypto,
+  # значения никуда не выводятся, попадают сразу в .env (права 600).
+  VAPID_PAIR=$(docker run --rm "$IMAGE" node -e "const c=require('node:crypto');const e=c.createECDH('prime256v1');e.generateKeys();const b=(x)=>Buffer.from(x).toString('base64url');process.stdout.write(b(e.getPublicKey())+' '+b(e.getPrivateKey()));")
+  VAPID_PUBLIC_KEY=${VAPID_PAIR%% *}
+  VAPID_PRIVATE_KEY=${VAPID_PAIR##* }
   cat > "$SITE_DIR/.env" <<EOF
 DATABASE_URL=postgresql://$DB_USER:$DB_PASS@$DB_CONTAINER:5432/$SLUG
 ADMIN_PASSWORD=$(openssl rand -hex 12)
 CRON_SECRET=$(openssl rand -hex 16)
 PLATFORM_PUBLIC_URL=${PLATFORM_PUBLIC_URL:-}
+VAPID_PUBLIC_KEY=$VAPID_PUBLIC_KEY
+VAPID_PRIVATE_KEY=$VAPID_PRIVATE_KEY
+VAPID_SUBJECT=mailto:push@fkuss.ru
 EOF
   chmod 600 "$SITE_DIR/.env"
 fi

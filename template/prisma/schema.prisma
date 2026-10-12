@@ -114,6 +114,7 @@ model AdminUser {
   updatedAt    DateTime @updatedAt
   sessions     AdminSession[]
   notificationReceipts AdminEventReceipt[]
+  pushSubscriptions    AdminPushSubscription[]
 }
 
 model AdminSession {
@@ -134,9 +135,50 @@ model AdminEvent {
   label     String
   createdAt DateTime @default(now())
   receipts  AdminEventReceipt[]
+  pushDeliveries AdminPushDelivery[]
 
   @@unique([kind, reference])
   @@index([createdAt])
+}
+
+// Подписка устройства админа на web push. Не равна сессии:
+// живёт своим сроком, продлевается авторизованным открытием приложения.
+model AdminPushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  user       AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  installId  String    // идентификатор установки приложения на устройстве
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+  deliveries AdminPushDelivery[]
+
+  @@index([userId])
+  @@index([installId])
+}
+
+// Outbox доставки: пара событие+подписка. Создаётся в той же транзакции,
+// что и AdminEvent; job push-delivery дошливает с backoff.
+model AdminPushDelivery {
+  eventId        String
+  subscriptionId String
+  event          AdminEvent            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  subscription   AdminPushSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  status         String                @default("pending") // pending | sending | sent | failed | expired
+  attempts       Int                   @default(0)
+  nextAttemptAt  DateTime              @default(now())
+  lastErrorCode  String?               // gone | timeout | server | network
+  sentAt         DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@id([eventId, subscriptionId])
+  @@index([status, nextAttemptAt])
 }
 
 model AdminEventReceipt {

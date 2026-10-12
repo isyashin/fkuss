@@ -88,8 +88,12 @@ async function SectionSync({ settings }: { settings: Awaited<ReturnType<typeof g
 }
 
 async function SectionTeam() {
-  const users = await getPrisma().adminUser.findMany({ orderBy: { createdAt: "asc" },
-    select: { id: true, login: true, name: true, role: true, active: true, updatedAt: true } });
+  const rows = await getPrisma().adminUser.findMany({ orderBy: { createdAt: "asc" },
+    select: { id: true, login: true, name: true, role: true, active: true, updatedAt: true,
+      // Устройства с включёнными уведомлениями: владелец видит и отзывает потерянные
+      pushSubscriptions: { where: { revokedAt: null }, orderBy: { lastSeenAt: "desc" },
+        select: { id: true, userAgent: true, lastSeenAt: true, createdAt: true } } } });
+  const users = rows.map(({ pushSubscriptions, ...user }) => ({ ...user, devices: pushSubscriptions }));
   return <div className={styles.legacyCard}><h2>Сотрудники</h2><p className={styles.editorHint}>Личные учётные записи и права в админке этого ресторана.</p>
     <TeamAdmin users={users} /></div>;
 }

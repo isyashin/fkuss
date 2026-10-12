@@ -42,6 +42,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     } catch {
       // не роняем webhook
     }
+    // Web push сотрудникам — фоном (дожим — job push-delivery)
+    try {
+      const { schedulePushAttempt } = await import("@/lib/admin-push");
+      schedulePushAttempt("order", event.orderId);
+    } catch {
+      // не роняем webhook
+    }
   }
 
   return NextResponse.json({ ok: true });

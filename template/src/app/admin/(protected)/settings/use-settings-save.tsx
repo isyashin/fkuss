@@ -20,9 +20,12 @@ let latestRev: number | null = null;
 let refreshEpoch = 0;
 let awaitingRefresh = false;
 // «Обновить» со свежими props на странице: сброс редакторов уже выполнен
-// немедленным бампом — провайдер лишь примет более новую ревизию без повторного
-// сброса (иначе поздний бамп стёр бы правку, введённую после «Обновить»).
+// немедленным бампом — провайдер примет ту же ревизию без повторного сброса
+// (иначе поздний бамп стёр бы правку, введённую после «Обновить»). Ревизия,
+// к которой выполнен сброс: если придёт ЕЁ БОЛЕЕ СВЕЖАЯ — это поздняя чужая
+// правка, редакторы сбрасываем повторно (аудит 12.10).
 let acceptRevWithoutBump = false;
+let silentAcceptBaseline: number | null = null;
 const epochListeners = new Set<() => void>();
 
 function bumpEpoch() {
@@ -59,6 +62,14 @@ export function getSettingsRev(): number | null {
   return savedRev;
 }
 
+/** Вкладка принимает ревизию собственной записи (автосохранения каналов,
+    банкетов, кабинета), которая не проходила через useSettingsSave — иначе
+    её следующее версионированное сохранение ложно конфликтует (аудит 12.10). */
+export function acceptSettingsRev(rev: number): void {
+  savedRev = Math.max(savedRev ?? 0, rev);
+  latestRev = Math.max(latestRev ?? 0, rev);
+}
+
 /** Серверная страница настроек кладёт актуальную версию сюда (обновляется при refresh).
     Если вкладка нажала «Обновить» и refresh привёз ещё более свежую версию —
     принимаем её и добампливаем эпоху (редакторы сбросятся повторно). */
@@ -71,11 +82,15 @@ export function SettingsRevProvider({ rev, children }: { rev: number; children: 
     }
     const acceptSilently = acceptRevWithoutBump;
     acceptRevWithoutBump = false;
-    if (rev === savedRev) return;
+    if (rev === savedRev) { silentAcceptBaseline = null; return; }
     if (acceptSilently) {
-      // Сброс после «Обновить» уже выполнен немедленным бампом — принимаем
-      // ревизию без повторного сброса редакторов.
+      // Сброс после «Обновить» уже выполнен к silentAcceptBaseline. Та же
+      // ревизия — принимаем молча; более свежая — поздняя чужая правка:
+      // редакторы обязаны сброситься к ней.
+      const baseline = silentAcceptBaseline ?? savedRev ?? 0;
+      silentAcceptBaseline = null;
       savedRev = rev;
+      if (rev > baseline) bumpEpoch();
       return;
     }
     if (awaitingRefresh) {
@@ -145,6 +160,7 @@ export function useSettingsSave<TInput = ContentSettings>(
         savedRev = Math.max(savedRev ?? 0, latestRev ?? 0);
         if (knownFresh) {
           acceptRevWithoutBump = true;
+          silentAcceptBaseline = savedRev;
           bumpEpoch();
         } else {
           awaitingRefresh = true;

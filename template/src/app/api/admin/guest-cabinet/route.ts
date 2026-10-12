@@ -15,15 +15,16 @@ const patchSchema = z.object({
   smtpFrom: z.string().optional(),
 });
 
-async function saveGuestCabinet(patch: Partial<GuestCabinetSettings>): Promise<GuestCabinetSettings> {
+async function saveGuestCabinet(patch: Partial<GuestCabinetSettings>): Promise<{ cabinet: GuestCabinetSettings; rev: number }> {
   const prisma = getPrisma();
   const current = await getSiteSettings();
   const guestCabinet = { ...normalizeGuestCabinet(current), ...patch };
   // Единая точка записи строки settings: общая блокировка и бамп _rev
-  // (P1, аудит 11.10).
+  // (P1, аудит 11.10). Ревизия возвращается клиенту (аудит 12.10).
   const { writeSettingsVersioned } = await import("@/lib/admin-settings-version");
-  await writeSettingsVersioned(prisma, (row) => ({ ...current, ...row, guestCabinet }), null);
-  return guestCabinet;
+  const rev = await writeSettingsVersioned(prisma, (row) => ({ ...current, ...row, guestCabinet }), null);
+  if (rev === "conflict") throw new Error("CONFLICT_WITHOUT_CHECK");
+  return { cabinet: guestCabinet, rev };
 }
 
 export async function GET() {

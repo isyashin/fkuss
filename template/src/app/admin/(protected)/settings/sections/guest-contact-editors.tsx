@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../use-settings-save";
+import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch, acceptSettingsRev } from "../use-settings-save";
 import { saveGuestContactChannels, saveSettings } from "../actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import { visibleGuestChannels } from "@/lib/guest-contact";
@@ -28,7 +28,10 @@ export function GuestContactEditor({ settings }: { settings: ContentSettings }) 
     startTransition(async () => {
       setStatus(null);
       try {
-        await saveGuestContactChannels(next);
+        const rev = await saveGuestContactChannels(next);
+        // Своя запись бампнула _rev — принимаем ревизию, иначе следующее
+        // версионированное сохранение этой вкладки ложно конфликтует (аудит 12.10).
+        acceptSettingsRev(rev);
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
         setContact(previous);

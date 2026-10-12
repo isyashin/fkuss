@@ -364,6 +364,193 @@ test("F04-разделы: правка «Связи с гостем» не ти�
   }
 });
 
+test("F04-разделы: автосохранение связи → оплата в той же вкладке без ложного конфликта", async ({ browser }, testInfo) => {
+  // Аудит 12.10: автосохранение каналов бампит _rev серверно; вкладка обязана
+  // принять ревизию, иначе её же сохранение оплаты ложно конфликтует.
+  test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
+  test.setTimeout(240_000);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  let whatsappInitially = true;
+  let initial = { cashback: 5, maxSpend: 20 };
+  try {
+    await gotoStable(page, "/admin/login");
+    if (await page.getByLabel("Логин").isVisible().catch(() => false)) {
+      await loginAdminUi(page);
+      await expect(page).toHaveURL(/\/admin$/, { timeout: 20_000 });
+    }
+    // 1) Связь с гостем: тоглим WhatsApp, авто-сохранение сразу.
+    await gotoStable(page, "/admin/settings?section=guest-contact");
+    const waRow = page.locator("label", { hasText: "WhatsApp" }).first();
+    await waRow.waitFor({ timeout: 20000 });
+    const waCheckbox = waRow.locator("input[type=checkbox]");
+    whatsappInitially = await waCheckbox.isChecked();
+    await waCheckbox.setChecked(!whatsappInitially);
+    await expect(page.getByRole("status")).toContainText("Сохранено", { timeout: 15000 });
+
+    // 2) Оплата в той же вкладке: сохранение проходит без конфликта.
+    await gotoStable(page, SECTION);
+    await page.getByLabel(/Кэшбэк/).waitFor({ timeout: 20000 });
+    initial = await readPair(page);
+    const nextCashback = initial.cashback === 47 ? 48 : 47;
+    await page.getByLabel(/Кэшбэк/).fill(String(nextCashback));
+    await page.getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await expect(page.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
+    const pair = await waitForServerPair(page, { cashback: nextCashback, maxSpend: initial.maxSpend });
+    expect(pair.cashback).toBe(nextCashback);
+  } finally {
+    try {
+      await gotoStable(page, "/admin/settings?section=guest-contact");
+      const waRow = page.locator("label", { hasText: "WhatsApp" }).first();
+      await waRow.waitFor({ timeout: 15000 }).catch(() => {});
+      const waCheckbox = waRow.locator("input[type=checkbox]");
+      if (await waCheckbox.isChecked() !== whatsappInitially) {
+        await waCheckbox.setChecked(whatsappInitially);
+        await page.waitForTimeout(1500);
+      }
+      await gotoStable(page, SECTION);
+      await page.getByLabel(/Кэшбэк/).waitFor({ timeout: 15000 }).catch(() => {});
+      const now = await readPair(page).catch(() => null);
+      if (now && now.cashback !== initial.cashback) {
+        await page.getByLabel(/Кэшбэк/).fill(String(initial.cashback));
+        const saveButton = page.getByRole("button", { name: "Сохранить" });
+        if (await saveButton.isVisible().catch(() => false)) { await saveButton.click(); await page.waitForTimeout(1500); }
+      }
+    } catch { /* восстановление лучшее усилие */ }
+    await context.close().catch(() => {});
+  }
+});
+
+test("F04-разделы: сохранение банкетов → оплата в той же вкладке без ложного конфликта", async ({ browser }, testInfo) => {
+  // Тот же регресс для банкетов (сохранение кнопкой, не авто) — аудит 12.10.
+  test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
+  test.setTimeout(240_000);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  let ctaInitially = "";
+  let initial = { cashback: 5, maxSpend: 20 };
+  try {
+    await gotoStable(page, "/admin/login");
+    if (await page.getByLabel("Логин").isVisible().catch(() => false)) {
+      await loginAdminUi(page);
+      await expect(page).toHaveURL(/\/admin$/, { timeout: 20_000 });
+    }
+    // 1) Банкеты: меняем текст CTA и сохраняем.
+    await gotoStable(page, "/admin/settings?section=banquets");
+    const cta = page.getByLabel(/Текст CTA-кнопки/);
+    await cta.waitFor({ timeout: 20000 });
+    ctaInitially = await cta.inputValue();
+    const nextCta = ctaInitially.includes("аудит") ? `${ctaInitially}.` : `${ctaInitially} аудит`;
+    await cta.fill(nextCta);
+    await page.getByRole("button", { name: "Сохранить настройки" }).click();
+    await expect(page.getByText("Сохранено ✓")).toBeVisible({ timeout: 15000 });
+
+    // 2) Оплата в той же вкладке: сохранение проходит без конфликта.
+    await gotoStable(page, SECTION);
+    await page.getByLabel(/Кэшбэк/).waitFor({ timeout: 20000 });
+    initial = await readPair(page);
+    const nextCashback = initial.cashback === 49 ? 50 : 49;
+    await page.getByLabel(/Кэшбэк/).fill(String(nextCashback));
+    await page.getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await expect(page.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
+    const pair = await waitForServerPair(page, { cashback: nextCashback, maxSpend: initial.maxSpend });
+    expect(pair.cashback).toBe(nextCashback);
+  } finally {
+    try {
+      await gotoStable(page, "/admin/settings?section=banquets");
+      const cta = page.getByLabel(/Текст CTA-кнопки/);
+      await cta.waitFor({ timeout: 15000 }).catch(() => {});
+      if ((await cta.inputValue().catch(() => ctaInitially)) !== ctaInitially) {
+        await cta.fill(ctaInitially);
+        const saveBanquets = page.getByRole("button", { name: "Сохранить настройки" });
+        if (await saveBanquets.isVisible().catch(() => false)) { await saveBanquets.click(); await page.waitForTimeout(1500); }
+      }
+      await gotoStable(page, SECTION);
+      await page.getByLabel(/Кэшбэк/).waitFor({ timeout: 15000 }).catch(() => {});
+      const now = await readPair(page).catch(() => null);
+      if (now && now.cashback !== initial.cashback) {
+        await page.getByLabel(/Кэшбэк/).fill(String(initial.cashback));
+        const saveButton = page.getByRole("button", { name: "Сохранить" });
+        if (await saveButton.isVisible().catch(() => false)) { await saveButton.click(); await page.waitForTimeout(1500); }
+      }
+    } catch { /* восстановление лучшее усилие */ }
+    await context.close().catch(() => {});
+  }
+});
+
+test("F04-поздняя правка: чужая запись после «Обновить» не затирается молча", async ({ browser }, testInfo) => {
+  // Аудит 12.10: флаг acceptRevWithoutBump обязан не проглатывать более свежую
+  // ревизию. Сохранение вкладки 2 после поздней правки вкладки 1 обязано
+  // показать конфликт (а не приняться и затирать чужую правку).
+  test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
+  test.setTimeout(300_000);
+  const t0 = Date.now();
+  const mark = (step: string) => console.log(`[conflict +${((Date.now() - t0) / 1000).toFixed(0)}s] ${step}`);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const tab1 = await context.newPage();
+  const tab2 = await context.newPage();
+  let initial = { cashback: 5, maxSpend: 20 };
+  try {
+    await openPayment(tab1);
+    await openPayment(tab2);
+    initial = await readPair(tab1);
+    const first = initial.cashback === 51 ? 52 : 51;
+    const late = initial.cashback === 53 ? 54 : 53;
+    const own = initial.cashback === 55 ? 56 : 55;
+
+    // Вкладка 1 сохраняет первую правку → у вкладки 2 конфликт → «Обновить».
+    await tab1.getByLabel(/Кэшбэк/).fill(String(first));
+    await tab1.getByRole("button", { name: "Сохранить" }).click();
+    await tab1.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await tab2.getByLabel(/Списание бонусов до/).fill(String(initial.maxSpend === 25 ? 26 : 25));
+    await tab2.getByRole("button", { name: "Сохранить" }).click();
+    await expect(tab2.getByText("Настройки изменены в другой вкладке")).toBeVisible({ timeout: 15000 });
+    // Детерминированность: не даём фоновому опросу доставить позднюю ревизию
+    // раньше сохранения вкладки 2 — конфликт обязан вычислиться замороженной
+    // версией вкладки.
+    await tab2.route("**/api/admin/events", (route) => route.abort());
+    await tab2.getByRole("button", { name: "Обновить", exact: true }).click();
+    await expect(tab2.getByLabel(/Кэшбэк/)).toHaveValue(String(first), { timeout: 15000 });
+    mark("вкладка 2 обновилась к версии первой правки");
+
+    // Поздняя чужая правка: вкладка 1 сохраняет ещё раз до сохранения вкладки 2.
+    await tab1.getByLabel(/Кэшбэк/).fill(String(late));
+    await tab1.getByRole("button", { name: "Сохранить" }).click();
+    await tab1.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    mark("вкладка 1 сохранила позднюю правку");
+
+    // Вкладка 2 применяет свою правку и сохраняет: конфликт обязан появиться.
+    await tab2.getByLabel(/Кэшбэк/).fill(String(own));
+    await tab2.getByRole("button", { name: "Сохранить" }).click();
+    await expect(tab2.getByText("Настройки изменены в другой вкладке")).toBeVisible({ timeout: 15000 });
+    mark("поздняя правка не проглочена — конфликт показан");
+
+    // «Обновить» → свежие значения → повторная правка → обе сохранены.
+    await tab2.getByRole("button", { name: "Обновить", exact: true }).click();
+    await expect(tab2.getByLabel(/Кэшбэк/)).toHaveValue(String(late), { timeout: 15000 });
+    await tab2.getByLabel(/Кэшбэк/).fill(String(own));
+    await tab2.getByRole("button", { name: "Сохранить" }).click();
+    await tab2.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    const pair = await waitForServerPair(tab1, { cashback: own, maxSpend: initial.maxSpend });
+    expect(pair.cashback).toBe(own);
+    mark("ПОЗДНЯЯ ПРАВКА НЕ ПОТЕРЯНА");
+  } finally {
+    try {
+      await gotoStable(tab2, SECTION);
+      await tab2.getByLabel(/Кэшбэк/).waitFor({ timeout: 15000 }).catch(() => {});
+      const now = await readPair(tab2).catch(() => null);
+      if (now && now.cashback !== initial.cashback) {
+        await tab2.getByLabel(/Кэшбэк/).fill(String(initial.cashback));
+        const saveButton = tab2.getByRole("button", { name: "Сохранить" });
+        if (await saveButton.isVisible().catch(() => false)) { await saveButton.click(); await tab2.waitForTimeout(1500); }
+      }
+    } catch { /* восстановление лучшее усилие */ }
+    await context.close().catch(() => {});
+  }
+});
+
 test("F04-перезаписать: явная перезапись затирает чужую правку", async ({ browser }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "конфликт вкладок: только десктопный проект");
   test.setTimeout(300_000);

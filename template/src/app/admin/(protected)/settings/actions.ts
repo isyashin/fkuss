@@ -45,20 +45,24 @@ export async function saveSettings(settings: ContentSettings, expectedRev?: numb
   return rev;
 }
 
-export async function saveGuestContactChannels(input: { whatsapp: boolean; telegram: boolean }): Promise<void> {
+export async function saveGuestContactChannels(input: { whatsapp: boolean; telegram: boolean }): Promise<number> {
   await guard();
   const guestContact = guestContactSchema.parse(input);
   const prisma = getPrisma();
   const fallback = await getSiteSettings();
   // Единая точка записи строки settings: общая блокировка и обязательный
   // бамп _rev — иначе правка не будет замечена версионированными вкладками
-  // и будет тихо затёрта их полным объектом (P1, аудит 11.10).
+  // и будет тихо затёрта их полным объектом (P1, аудит 11.10). Возвращаем
+  // ревизию: вкладка, сделавшая запись, обязана принять её, иначе её же
+  // следующее сохранение ложно конфликтует (аудит 12.10).
   const { writeSettingsVersioned } = await import("@/lib/admin-settings-version");
-  await writeSettingsVersioned(prisma, (current) => ({ ...fallback, ...current, guestContact }), null);
+  const rev = await writeSettingsVersioned(prisma, (current) => ({ ...fallback, ...current, guestContact }), null);
+  if (rev === "conflict") throw new Error("CONFLICT_WITHOUT_CHECK");
   revalidatePath("/admin/settings");
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
   revalidatePath("/");
+  return rev;
 }
 
 export async function saveTheme(theme: { preset: string; accent: string }): Promise<void> {

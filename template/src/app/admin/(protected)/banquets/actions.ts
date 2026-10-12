@@ -19,17 +19,20 @@ export interface BanquetsSettings {
   ctaUrl: string;
 }
 
-export async function saveBanquetsSettings(input: BanquetsSettings): Promise<void> {
+export async function saveBanquetsSettings(input: BanquetsSettings): Promise<number> {
   await guard();
   const prisma = getPrisma();
   // Единая точка записи строки settings: общая блокировка и бамп _rev
   // (P1, аудит 11.10) — правка банкетов не должна тихо теряться чужим
-  // полным объектом из устаревшей вкладки.
+  // полным объектом из устаревшей вкладки. Ревизия возвращается, чтобы
+  // сохранившая вкладка приняла её и не конфликтовала ложно (аудит 12.10).
   const { writeSettingsVersioned } = await import("@/lib/admin-settings-version");
-  await writeSettingsVersioned(prisma, (current) => ({ ...current, banquets: input }), null);
+  const rev = await writeSettingsVersioned(prisma, (current) => ({ ...current, banquets: input }), null);
+  if (rev === "conflict") throw new Error("CONFLICT_WITHOUT_CHECK");
   revalidatePath("/admin/banquets");
   revalidatePath("/banquets");
   revalidatePath("/");
+  return rev;
 }
 
 export async function saveHall(input: {

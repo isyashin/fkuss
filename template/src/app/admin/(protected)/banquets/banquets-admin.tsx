@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { deleteHall, saveBanquetsSettings, saveHall, addHallImage, removeHallImage, type BanquetsSettings } from "./actions";
+import { acceptSettingsRev } from "../settings/use-settings-save";
 import { contentAssetUrl } from "@/lib/assets";
 import type { BanquetHall } from "@/generated/prisma/client";
 
@@ -79,7 +80,10 @@ export function BanquetsAdmin({
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
-              await saveBanquetsSettings(s);
+              const rev = await saveBanquetsSettings(s);
+              // Своя запись бампнула _rev — принимаем ревизию, иначе
+              // сохранение другого раздела этой вкладки ложно конфликтует (аудит 12.10).
+              acceptSettingsRev(rev);
               setSaved(true);
               setTimeout(() => setSaved(false), 3000);
             })

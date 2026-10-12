@@ -59,6 +59,9 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
   // F10: прямая ссылка ?selected= на телефоне сразу открывает деталь вместо списка.
   const [mobileDetail, setMobileDetail] = useState(() => Boolean(initialSelectedId));
+  // На телефоне pushState запускает навигацию Next. Пока она не завершилась,
+  // карточка может размонтироваться и потерять открытый редактор состава.
+  const [openingOrderId, setOpeningOrderId] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const router = useRouter();
   const [quickPending, startQuickTransition] = useTransition();
@@ -72,6 +75,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
   useEffect(() => {
     const onPopState = () => {
       setMobileDetail(false);
+      setOpeningOrderId(null);
       const params = new URLSearchParams(window.location.search);
       const fromUrl = params.get("selected");
       setSelectedId(fromUrl && fromUrl.length <= 100 ? fromUrl : null);
@@ -90,6 +94,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       window.scrollTo(0, 0);
       const isMobile = window.matchMedia("(max-width: 760px)").matches;
       if (isMobile) {
+        setOpeningOrderId(id);
         const base = href(query);
         window.history.pushState({ orderDetail: id }, "", `${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`);
       } else {
@@ -99,6 +104,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
     });
   };
   const closeDetail = () => {
+    setOpeningOrderId(null);
     // Если слой открыт через pushState — возврат системной кнопкой сохранит контекст списка.
     if (window.history.state?.orderDetail) window.history.back();
     else setMobileDetail(false);
@@ -208,6 +214,10 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       </div>
       <AdminPagination base="/admin" query={query} page={page} pageCount={pageCount} total={counts.total}/>
     </section>
-    <section className={styles.detailPanel} aria-label="Детали заказа">{selected ? <OrderCard key={`${selected.id}:${selected.updatedAt.toISOString()}`} order={selected} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} guestContact={guestContact} timeZone={timeZone} onBack={closeDetail}/> : <div className={styles.detailInner}><p className={styles.empty}>Выберите заказ.</p></div>}</section>
+    <section className={styles.detailPanel} aria-label="Детали заказа">{selected ? (
+      openingOrderId === selected.id && initialSelectedId !== openingOrderId
+        ? <div className={styles.detailInner}><p className={styles.muted} role="status">Открываем заказ…</p></div>
+        : <OrderCard key={`${selected.id}:${selected.updatedAt.toISOString()}`} order={selected} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} guestContact={guestContact} timeZone={timeZone} onBack={closeDetail}/>
+    ) : <div className={styles.detailInner}><p className={styles.empty}>Выберите заказ.</p></div>}</section>
   </div>;
 }

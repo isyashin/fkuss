@@ -91,7 +91,10 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       const isMobile = window.matchMedia("(max-width: 760px)").matches;
       if (isMobile) {
         const base = href(query);
-        window.history.pushState({ orderDetail: id }, "", `${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`);
+        // Деталь уже выбрана в локальном состоянии. Перехват pushState роутером
+        // Next запускает повторный рендер страницы и сбрасывает черновик заказа.
+        // Сохраняем внутренние поля history.state для корректной системной Back.
+        History.prototype.pushState.call(window.history, { ...window.history.state, orderDetail: id }, "", `${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`);
       } else {
         const base = href(query);
         router.replace(`${base}${base.includes("?") ? "&" : "?"}selected=${encodeURIComponent(id)}`, { scroll: false });
@@ -208,6 +211,6 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       </div>
       <AdminPagination base="/admin" query={query} page={page} pageCount={pageCount} total={counts.total}/>
     </section>
-    <section className={styles.detailPanel} aria-label="Детали заказа">{selected ? <OrderCard key={selected.id} order={selected} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} guestContact={guestContact} timeZone={timeZone} onBack={closeDetail}/> : <div className={styles.detailInner}><p className={styles.empty}>Выберите заказ.</p></div>}</section>
+    <section className={styles.detailPanel} aria-label="Детали заказа">{selected ? <OrderCard key={`${selected.id}:${selected.updatedAt.toISOString()}`} order={selected} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} guestContact={guestContact} timeZone={timeZone} onBack={closeDetail}/> : <div className={styles.detailInner}><p className={styles.empty}>Выберите заказ.</p></div>}</section>
   </div>;
 }

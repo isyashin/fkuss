@@ -114,3 +114,37 @@ test("F02: добавление блюда в состав заказа рабо
   // Количество первой позиции сохранилось как 2
   await expect(detail.locator("[class*=lineItem] b").first()).toContainText("2 ×", { timeout: 15000 });
 });
+
+test("мобильный заказ: открытие, системная Back и прямая ссылка после reload", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "мобильная навигация");
+  const response = await page.request.post("/api/order", {
+    headers: { "x-forwarded-for": "10.99.70.1" },
+    data: {
+      items: [{ dishId: "khachapuri-adjarski", quantity: 1, modifierIds: [] }],
+      type: "pickup", zoneName: null, address: "", customerName: "E2E Mobile Back",
+      customerPhone: "+79990000004", website: "",
+    },
+  });
+  expect(response.ok()).toBe(true);
+  const { orderNumber } = await response.json() as { orderNumber: number };
+
+  await page.goto("/admin/login");
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
+  const card = page.getByRole("button", { name: new RegExp(`^Открыть заказ № ${orderNumber}`) });
+  await card.click();
+  await expect(page).toHaveURL(/\?selected=/);
+  await expect(page.getByRole("region", { name: "Детали заказа" })).toContainText(`Заказ № ${orderNumber}`);
+
+  await page.goBack();
+  await expect(page).not.toHaveURL(/selected=/);
+  await expect(card).toBeVisible();
+
+  await card.click();
+  await page.reload();
+  const detail = page.getByRole("region", { name: "Детали заказа" });
+  await expect(detail).toContainText(`Заказ № ${orderNumber}`);
+  await detail.getByRole("button", { name: "Назад к заказам" }).click();
+  await expect(page).not.toHaveURL(/selected=/);
+  await expect(card).toBeVisible();
+});

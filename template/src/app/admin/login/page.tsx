@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getAdminActor } from "@/lib/admin-auth";
+import { validateAdminNext } from "@/lib/admin-next";
 import { getContentDir } from "@/lib/content-dir";
 import { getIconsVersion } from "@/lib/pwa-icons";
 import { LoginForm } from "./login-form";
@@ -23,10 +25,11 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function AdminLoginPage() {
+export default async function AdminLoginPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const rawNext = (await searchParams).next;
+  const next = validateAdminNext(typeof rawNext === "string" ? rawNext : null);
   if (await getAdminActor()) {
-    const { redirect } = await import("next/navigation");
-    redirect("/admin");
+    redirect(next ?? "/admin");
   }
 
   return (
@@ -36,7 +39,7 @@ export default async function AdminLoginPage() {
         <span className={styles.eyebrow}>ПАНЕЛЬ РЕСТОРАНА</span>
         <h1>Вход в админку</h1>
         <p>Введите личный логин и пароль сотрудника.</p>
-        <LoginForm />
+        <LoginForm next={next} />
       </div>
       <AdminPushManager />
     </main>

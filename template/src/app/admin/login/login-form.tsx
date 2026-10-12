@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { loginAction } from "./actions";
 import styles from "./login.module.css";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string | null }) {
   const router = useRouter();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +21,8 @@ export function LoginForm() {
         const ok = await loginAction(login, password);
         setSending(false);
         if (ok) {
-          router.push("/admin");
+          // next — уже провалидирован сервером (validateAdminNext в page)
+          router.push(next ?? "/admin");
         } else {
           setError("Неверный логин или пароль");
         }

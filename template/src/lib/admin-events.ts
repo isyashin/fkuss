@@ -6,6 +6,7 @@ export type AdminEventKind = "order" | "booking";
 export type ClaimedEvent = {
   id: string;
   kind: AdminEventKind;
+  reference: string; // id заказа/брони — для точной ссылки (?selected=)
   label: string;
   createdAt: Date;
   status: string | null; // текущий статус заказа/брони (для остановки звука)
@@ -76,6 +77,6 @@ export async function claimAdminEvents(prisma: PrismaClient, userId: string, tab
 
     return events
       .filter((event) => claimedIds.has(event.id))
-      .map((event) => ({ id: event.id, kind: event.kind as AdminEventKind, label: event.label, createdAt: event.createdAt, status: statusByRef.get(event.reference) ?? null }));
+      .map((event) => ({ id: event.id, kind: event.kind as AdminEventKind, reference: event.reference, label: event.label, createdAt: event.createdAt, status: statusByRef.get(event.reference) ?? null }));
   });
 }

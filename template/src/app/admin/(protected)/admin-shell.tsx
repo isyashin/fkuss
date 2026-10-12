@@ -10,6 +10,7 @@ import { ConfirmDialog, type ConfirmRequest } from "./confirm-dialog";
 import type { AdminActor } from "@/lib/admin-users";
 import { AdminNotifications } from "./admin-notifications";
 import { AdminIcon } from "./admin-icon";
+import { ADMIN_PUSH_OPEN_EVENT } from "./admin-push";
 import styles from "./admin-redesign.module.css";
 
 const primary = [
@@ -118,6 +119,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
               <small>{actor.role === "owner" ? "Владелец" : "Сотрудник"}</small>
               <nav aria-label="Профиль">
                 <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
+                <button type="button" onClick={() => { setProfileOpen(false); window.dispatchEvent(new CustomEvent(ADMIN_PUSH_OPEN_EVENT)); }}>Уведомления на этом устройстве</button>
                 <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
                 <form action={logoutAction}><button type="submit">Выйти</button></form>
               </nav>
@@ -142,6 +144,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
               <small>{actor.role === "owner" ? "Владелец" : "Сотрудник"}</small>
               <nav aria-label="Профиль">
                 <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
+                <button type="button" onClick={() => { setProfileOpen(false); window.dispatchEvent(new CustomEvent(ADMIN_PUSH_OPEN_EVENT)); }}>Уведомления на этом устройстве</button>
                 <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
                 <form action={logoutAction}><button type="submit">Выйти</button></form>
               </nav>

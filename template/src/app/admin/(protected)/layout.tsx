@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAdminActor } from "@/lib/admin-auth";
 import { isPinUnlocked } from "@/lib/admin-pin";
@@ -28,7 +29,16 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AdminProtectedLayout({ children }: { children: React.ReactNode }) {
   const actor = await getAdminActor();
-  if (!actor) redirect("/admin/login");
+  if (!actor) {
+    // Сессия истекла (переход из push-уведомления, reload): помним цель и после
+    // входа возвращаем в ту же запись. validateAdminNext отсекает всё, что не
+    // дерево админки, — open redirect невозможен.
+    const h = await headers();
+    const target = (h.get("x-pathname") ?? "") + (h.get("x-search") ?? "");
+    const { validateAdminNext } = await import("@/lib/admin-next");
+    const next = validateAdminNext(target);
+    redirect(next ? `/admin/login?next=${encodeURIComponent(next)}` : "/admin/login");
+  }
   const prisma = getPrisma();
   const [restaurant, newOrdersCount, newBookingsCount, unlocked] = await Promise.all([
     getSiteRestaurant(),

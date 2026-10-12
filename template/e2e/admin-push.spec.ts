@@ -101,7 +101,8 @@ test.describe("PWA админки", () => {
     await loginAdminUi(page);
     await expect(page).toHaveURL(/\/admin/);
 
-    await page.getByRole("button", { name: "Установка и уведомления на этом устройстве" }).click();
+    await page.getByRole("button", { name: /Профиль/ }).click();
+    await page.getByRole("button", { name: "Уведомления на этом устройстве" }).click();
     const dialog = page.getByRole("dialog", { name: "Установка и уведомления" });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText(/не поддерживает push-уведомления/)).toBeVisible();
@@ -155,7 +156,8 @@ test.describe("PWA админки", () => {
     await loginAdminUi(page);
     await expect(page).toHaveURL(/\/admin/);
 
-    await page.getByRole("button", { name: "Установка и уведомления на этом устройстве" }).click();
+    await page.getByRole("button", { name: /Профиль/ }).click();
+    await page.getByRole("button", { name: "Уведомления на этом устройстве" }).click();
     const dialog = page.getByRole("dialog", { name: "Установка и уведомления" });
 
     await dialog.getByRole("button", { name: "Включить уведомления" }).click();
@@ -200,7 +202,8 @@ test.describe("PWA админки", () => {
     await loginAdminUi(page);
     await expect(page).toHaveURL(/\/admin/);
 
-    await page.getByRole("button", { name: "Установка и уведомления на этом устройстве" }).click();
+    await page.getByRole("button", { name: /Профиль/ }).click();
+    await page.getByRole("button", { name: "Уведомления на этом устройстве" }).click();
     const dialog = page.getByRole("dialog", { name: "Установка и уведомления" });
     await dialog.getByRole("button", { name: "Включить уведомления" }).click();
     await expect(dialog.getByText("Уведомления включены на этом устройстве.").first()).toBeVisible({ timeout: 15_000 });

@@ -23,8 +23,10 @@ export default function proxy(request: NextRequest) {
   }
 
   // Путь для root layout: фон витрины не применяется в /admin
+  // Путь+query — для редиректа на вход с возвратом (?next=) после истёкшей сессии.
   const headers = new Headers(request.headers);
   headers.set("x-pathname", pathname);
+  headers.set("x-search", request.nextUrl.search);
   return NextResponse.next({ request: { headers } });
 }
 

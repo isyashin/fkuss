@@ -6,13 +6,15 @@
  * Финальный триггер после редизайна — в поповере профиля (см. интеграцию PR #35).
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { AdminIcon } from "./admin-icon";
 import styles from "./admin-push.module.css";
 
 const INSTALL_KEY = "admin-install-id";
 const THEME_KEY = "restaurant-admin-theme";
 // Держать в sync с ADMIN_INSTALL_COOKIE в src/lib/admin-push.ts (сервер читает при выходе)
 const ADMIN_INSTALL_COOKIE = "admin_install_id";
+
+/** Событие открытия панели — триггер живёт в поповере профиля (оба экземпляра в shell). */
+export const ADMIN_PUSH_OPEN_EVENT = "admin-push-open";
 
 type PushConfig = { enabled: boolean; publicKey: string | null; subscribed: boolean; stale: boolean };
 
@@ -117,6 +119,12 @@ export function AdminPushPanel() {
     } catch {
       // конфиг недоступен — оставляем прежнее состояние
     }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener(ADMIN_PUSH_OPEN_EVENT, handler);
+    return () => window.removeEventListener(ADMIN_PUSH_OPEN_EVENT, handler);
   }, []);
 
   useEffect(() => {
@@ -268,14 +276,11 @@ export function AdminPushPanel() {
   const unavailable = pushUnavailableReason();
   const subscribed = Boolean(config?.subscribed && !config?.stale);
 
+  if (!open) return null;
+
   return (
     <div className={`${styles.panel} ${dark ? styles.dark : ""}`}>
-      <button type="button" className={styles.fab} aria-label="Установка и уведомления на этом устройстве" onClick={() => setOpen(true)}>
-        <AdminIcon name="bell" size={22} />
-      </button>
-
-      {open && (
-        <div className={styles.backdrop} role="presentation" onClick={() => setOpen(false)}>
+      <div className={styles.backdrop} role="presentation" onClick={() => setOpen(false)}>
           <div className={`${styles.sheet} ${styles.sheetWrap}`} role="dialog" aria-modal="true" aria-label="Установка и уведомления" onClick={(e) => e.stopPropagation()}>
             <button type="button" className={styles.close} aria-label="Закрыть" onClick={() => setOpen(false)}>×</button>
             <h2>Это устройство</h2>
@@ -342,7 +347,6 @@ export function AdminPushPanel() {
             </section>
           </div>
         </div>
-      )}
     </div>
   );
 }

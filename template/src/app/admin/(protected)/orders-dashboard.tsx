@@ -162,7 +162,16 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
       >
         {QUEUE_MODES.map((mode) => <Link key={mode} prefetch={false} role="tab" tabIndex={query.mode === mode ? 0 : -1} aria-selected={query.mode === mode} href={href({ ...query, mode, page: 1 })} aria-current={query.mode === mode ? "page" : undefined}>{mode === "current" ? "Текущие" : mode === "new" ? "Новые" : "История"} <span className={styles.count}>{counts.byMode[mode]}</span></Link>)}
       </div>
-      <form key={`${query.mode}|${query.sort}|${query.q}`} className={styles.queueTools} role="search" action="/admin" method="get">
+      <form key={`${query.mode}|${query.sort}|${query.q}`} className={styles.queueTools} role="search" action="/admin" method="get" onSubmit={(event) => {
+        // Сохраняем ввод до фонового router.refresh(): нативный GET в WebKit
+        // иногда проигрывал навигации от оповещений и возвращал пустой поиск.
+        event.preventDefault();
+        const params = new URLSearchParams();
+        for (const [name, value] of new FormData(event.currentTarget)) {
+          if (typeof value === "string") params.set(name, value);
+        }
+        router.push(`/admin?${params.toString()}`);
+      }}>
         {query.mode !== "all" && query.mode !== "current" && <input type="hidden" name="mode" value={query.mode} />}
         {query.sort !== "desc" && <input type="hidden" name="sort" value={query.sort} />}
         <input className={styles.searchInput} type="search" name="q" defaultValue={query.q} placeholder="№, имя или телефон" maxLength={60} aria-label="Поиск заказа" />

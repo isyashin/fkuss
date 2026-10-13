@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { DaySchedule, WeeklySchedule } from "@/lib/hours";
 
@@ -11,6 +12,9 @@ export type RestaurantEditInput = {
   socials: { telegram: string; max: string; whatsapp: string; vk: string };
   schedule: WeeklySchedule;
 };
+
+export type RestaurantContactsField = "phone" | "email" | "whatsapp" | "telegram";
+export type RestaurantContactsFieldErrors = Partial<Record<RestaurantContactsField, string>>;
 
 const DAY_NAMES: Record<string, string> = {
   mon: "пн", tue: "вт", wed: "ср", thu: "чт", fri: "пт", sat: "сб", sun: "вс",
@@ -38,6 +42,39 @@ export function readRestaurantSectionRev(raw: unknown, section: RestaurantSectio
   const key = section === "contacts" ? "_contactsRev" : "_hoursRev";
   const value = (raw as Record<string, unknown> | null | undefined)?.[key];
   return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : 0;
+}
+
+function isRuPhone(value: string): boolean {
+  const v = value.trim();
+  if (v === "") return true;
+  if (!/^\+?[\d\s()-]+$/.test(v)) return false;
+  const digits = v.replace(/\D/g, "");
+  return (
+    (digits.length === 11 && (digits.startsWith("7") || digits.startsWith("8"))) ||
+    (digits.length === 10 && digits.startsWith("9"))
+  );
+}
+
+/** Контакты, выводимые на витрину: телефон/email и соцссылки. Пустые поля допустимы. */
+export function validateRestaurantContacts(
+  input: Pick<RestaurantEditInput, "phone" | "email" | "socials">,
+): RestaurantContactsFieldErrors {
+  const errors: RestaurantContactsFieldErrors = {};
+  if (!isRuPhone(input.phone)) {
+    errors.phone = "Укажите телефон в формате +7 999 123-45-67 или 8 999 123-45-67";
+  }
+  const email = input.email.trim();
+  if (email !== "" && !z.email().safeParse(email).success) {
+    errors.email = "Укажите корректный email, например hello@example.ru";
+  }
+  if (!isRuPhone(input.socials.whatsapp)) {
+    errors.whatsapp = "Укажите номер в формате +7 999 123-45-67 или 8 999 123-45-67";
+  }
+  const telegram = input.socials.telegram.trim();
+  if (telegram !== "" && !/^https?:\/\//i.test(telegram)) {
+    errors.telegram = "Укажите ссылку вида https://t.me/restaurant";
+  }
+  return errors;
 }
 
 /** Одна секция меняет только свои поля. Соседняя секция и логотип остаются актуальными. */

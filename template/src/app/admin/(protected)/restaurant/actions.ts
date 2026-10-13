@@ -8,8 +8,10 @@ import { getContentDir } from "@/lib/content-dir";
 import { getSiteRestaurant } from "@/lib/site";
 import {
   readRestaurantSectionRev,
+  validateRestaurantContacts,
   writeRestaurantLogo,
   writeRestaurantSection,
+  type RestaurantContactsFieldErrors,
   type RestaurantEditInput,
   type RestaurantSection,
 } from "@/lib/restaurant-settings-write";
@@ -19,8 +21,15 @@ export async function saveRestaurant(
   section: RestaurantSection,
   expectedRev: number,
   force = false,
-): Promise<number | "conflict"> {
+): Promise<number | "conflict" | RestaurantContactsFieldErrors> {
   if (!(await isAdmin())) throw new Error("Forbidden");
+
+  // Тексты ошибок возвращаем значением: сообщения исключений из server
+  // actions на клиент не передаются (React их редактирует).
+  if (section === "contacts") {
+    const errors = validateRestaurantContacts(input);
+    if (Object.keys(errors).length > 0) return errors;
+  }
 
   const result = await writeRestaurantSection(getPrisma(), input, section, expectedRev, force);
   if (result === "conflict") return result;

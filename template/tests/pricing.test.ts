@@ -79,9 +79,14 @@ describe("checkMinOrder", () => {
     expect(checkMinOrder(800, 800).ok).toBe(true);
   });
 
+  it("проходит на 1 ₽ выше minOrder", () => {
+    expect(checkMinOrder(801, 800).ok).toBe(true);
+  });
+
   it("отклоняет при сумме < minOrder", () => {
     const result = checkMinOrder(799, 800);
     expect(result.ok).toBe(false);
+    expect(result.reason).toBe("Минимальная сумма заказа 800 ₽");
   });
 
   it("minOrder=0 — всегда ок", () => {

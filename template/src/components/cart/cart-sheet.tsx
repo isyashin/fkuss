@@ -83,6 +83,10 @@ export function CartSheet({
   }, []);
 
   const itemsTotal = total();
+  // Минимальная сумма действует только для доставки (у самовывоза отдельного поля нет)
+  const minOrder = type === "delivery" ? delivery.minOrder : 0;
+  const belowMinOrder = minOrder > 0 && itemsTotal < minOrder;
+  const minOrderShort = belowMinOrder ? minOrder - itemsTotal : 0;
   const selectedOption = options.find((o) => o.id === deliveryOptionId);
   // F03: если варианты настроены, но все недоступны сегодня — объясняем до отправки.
   const noDeliveryAvailable = options.length > 0 && !selectedOption;
@@ -351,6 +355,12 @@ export function CartSheet({
                 );
               })}
             </div>
+            {belowMinOrder && (
+              <p className="text-red-600 text-sm mt-4">
+                Минимальная сумма заказа для доставки {formatPrice(minOrder)} — добавьте ещё{" "}
+                {formatPrice(minOrderShort)}.
+              </p>
+            )}
             <button
               onClick={() => setStep("form")}
               disabled={items.length === 0}
@@ -665,6 +675,12 @@ export function CartSheet({
             </div>
 
             {error && <p className="text-red-600 text-sm">{error}</p>}
+            {belowMinOrder && (
+              <p className="text-red-600 text-sm">
+                Минимальная сумма заказа для доставки {formatPrice(minOrder)} — не хватает{" "}
+                {formatPrice(minOrderShort)}.
+              </p>
+            )}
 
             <div className="flex gap-2">
               <button onClick={() => setStep("cart")} className="min-h-12 px-5 rounded-full border border-foreground/20">
@@ -674,6 +690,7 @@ export function CartSheet({
                 onClick={submit}
                 disabled={
                   submitting ||
+                  belowMinOrder ||
                   !form.name ||
                   !form.phone ||
                   (type === "delivery" && !form.address) ||

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveRestaurant, refreshRestaurantSection, afterLogoUpload } from "./actions";
 import { useDirtyGuard } from "../admin-dirty";
 import type { WeeklySchedule, DaySchedule, DayException } from "@/lib/hours";
-import type { RestaurantEditInput, RestaurantSection } from "@/lib/restaurant-settings-write";
+import { validateRestaurantContacts, type RestaurantContactsField, type RestaurantContactsFieldErrors, type RestaurantEditInput, type RestaurantSection } from "@/lib/restaurant-settings-write";
 import { SettingsConflictDialog } from "../settings/use-settings-save";
 import { contentAssetUrl } from "@/lib/assets";
 import styles from "./restaurant-admin.module.css";
@@ -36,6 +36,7 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
   const [savedRevision, setSavedRevision] = useState(initialRevision);
   const [conflict, setConflict] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<RestaurantContactsFieldErrors>({});
   // F06: уход с несохранёнными правками спрашивает подтверждение (навигация
   // по секциям перехватывается через реестр грязных форм).
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
@@ -64,8 +65,22 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
     setForm({ ...form, schedule: { ...form.schedule, exceptions } });
   }
 
+  function clearFieldError(field: RestaurantContactsField) {
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
+
   function persist(force = false) {
     const next = form;
+    if (focus === "contacts") {
+      const errors = validateRestaurantContacts(next);
+      setFieldErrors(errors);
+      if (Object.keys(errors).length > 0) return;
+    }
     startTransition(async () => {
       setSaveError(false);
       try {
@@ -74,8 +89,13 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
           setConflict(true);
           return;
         }
+        if (typeof result === "object") {
+          setFieldErrors(result);
+          return;
+        }
         setSavedRevision(result);
         setBaseline(next);
+        setFieldErrors({});
         setConflict(false);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
@@ -94,6 +114,7 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
       setSavedRevision(fresh.rev);
       setConflict(false);
       setSaveError(false);
+      setFieldErrors({});
       setSaved(false);
       router.refresh();
     } catch {
@@ -114,11 +135,13 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
         </label>
           <label className="block">
             <span className="text-sm text-muted">Телефон</span>
-            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} />
+            <input value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); clearFieldError("phone"); }} className={inputCls} aria-invalid={!!fieldErrors.phone} />
+            {fieldErrors.phone && <p role="alert" className="text-red-600 text-sm mt-1">{fieldErrors.phone}</p>}
           </label>
           <label className="block">
             <span className="text-sm text-muted">Email</span>
-            <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />
+            <input value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); clearFieldError("email"); }} className={inputCls} aria-invalid={!!fieldErrors.email} />
+            {fieldErrors.email && <p role="alert" className="text-red-600 text-sm mt-1">{fieldErrors.email}</p>}
           </label>
         <label className="block">
           <span className="text-sm text-muted">Адрес</span>
@@ -126,11 +149,13 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
         </label>
         <label className="block">
           <span className="text-sm text-muted">WhatsApp (номер)</span>
-          <input value={form.socials.whatsapp} onChange={(e) => setForm({ ...form, socials: { ...form.socials, whatsapp: e.target.value } })} className={inputCls} />
+          <input value={form.socials.whatsapp} onChange={(e) => { setForm({ ...form, socials: { ...form.socials, whatsapp: e.target.value } }); clearFieldError("whatsapp"); }} className={inputCls} aria-invalid={!!fieldErrors.whatsapp} />
+          {fieldErrors.whatsapp && <p role="alert" className="text-red-600 text-sm mt-1">{fieldErrors.whatsapp}</p>}
         </label>
         <label className="block">
           <span className="text-sm text-muted">Telegram (ссылка)</span>
-          <input value={form.socials.telegram} onChange={(e) => setForm({ ...form, socials: { ...form.socials, telegram: e.target.value } })} className={inputCls} />
+          <input value={form.socials.telegram} onChange={(e) => { setForm({ ...form, socials: { ...form.socials, telegram: e.target.value } }); clearFieldError("telegram"); }} className={inputCls} aria-invalid={!!fieldErrors.telegram} />
+          {fieldErrors.telegram && <p role="alert" className="text-red-600 text-sm mt-1">{fieldErrors.telegram}</p>}
         </label>
         </div>
         <div className={styles.logoEdit}>

@@ -10,7 +10,7 @@ import { useCart, type CartModifier } from "@/lib/cart/store";
 import { validateModifierSelection } from "@/lib/order/modifier-validation";
 import { CartBar } from "@/components/cart/cart-bar";
 import { CartSheet } from "@/components/cart/cart-sheet";
-import { menuSwitchItems } from "@/lib/multi-menu";
+import { menuSwitchItems, visibleMenuCategories } from "@/lib/multi-menu";
 
 function formatPrice(price: number): string {
   return `${price.toLocaleString("ru-RU")} ₽`;
@@ -42,18 +42,21 @@ export function MenuClient({
   /** Ключ JS API Яндекс.Карт — зоны на карте и подсказки адресов. */
   ymapsKey?: string;
 }) {
-  const [activeCategory, setActiveCategory] = useState(menu.categories[0]?.id ?? "");
   const menus = menu.menus ?? [];
+  // Пустые категории (нет доступных блюд) на витрине не показываем —
+  // и в табах, и в секциях (issue #43).
+  const displayCategories = visibleMenuCategories(menu.categories);
+  const [activeCategory, setActiveCategory] = useState(displayCategories[0]?.id ?? "");
   // Переключатель показываем только в мультименю-режиме (есть группы);
   // без групп — прежний вид: один ряд табов, без второй sticky-плашки.
-  const switchItems = menuSwitchItems(menus, menu.categories);
+  const switchItems = menuSwitchItems(menus, displayCategories);
   // Дефолт — группа первой категории: стартовый экран совпадает с прежним
   // поведением (одно меню), даже когда группы настроены.
   const [activeMenuId, setActiveMenuId] = useState(
-    menu.categories[0] ? (menu.categories[0].menuId ?? "") : (switchItems[0]?.id ?? "all"),
+    displayCategories[0] ? (displayCategories[0].menuId ?? "") : (switchItems[0]?.id ?? "all"),
   );
   // Категории активной группы (без переключателя — все, как раньше)
-  const visibleCategories = switchItems.length === 0 ? menu.categories : menu.categories.filter((c) => (c.menuId ?? "") === activeMenuId);
+  const visibleCategories = switchItems.length === 0 ? displayCategories : displayCategories.filter((c) => (c.menuId ?? "") === activeMenuId);
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const add = useCart((s) => s.add);
@@ -139,7 +142,7 @@ export function MenuClient({
                 data-active={activeMenuId === group.id ? "true" : undefined}
                 onClick={() => {
                   setActiveMenuId(group.id);
-                  const first = menu.categories.find((c) => (c.menuId ?? "") === group.id);
+                  const first = displayCategories.find((c) => (c.menuId ?? "") === group.id);
                   setActiveCategory(first?.id ?? "");
                 }}
                 className={`min-h-11 shrink-0 px-5 rounded-full text-sm font-semibold transition-colors ${

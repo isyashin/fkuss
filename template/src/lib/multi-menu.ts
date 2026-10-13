@@ -69,3 +69,8 @@ export function menuSwitchItems<T extends { menuId?: string }>(
   if (categories.some((c) => !(c.menuId ?? ""))) items.push({ id: "", name: "Меню" });
   return items;
 }
+
+/** Категории, видимые на витрине: хотя бы одно доступное блюдо. */
+export function visibleMenuCategories<T extends { dishes: { available: boolean }[] }>(categories: T[]): T[] {
+  return categories.filter((category) => category.dishes.some((dish) => dish.available));
+}

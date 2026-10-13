@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin-auth";
 import { parseAdminInput, adminIdSchema, adminMoneySchema, adminPercentSchema, adminShortTextSchema, adminTextSchema } from "@/lib/admin-validation";
+import { assertCategoryDeletable, categoryReorderUpdates } from "@/lib/menu-categories";
 
 async function guard() {
   if (!(await isAdmin("menu"))) throw new Error("Forbidden");
@@ -129,6 +130,52 @@ export async function addCategory(name: string, menuId?: string): Promise<void> 
   });
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
+}
+
+export async function renameCategory(id: string, name: string): Promise<void> {
+  await guard();
+  parseAdminInput(adminIdSchema, id);
+  parseAdminInput(adminShortTextSchema, name);
+  const prisma = getPrisma();
+  const category = await prisma.category.findUnique({ where: { id } });
+  if (!category) throw new Error("Категория не найдена");
+  await prisma.category.update({ where: { id }, data: { name } });
+  revalidatePath("/admin/menu");
+  revalidatePath("/menu");
+  revalidatePath("/");
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await guard();
+  parseAdminInput(adminIdSchema, id);
+  const prisma = getPrisma();
+  const category = await prisma.category.findUnique({ where: { id }, include: { _count: { select: { dishes: true } } } });
+  if (!category) throw new Error("Категория не найдена");
+  assertCategoryDeletable(category._count.dishes);
+  await prisma.category.delete({ where: { id } });
+  revalidatePath("/admin/menu");
+  revalidatePath("/menu");
+  revalidatePath("/");
+}
+
+/** Сдвиг категории вверх/вниз внутри её группы меню. */
+export async function reorderCategory(id: string, direction: "up" | "down"): Promise<void> {
+  await guard();
+  parseAdminInput(adminIdSchema, id);
+  const prisma = getPrisma();
+  const category = await prisma.category.findUnique({ where: { id } });
+  if (!category) throw new Error("Категория не найдена");
+  const siblings = await prisma.category.findMany({
+    where: { menuId: category.menuId },
+    orderBy: { position: "asc" },
+    select: { id: true, position: true },
+  });
+  const updates = categoryReorderUpdates(siblings, id, direction);
+  if (updates.length === 0) return;
+  await prisma.$transaction(updates.map((update) => prisma.category.update({ where: { id: update.id }, data: { position: update.position } })));
+  revalidatePath("/admin/menu");
+  revalidatePath("/menu");
+  revalidatePath("/");
 }
 
 /** Перенос категории между группами меню ("" = без группы). */

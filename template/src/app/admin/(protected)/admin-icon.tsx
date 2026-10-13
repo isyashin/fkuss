@@ -18,6 +18,9 @@ export function AdminIcon({ name, size = 20 }: { name: string; size?: number }) 
     plus: <path d="M12 5v14M5 12h14"/>,
     minus: <path d="M5 12h14"/>,
     close: <path d="M5 5l14 14M19 5 5 19"/>,
+    up: <path d="M12 19V5m-6 6 6-6 6 6"/>,
+    down: <path d="M12 5v14m-6-6 6 6 6-6"/>,
+    edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 16.5-14.5" /></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] ?? paths.chevron}</svg>;
 }

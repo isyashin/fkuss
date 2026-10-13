@@ -24,6 +24,16 @@ function isValidSlotTime(time: string): boolean {
   return h <= 23 && m <= 59;
 }
 
+/** Ввод слота из редактора: «9:30» → «09:30»; недопустимое время — null. */
+export function coerceSlotTime(input: string): string | null {
+  const match = /^(\d{1,2}):(\d{1,2})$/.exec(input.trim());
+  if (!match) return null;
+  const h = Number(match[1]);
+  const m = Number(match[2]);
+  if (h > 23 || m > 59) return null;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
 /** Настройки из БД могли появиться до появления блока — добиваем дефолт. */
 export function normalizePreOrder(raw: unknown): PreOrderSettings {
   const value = (raw ?? {}) as Partial<PreOrderSettings>;

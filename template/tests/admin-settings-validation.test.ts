@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import settings from "../content/settings.json";
-import { validateSettingsMutation, validateThemeMutation, validateBackgroundMutation } from "@/lib/admin-settings-validation";
+import { validateSettingsMutation, validatePreOrderMutation, validateThemeMutation, validateBackgroundMutation } from "@/lib/admin-settings-validation";
 
 describe("admin settings server validation", () => {
   it("accepts the complete current settings document", () => {
@@ -23,5 +23,19 @@ describe("admin settings server validation", () => {
     expect(() => validateThemeMutation({ preset: "warm", accent: "red" })).toThrow();
     expect(() => validateBackgroundMutation({ enabled: true, image: "../secret", position: "center", dimPercent: 20, disableOnMobile: false })).toThrow();
     expect(() => validateBackgroundMutation({ enabled: true, image: "", position: "center", dimPercent: 101, disableOnMobile: false })).toThrow();
+  });
+
+  it("accepts a valid preOrder block", () => {
+    expect(validatePreOrderMutation({ enabled: true, slots: ["10:00", "23:59"], daysAhead: 14, minAheadMinutes: 0 })).toEqual({
+      enabled: true, slots: ["10:00", "23:59"], daysAhead: 14, minAheadMinutes: 0,
+    });
+  });
+
+  it.each([
+    ["slot format", { enabled: true, slots: ["10:00", "10:0"], daysAhead: 1, minAheadMinutes: 30 }],
+    ["daysAhead above 14", { enabled: true, slots: [], daysAhead: 15, minAheadMinutes: 30 }],
+    ["negative minAheadMinutes", { enabled: true, slots: [], daysAhead: 1, minAheadMinutes: -1 }],
+  ])("rejects invalid preOrder %s before database write", (_name, patch) => {
+    expect(() => validatePreOrderMutation(patch)).toThrow();
   });
 });

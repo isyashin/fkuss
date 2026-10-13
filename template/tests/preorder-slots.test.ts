@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  coerceSlotTime,
   formatPreOrderSlot,
   generatePreOrderSlots,
   isValidPreOrderSlot,
@@ -115,5 +116,28 @@ describe("formatPreOrderSlot", () => {
 
   it("поздние даты — числом", () => {
     expect(formatPreOrderSlot("2026-09-20", "11:00", NOW, TZ)).toContain("11:00");
+  });
+});
+
+describe("coerceSlotTime (ввод в админке)", () => {
+  it("нормализует короткие компоненты", () => {
+    expect(coerceSlotTime("9:30")).toBe("09:30");
+    expect(coerceSlotTime("9:5")).toBe("09:05");
+    expect(coerceSlotTime(" 12:00 ")).toBe("12:00");
+  });
+
+  it("принимает уже нормализованное значение", () => {
+    expect(coerceSlotTime("23:59")).toBe("23:59");
+  });
+
+  it("отклоняет пустой и мусорный ввод", () => {
+    expect(coerceSlotTime("")).toBeNull();
+    expect(coerceSlotTime("abc")).toBeNull();
+    expect(coerceSlotTime("12:00:00")).toBeNull();
+  });
+
+  it("отклоняет время вне суток", () => {
+    expect(coerceSlotTime("24:00")).toBeNull();
+    expect(coerceSlotTime("12:60")).toBeNull();
   });
 });

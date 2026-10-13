@@ -7,6 +7,10 @@ export function validateSettingsMutation(input: unknown) {
   return settingsSchema.parse(input);
 }
 
+export function validatePreOrderMutation(input: unknown) {
+  return settingsSchema.shape.preOrder.parse(input);
+}
+
 export function validateThemeMutation(input: unknown) {
   return themeMutationSchema.parse(input);
 }

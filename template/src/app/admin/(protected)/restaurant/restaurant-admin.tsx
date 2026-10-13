@@ -144,8 +144,11 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
             {fieldErrors.email && <p role="alert" className="text-red-600 text-sm mt-1">{fieldErrors.email}</p>}
           </label>
         <label className="block">
-          <span className="text-sm text-muted">Адрес</span>
+          <span className="text-sm text-muted">Адрес заведения</span>
           <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={inputCls} />
+          <span className="text-muted text-xs mt-1 block">
+            Показывается гостям при самовывозе. На расчёт доставки не влияет.
+          </span>
         </label>
         <label className="block">
           <span className="text-sm text-muted">WhatsApp (номер)</span>

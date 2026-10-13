@@ -41,6 +41,17 @@ test("UI-04: админ включает банкеты → страница и 
   await page.getByRole("button", { name: "Сохранить настройки" }).click();
   await expect(page.getByText("Сохранено ✓")).toBeVisible({ timeout: 15000 });
 
+  // Issue #47: сразу после включения (залов ещё нет) страница доступна с заглушкой,
+  // кнопка на главной видна без ожидания кэша
+  const early = await page.request.get("/banquets");
+  expect(early.status()).toBe(200);
+  await page.goto("/banquets");
+  await expect(page.getByText("Залы скоро появятся")).toBeVisible({ timeout: 15000 });
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Банкеты" })).toBeVisible();
+
+  await page.goto("/admin/settings?section=banquets");
+
   await page.getByRole("button", { name: "+ Зал" }).click();
   await page.getByPlaceholder("Название зала").fill(hallName);
   await page.getByPlaceholder("Вместимость").fill("до 40 гостей");
@@ -62,4 +73,8 @@ test("UI-04: админ включает банкеты → страница и 
   page.once("dialog", (d) => d.accept());
   await page.locator("div.bg-card", { hasText: hallName }).getByRole("button", { name: "Удалить" }).click();
   await expect(page.getByText(hallName)).toHaveCount(0, { timeout: 15000 });
+
+  // После выключения страница снова 404
+  const off = await page.request.get("/banquets");
+  expect(off.status()).toBe(404);
 });

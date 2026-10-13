@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addCategory, addDish, addModifier, addModifierGroup, deleteCategory, deleteDish, deleteModifier, deleteModifierGroup, renameCategory, reorderCategory, updateCategoryMenu, updateDish, updateModifierGroup, type ModifierActionResult } from "./actions";
 import { dishImageUrl } from "@/lib/assets";
+import { filterAdminMenuCategories } from "@/lib/menu-categories";
 import { AdminIcon } from "../admin-icon";
 import type { Category, Dish, Modifier, ModifierGroup } from "@/generated/prisma/client";
 import ui from "../admin-ui.module.css";
@@ -76,19 +77,12 @@ export function MenuAdmin({ categories, menus }: { categories: CategoryWithDishe
     catch (cause) { setError(errorText(cause)); }
   });
 
-  const needle = query.trim().toLocaleLowerCase("ru");
   const menuFiltered = useMemo(() => menuId === "all" ? categories : categories.filter((category) => (category.menuId ?? "") === menuId), [categories, menuId]);
-  const flat = useMemo(() => menuFiltered
-    .filter((category) => categoryId === "all" || category.id === categoryId)
-    .map((category) => ({
-      ...category,
-      dishes: category.dishes.filter((dish) => {
-        if (availability === "available" && !dish.available) return false;
-        if (availability === "unavailable" && dish.available) return false;
-        return !needle || [dish.name, dish.description, dish.composition].some((value) => value.toLocaleLowerCase("ru").includes(needle));
-      }),
-    }))
-    .filter((category) => category.dishes.length > 0 || categoryId === category.id), [menuFiltered, categoryId, availability, needle]);
+  const flat = useMemo(() => filterAdminMenuCategories(
+    menuFiltered.filter((category) => categoryId === "all" || category.id === categoryId),
+    { needle: query, availability },
+    categoryId !== "all" ? categoryId : undefined),
+  [menuFiltered, categoryId, availability, query]);
   const allDishes = flat.flatMap((category) => category.dishes);
   const selected = allDishes.find((dish) => dish.id === selectedId) ?? null;
 
@@ -181,7 +175,7 @@ export function MenuAdmin({ categories, menus }: { categories: CategoryWithDishe
                   <span className={styles.dishPrice}>{rub(dish.price)}</span>
                 </div>
               ))}
-              {category.dishes.length === 0 && <p className={ui.empty}>В этой категории блюд нет.</p>}
+              {category.dishes.length === 0 && <p className={ui.empty}>{dishCount === 0 ? "Пустая — скрыта на витрине." : "В этой категории блюд нет."}</p>}
             </div>
             );
           }) : <p className={ui.empty}>По этим условиям блюд нет.</p>}

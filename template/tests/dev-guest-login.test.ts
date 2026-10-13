@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { issueGuestSession } from "@/lib/auth";
@@ -16,8 +16,7 @@ afterAll(async () => {
 });
 
 describe("dev guest login (DEV_GUEST_LOGIN)", () => {
-  it("returns 404 when the flag is off", async () => {
-    const saved = process.env.DEV_GUEST_LOGIN;
+  it("returns 404 when the flag is off", async () => {    const saved = process.env.DEV_GUEST_LOGIN;
     delete process.env.DEV_GUEST_LOGIN;
     try {
       const response = await POST(new Request("http://localhost/api/auth/dev-login", {
@@ -49,5 +48,35 @@ describe("dev guest login (DEV_GUEST_LOGIN)", () => {
     const second = await prisma.session.findUnique({ where: { id: secondId }, include: { customer: true } });
     expect(second?.customer.email).toBe(email);
     expect(await prisma.customer.count({ where: { email } })).toBe(1);
+  });
+});
+
+// Issue #49: на проде DEV_GUEST_LOGIN=1 без SITE_ENV=dev больше не открывает вход.
+describe("dev-login prod gate (issue #49)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function postDevLogin() {
+    return POST(new Request("http://localhost/api/auth/dev-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "nobody@example.com" }),
+    }));
+  }
+
+  it("returns 404 on production even with DEV_GUEST_LOGIN=1", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DEV_GUEST_LOGIN", "1");
+    vi.stubEnv("SITE_ENV", "");
+    expect((await postDevLogin()).status).toBe(404);
+  });
+
+  it("passes the gate on a dev stand (SITE_ENV=dev, NODE_ENV=production)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DEV_GUEST_LOGIN", "1");
+    vi.stubEnv("SITE_ENV", "dev");
+    // Дальше — проверка кабинета/БД (403/200), но не отсечка 404.
+    expect((await postDevLogin()).status).not.toBe(404);
   });
 });

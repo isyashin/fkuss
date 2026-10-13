@@ -12,6 +12,15 @@ const CODE_MAX_ATTEMPTS = 3;
 export const SESSION_TTL_DAYS = 30;
 const SESSION_COOKIE = "resto_session";
 
+/** DEV-вход без почтового кода. Одного DEV_GUEST_LOGIN=1 недостаточно:
+ *  на прод-сборке (NODE_ENV=production) требуется ещё SITE_ENV=dev. */
+export function isDevGuestLoginEnabled(): boolean {
+  return (
+    process.env.DEV_GUEST_LOGIN === "1" &&
+    (process.env.NODE_ENV !== "production" || process.env.SITE_ENV === "dev")
+  );
+}
+
 /** Гостя регистрируем при первом входе и сразу открываем сессию. */
 export async function issueGuestSession(prisma: PrismaClient, email: string): Promise<string> {
   const customer = await prisma.customer.upsert({

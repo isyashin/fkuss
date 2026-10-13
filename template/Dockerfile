@@ -37,6 +37,10 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 RUN addgroup -S app && adduser -S app -G app
 
 COPY --from=builder /app/.next/standalone ./
+# Трассировка standalone копирует sharp без libvips (соседние .so/.dll рядом с .node),
+# require("sharp") падает с ERR_DLOPEN_FAILED → upload 500. Берём платформенные
+# пакеты целиком из builder-а (npm ci там шёл под ту же alpine).
+COPY --from=builder /app/node_modules/@img ./node_modules/@img
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 # standalone копируется с владельцем root, а процесс — app: runtime-кэш .next недоступен

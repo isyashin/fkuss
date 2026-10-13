@@ -64,15 +64,17 @@ test("«Удалить блюдо» кликабельна целиком, saveb
   await expect(deleteButton).toBeVisible();
 
   // Вся площадь кнопки принадлежит ей: центр и края не перекрыты savebar.
+  // Точки в inset 8px: у кнопки border-radius 6px + border 1px, углы скругления
+  // не принимают хиты (elementFromPoint вернёт родителя) — это норма, а не баг.
   // Диагностика: если что-то перекрывает, в ошибке видно, какой элемент
   // вернул elementFromPoint для каждой контрольной точки.
   const probe = await deleteButton.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const points: Array<[number, number]> = [
       [rect.left + rect.width / 2, rect.top + rect.height / 2],
-      [rect.left + 2, rect.top + 2],
-      [rect.right - 2, rect.bottom - 2],
-      [rect.left + rect.width / 2, rect.bottom - 2],
+      [rect.left + 8, rect.top + 8],
+      [rect.right - 8, rect.bottom - 8],
+      [rect.left + rect.width / 2, rect.bottom - 8],
     ];
     const hits = points.map(([x, y]) => {
       const hit = document.elementFromPoint(x, y);

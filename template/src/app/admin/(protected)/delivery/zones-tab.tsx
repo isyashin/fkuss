@@ -145,7 +145,7 @@ export function ZonesTab({
           </div>
         )}
         {/* F21: кнопка сохранения всегда на месте; без изменений недоступна */}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-3 ml-auto" role="group" aria-label="Сохранение зон доставки">
           {dirty && <span className="text-sm text-muted">Есть несохранённые изменения</span>}
           <button
             type="button"

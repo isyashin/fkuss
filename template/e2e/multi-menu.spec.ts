@@ -38,7 +38,7 @@ test("несколько меню: переключатель на витрин�
   await page.getByLabel("Имя").fill("Тест Мультименю");
   await page.getByLabel("Телефон").fill("+79990001144");
   await page.getByRole("button", { name: /Заказать ·/ }).click();
-  const ok = page.getByText(/Заказ №\d+ принят/);
+  const ok = page.getByRole("heading", { name: /Заказ №\d+ принят/ });
   await ok.waitFor({ timeout: 15000 });
   const orderNumber = Number(((await ok.textContent()) ?? "").match(/№(\d+)/)?.[1]);
 

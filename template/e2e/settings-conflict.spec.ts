@@ -56,11 +56,12 @@ async function waitForServerPair(page: Page, expected: { cashback: number; maxSp
 
 // Синхронизация после клика «Сохранить»: кнопка теперь всегда на месте и лишь
 // блокируется без изменений (issue #59) — ждём статус «Сохранено» в панели раздела.
+// После успеха «Сохранено» дублируется в rd.saved под формой — берём span в savebar.
 async function waitSaved(page: Page) {
   await expect(
     page
       .locator('section[aria-label="Оплата и бонусы"], section[aria-label="Параметры бронирования"]')
-      .getByRole("status"),
+      .locator("span[role='status']"),
   ).toHaveText("Сохранено", { timeout: 15000 });
 }
 

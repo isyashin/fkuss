@@ -13,7 +13,9 @@ function ip(project: string, n: number) {
 async function setGeoZones(page: import("@playwright/test").Page, enabled: boolean) {
   await gotoAdmin(page, "/admin/settings?section=delivery");
   await page.getByRole("checkbox", { name: /Зоны на карте/ }).setChecked(enabled);
-  await page.getByRole("button", { name: "Сохранить" }).first().click();
+  // Кнопка «Сохранить» общих условий доставки всегда на месте (issue #59) —
+  // скоупимся на панель зон.
+  await page.getByRole("group", { name: "Сохранение зон доставки" }).getByRole("button", { name: "Сохранить" }).click();
   await expect(page.getByText("Сохранено")).toBeVisible({ timeout: 15000 });
 }
 
@@ -82,7 +84,8 @@ test("geo-режим: default выключен; без ключа геокоде
     await page.getByLabel("Часы с").fill("00:00");
     await page.getByLabel("Часы до").fill("23:59");
     await page.getByLabel("Цена, ₽").fill("200");
-    await page.getByRole("button", { name: "Сохранить" }).click();
+    // «Сохранить» общих условий теперь всегда видна — скоупимся на форму варианта.
+    await page.getByRole("group", { name: /варианта доставки/ }).getByRole("button", { name: "Сохранить" }).click();
     await expect(page.locator('[data-option-name="Курьер"]')).toBeVisible({ timeout: 15000 });
   }
 

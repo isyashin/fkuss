@@ -28,7 +28,8 @@ test("VIS-01/03: загрузка фона через админку, приме
   const appearance = page.locator('section[aria-label="Оформление сайта"]');
   const saveAppearance = async () => {
     await appearance.getByRole("button", { name: "Сохранить" }).click();
-    await expect(appearance.getByRole("status")).toHaveText("Сохранено", { timeout: 15000 });
+    // Статус «Сохранено» дублируется под формой — берём span из панели сохранения.
+    await expect(appearance.locator("span[role='status']")).toHaveText("Сохранено", { timeout: 15000 });
   };
 
   // Загрузка PNG

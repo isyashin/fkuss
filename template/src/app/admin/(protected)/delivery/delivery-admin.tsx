@@ -110,7 +110,11 @@ function EditForm({
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
 
   return (
-    <div className="bg-card rounded-[var(--radius)] p-4 space-y-3">
+    <div
+      className="bg-card rounded-[var(--radius)] p-4 space-y-3"
+      role="group"
+      aria-label={initial.name ? `Вариант доставки ${initial.name}` : "Новый вариант доставки"}
+    >
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="text-sm text-muted">Название</span>

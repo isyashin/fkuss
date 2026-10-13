@@ -7,6 +7,7 @@ import { themeCssVars } from "@/lib/theme";
 import { SiteHeader } from "@/components/site-header";
 import { InstallPrompt } from "@/components/install-prompt";
 import { OfflineBanner } from "@/components/offline-banner";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import "./globals.css";
 
 const headingFont = Playfair_Display({
@@ -77,6 +78,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <InstallPrompt />
         <OfflineBanner />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

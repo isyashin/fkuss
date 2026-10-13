@@ -11,7 +11,8 @@ function subscribeOnline(callback: () => void): () => void {
   };
 }
 
-/** Без сети — понятная плашка. Устаревшее меню не показываем (кэша нет). */
+/** Без сети — понятная плашка. SW витрины (#52) отдаёт последние сохранённые
+ *  страницы из кэша — плашка предупреждает, что данные могут быть неактуальны. */
 export function OfflineBanner() {
   const offline = useSyncExternalStore(
     subscribeOnline,

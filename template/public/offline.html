@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Нет подключения к сети</title>
+    <style>
+      /* Полностью автономная страница: без внешних стилей и шрифтов */
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 24px;
+        box-sizing: border-box;
+        background: #171412;
+        color: #f5efe8;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        text-align: center;
+      }
+      main {
+        max-width: 420px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 22px;
+      }
+      p {
+        margin: 0 0 20px;
+        font-size: 15px;
+        line-height: 1.5;
+        color: #cfc6bb;
+      }
+      button {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 10px 24px;
+        border: 0;
+        border-radius: 10px;
+        background: #e8b04b;
+        color: #171412;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Нет подключения к сети</h1>
+      <p>
+        Эта страница ещё не сохранена на устройстве. Проверьте интернет и попробуйте снова — ранее
+        открытые страницы работают без сети, мы покажем последние сохранённые данные.
+      </p>
+      <button type="button" onclick="location.reload()">Повторить</button>
+    </main>
+  </body>
+</html>

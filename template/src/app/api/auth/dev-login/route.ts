@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPrisma } from "@/lib/db";
-import { issueGuestSession, attachGuestSession } from "@/lib/auth";
+import { issueGuestSession, attachGuestSession, isDevGuestLoginEnabled } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 
 /**
- * DEV-вход гостя без почтового кода. Работает только при DEV_GUEST_LOGIN=1
- * (выставляется вручную в dev-окружении; на проде отсутствует — роут отдаёт 404).
+ * DEV-вход гостя без почтового кода. Роут активен только на dev-стендах:
+ * DEV_GUEST_LOGIN=1 и (NODE_ENV !== "production" или SITE_ENV=dev).
+ * На проде при DEV_GUEST_LOGIN=1 без SITE_ENV=dev отдаёт 404.
  */
 
 const schema = z.object({ email: z.email() });
@@ -18,7 +19,7 @@ function getClientIp(request: Request): string {
 }
 
 export async function POST(request: Request) {
-  if (process.env.DEV_GUEST_LOGIN !== "1") {
+  if (!isDevGuestLoginEnabled()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   const { getSiteSettings } = await import("@/lib/site");

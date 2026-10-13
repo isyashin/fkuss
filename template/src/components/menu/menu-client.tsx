@@ -27,6 +27,7 @@ export function MenuClient({
   bonusBalance = 0,
   cabinetEnabled = false,
   initialAddress = "",
+  pickupAddress = "",
   ymapsKey = "",
 }: {
   menu: Menu;
@@ -39,6 +40,8 @@ export function MenuClient({
   bonusBalance?: number;
   cabinetEnabled?: boolean;
   initialAddress?: string;
+  /** Адрес заведения — показываем гостю в чекауте самовывоза (issue #55). */
+  pickupAddress?: string;
   /** Ключ JS API Яндекс.Карт — зоны на карте и подсказки адресов. */
   ymapsKey?: string;
 }) {
@@ -280,6 +283,7 @@ export function MenuClient({
           bonusBalance={bonusBalance}
           cabinetEnabled={cabinetEnabled}
           initialAddress={initialAddress}
+          pickupAddress={pickupAddress}
           onClose={() => setCartOpen(false)}
         />
       )}

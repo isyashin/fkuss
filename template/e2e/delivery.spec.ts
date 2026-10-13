@@ -13,7 +13,7 @@ test("админ создаёт scheduled-вариант, гость заказ�
 
   // «Сохранить» общих условий доставки теперь всегда на месте (issue #59) —
   // скоупимся на форму варианта.
-  const variantSave = page.getByRole("group", { name: /варианта доставки/ }).getByRole("button", { name: "Сохранить" });
+  const variantSave = page.getByRole("group", { name: /вариант доставки/ }).getByRole("button", { name: "Сохранить" });
 
   // 1. Админка → Доставка → новый вариант
   await page.goto("/admin/login");

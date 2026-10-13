@@ -85,7 +85,7 @@ test("geo-режим: default выключен; без ключа геокоде
     await page.getByLabel("Часы до").fill("23:59");
     await page.getByLabel("Цена, ₽").fill("200");
     // «Сохранить» общих условий теперь всегда видна — скоупимся на форму варианта.
-    await page.getByRole("group", { name: /варианта доставки/ }).getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("group", { name: /вариант доставки/ }).getByRole("button", { name: "Сохранить" }).click();
     await expect(page.locator('[data-option-name="Курьер"]')).toBeVisible({ timeout: 15000 });
   }
 

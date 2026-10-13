@@ -27,6 +27,12 @@ export function DeliveryAdmin({ options }: { options: DeliveryOption[] }) {
 
   return (
     <div className="space-y-4 max-w-2xl">
+      {/* #54: варианты — это способы доставки, а не географические зоны. */}
+      <p className="text-sm text-muted">
+        Варианты — способы доставки с ценой и окнами («Курьер», «К выбранному времени» и т.п.). Гость
+        выбирает один из списка. Пока настроен хотя бы один вариант, зоны на карте (вкладка слева) в
+        чекауте не используются.
+      </p>
       {options.map((option) => (
         <div key={option.id} data-option-name={option.name} className="bg-card rounded-[var(--radius)] p-4 flex justify-between gap-3 items-start">
           <div>

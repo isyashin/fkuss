@@ -25,6 +25,7 @@ export function CartSheet({
   bonusBalance = 0,
   cabinetEnabled = false,
   initialAddress = "",
+  pickupAddress = "",
   ymapsKey = "",
   onClose,
 }: {
@@ -36,6 +37,8 @@ export function CartSheet({
   bonusBalance?: number;
   cabinetEnabled?: boolean;
   initialAddress?: string;
+  /** Адрес заведения — показываем гостю в чекауте самовывоза (issue #55). */
+  pickupAddress?: string;
   /** Ключ JS API Яндекс Карт (публичный). Пустой — карта и подсказки отключены. */
   ymapsKey?: string;
   onClose: () => void;
@@ -421,6 +424,12 @@ export function CartSheet({
                 </button>
               )}
             </div>
+
+            {type === "pickup" && pickupAddress && (
+              <p className="text-sm text-muted" data-testid="pickup-address">
+                Пункт самовывоза: {pickupAddress}
+              </p>
+            )}
 
             {type === "delivery" && (
               <>

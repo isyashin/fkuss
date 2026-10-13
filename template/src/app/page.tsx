@@ -99,6 +99,7 @@ export default async function HomePage() {
             bonusBalance={bonusBalance}
             cabinetEnabled={cabinet.enabled}
             initialAddress={lastAddress}
+            pickupAddress={restaurant.address}
             ymapsKey={process.env.YANDEX_MAPS_API_KEY ?? ""}
           />
         </div>

@@ -267,6 +267,18 @@ export const settingsSchema = z.object({
     maxGuestsPerSlot: z.number().int().min(1).default(20),
     minHoursAhead: z.number().min(0).default(2),
   }),
+  // Предзаказ ко времени в чекауте (самовывоз и доставка без настроенных вариантов)
+  preOrder: z
+    .object({
+      enabled: z.boolean().default(false),
+      // Точки начала слотов HH:MM; прошедшие на сегодня не предлагаем
+      slots: z.array(z.string().regex(/^\d{2}:\d{2}$/)).default([]),
+      // На сколько суток вперёд предлагаем слоты (0 — только сегодня)
+      daysAhead: z.number().int().min(0).max(14).default(1),
+      // Минимальный запас от «сейчас» для сегодняшних слотов
+      minAheadMinutes: z.number().int().min(0).default(30),
+    })
+    .default({ enabled: false, slots: [], daysAhead: 1, minAheadMinutes: 30 }),
   captcha: z.object({
     provider: z.enum(["none", "smartcaptcha"]).default("none"),
   }),

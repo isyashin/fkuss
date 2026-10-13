@@ -5,6 +5,7 @@ import { useState, useTransition, useEffect, useSyncExternalStore } from "react"
 import { useRouter } from "next/navigation";
 import type { Order, OrderItem } from "@/generated/prisma/client";
 import { orderActionsFor, orderStatusLabel } from "@/lib/order-status";
+import { formatAdminTime } from "@/lib/admin-date";
 import { adminListHref, orderListCounts, ORDER_MODES, ORDER_TYPES, type OrderListQuery } from "@/lib/admin-list-query";
 import { OrderCard } from "./order-card";
 import { AdminPagination } from "./admin-pagination";
@@ -20,9 +21,6 @@ type OrderWithItems = Order & { items: OrderItem[] };
 const QUEUE_MODES = ORDER_MODES.filter((mode) => mode !== "all");
 const typeNames = { all: "Все типы", delivery: "Доставка", pickup: "Самовывоз" };
 const rub = (value: number) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
-function orderTime(date: Date, timeZone: string) {
-  return new Intl.DateTimeFormat("ru-RU", { timeZone, hour: "2-digit", minute: "2-digit" }).format(date);
-}
 function statusTone(status: string): "new" | "success" | "danger" | "warn" {
   if (status === "new") return "new";
   if (status === "cancelled") return "danger";
@@ -190,7 +188,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
         <div className={styles.ordersDesktopList}>
           {orders.length ? orders.map((order) => <div className={`${styles.orderPreview} ${selected?.id === order.id ? styles.selectedPreview : ""}`} key={order.id}>
             <button type="button" className={styles.orderOpen} aria-label={`Открыть заказ № ${order.number}`} aria-pressed={selected?.id === order.id} onClick={() => { saveListPosition(); openOrder(order.id); }}/>
-            <span className={styles.rowTop}><span><strong>№ {order.number}</strong><time>{orderTime(order.createdAt, timeZone)}</time></span><StatusPill tone={statusTone(order.status)}>{orderStatusLabel(order.status)}</StatusPill></span>
+            <span className={styles.rowTop}><span><strong>№ {order.number}</strong><time>{formatAdminTime(order.createdAt, timeZone)}</time></span><StatusPill tone={statusTone(order.status)}>{orderStatusLabel(order.status)}</StatusPill></span>
             <span className={styles.rowPerson}>{order.customerName}</span>
             <span className={styles.rowBottom}><span>{order.type === "delivery" ? "Доставка" : "Самовывоз"} · {order.desiredTime ? `к ${order.desiredTime}` : "как можно скорее"}</span><b>{rub(order.total)}</b></span>
           </div>) : null}
@@ -215,7 +213,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
                         <button type="button" className={styles.orderCardOpen} aria-current={selected?.id === order.id}
                           aria-label={`Открыть заказ № ${order.number}, ${rub(order.total)}, ${count} ${dishWord(count)}, ${order.type === "delivery" ? "доставка" : "самовывоз"}${order.desiredTime ? ` к ${order.desiredTime}` : ""}`}
                           onClick={() => { saveListPosition(); openOrder(order.id); }}>
-                          <span className={styles.orderCardTop}><strong>№ {order.number}</strong><time>{orderTime(order.createdAt, timeZone)}</time></span>
+                          <span className={styles.orderCardTop}><strong>№ {order.number}</strong><time>{formatAdminTime(order.createdAt, timeZone)}</time></span>
                           <span className={styles.orderCardMeta}>{rub(order.total)} · {count} {dishWord(count)}</span>
                           <span className={styles.orderCardRoute}>{order.type === "delivery" ? "Доставка" : "Самовывоз"}{order.desiredTime ? ` · к ${order.desiredTime}` : ""}</span>
                         </button>

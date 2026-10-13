@@ -56,16 +56,7 @@ export default async function HomePage() {
     // БД недоступна — галерею пропускаем
   }
   const banquetsSettings = (settings as { banquets?: { enabled?: boolean; title?: string } }).banquets;
-  let banquetsEnabled = banquetsSettings?.enabled === true;
-  if (banquetsEnabled) {
-    try {
-      const prisma = getPrisma();
-      banquetsEnabled = (await prisma.banquetHall.count()) > 0;
-    } catch {
-      // платформа/БД недоступна — считаем выключенным
-      banquetsEnabled = false;
-    }
-  }
+  const banquetsEnabled = banquetsSettings?.enabled === true;
 
   const blocks = theme.homeBlocks;
 

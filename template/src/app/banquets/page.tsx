@@ -24,14 +24,14 @@ export default async function BanquetsPage() {
 
   const prisma = getPrisma();
   const halls = await prisma.banquetHall.findMany({ orderBy: { position: "asc" } });
-  if (halls.length === 0) notFound();
 
   return (
     <main className="flex-1 mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="text-3xl mb-2">{banquets.title || "Банкеты"}</h1>
       {banquets.description && <p className="text-muted max-w-2xl">{banquets.description}</p>}
 
-      <div className="mt-8 grid md:grid-cols-2 gap-4">
+      {halls.length > 0 ? (
+        <div className="mt-8 grid md:grid-cols-2 gap-4">
         {halls.map((hall) => {
           const images = hall.images.length > 0 ? hall.images : hall.image ? [hall.image] : [];
           return (
@@ -59,7 +59,10 @@ export default async function BanquetsPage() {
             </div>
           );
         })}
-      </div>
+        </div>
+      ) : (
+        <p className="mt-8 text-muted max-w-2xl">Залы скоро появятся</p>
+      )}
 
       {banquets.conditions && (
         <section className="mt-8">

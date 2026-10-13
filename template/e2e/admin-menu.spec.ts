@@ -11,10 +11,12 @@ test("пустая категория видна в админке меню и �
   await gotoAdmin(page, "/admin/menu");
   await expect(page.getByRole("heading", { name: "Меню", exact: true })).toBeVisible();
 
-  // Создаём пустую категорию
+  // Создаём пустую категорию. Оба диалога (создание/переименование) всегда в DOM,
+  // поэтому сужаем до видимого — иначе strict mode violation на getByLabel.
   await page.getByRole("button", { name: "+ Категория" }).click();
-  await page.getByLabel("Название").fill("E2E Пустая категория");
-  await page.getByRole("button", { name: "Добавить" }).click();
+  const createDialog = page.locator("dialog").filter({ visible: true });
+  await createDialog.getByLabel("Название").fill("E2E Пустая категория");
+  await createDialog.getByRole("button", { name: "Добавить" }).click();
 
   // Видна в списке с пометкой и доступными кнопками управления
   await expect(page.getByText("E2E Пустая категория")).toBeVisible();
@@ -25,8 +27,9 @@ test("пустая категория видна в админке меню и �
 
   // Переименование работает
   await page.getByRole("button", { name: "Переименовать категорию E2E Пустая категория" }).click();
-  await page.getByLabel("Название").fill("E2E Пустая категория 2");
-  await page.getByRole("button", { name: "Сохранить" }).click();
+  const renameDialog = page.locator("dialog").filter({ visible: true });
+  await renameDialog.getByLabel("Название").fill("E2E Пустая категория 2");
+  await renameDialog.getByRole("button", { name: "Сохранить" }).click();
   await expect(page.getByText("E2E Пустая категория 2")).toBeVisible();
 
   // На витрине пустая категория не появляется

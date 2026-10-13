@@ -55,7 +55,12 @@
 .menuSavebar > span { color: var(--rd-savebar-text, #81512c); font-size: 12px; font-weight: 620; }
 .menuSavebar > div { display: flex; gap: 8px; }
 .menuDelete { justify-self: start; margin: 16px 0 0 -9px; }
-.menuDetailInner { }
+/* #50: у dashboard отрицательный margin-bottom -90px (ui.dashboard), который
+   съедает нижний padding detailInner (90px). Без компенсации «Удалить блюдо»
+   оказывается заподлицо с низом документа, и sticky-savebar (z-index 2,
+   прижат к низу вьюпорта) перекрывает её при полной прокрутке на desktop.
+   180 = 90 padding detailInner + 90 компенсации отрицательного margin. */
+.menuDetailInner { padding-bottom: 180px; }
 
 /* Модификаторы блюда в редакторе */
 .modifiers { display: grid; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--admin-line); }

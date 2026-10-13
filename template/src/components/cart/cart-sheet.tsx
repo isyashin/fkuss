@@ -785,7 +785,8 @@ export function CartSheet({
               </p>
             )}
 
-            <div className="flex gap-2">
+            {/* Issue #58: sticky-футер — submit виден без прокрутки до конца формы на mobile */}
+            <div className="sticky -bottom-4 -mx-4 px-4 pb-4 pt-2 bg-background border-t border-foreground/10 flex gap-2">
               <button onClick={() => setStep("cart")} className="min-h-12 px-5 rounded-full border border-foreground/20">
                 Назад
               </button>

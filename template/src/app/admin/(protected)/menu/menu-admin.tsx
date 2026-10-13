@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addCategory, addDish, deleteDish, updateCategoryMenu, updateDish } from "./actions";
+import { addCategory, addDish, deleteCategory, deleteDish, renameCategory, reorderCategory, updateCategoryMenu, updateDish } from "./actions";
 import { dishImageUrl } from "@/lib/assets";
+import { AdminIcon } from "../admin-icon";
 import type { Category, Dish } from "@/generated/prisma/client";
 import ui from "../admin-ui.module.css";
 import rd from "../admin-redesign.module.css";
@@ -57,11 +58,21 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [newCategoryMenu, setNewCategoryMenu] = useState("");
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState<{ id: string; name: string; dishCount: number } | null>(null);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const categoryDialogRef = useRef<HTMLDialogElement>(null);
+  const renameDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => { const dialog = categoryDialogRef.current; if (!dialog) return; if (categoryDialogOpen && !dialog.open) dialog.showModal(); if (!categoryDialogOpen && dialog.open) dialog.close(); }, [categoryDialogOpen]);
+  useEffect(() => { const dialog = renameDialogRef.current; if (!dialog) return; if (renaming && !dialog.open) dialog.showModal(); if (!renaming && dialog.open) dialog.close(); }, [renaming]);
+
+  const moveCategory = (id: string, direction: "up" | "down") => startTransition(async () => {
+    setError("");
+    try { await reorderCategory(id, direction); router.refresh(); }
+    catch (cause) { setError(errorText(cause)); }
+  });
 
   const needle = query.trim().toLocaleLowerCase("ru");
   const menuFiltered = useMemo(() => menuId === "all" ? categories : categories.filter((category) => (category.menuId ?? "") === menuId), [categories, menuId]);
@@ -136,9 +147,25 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
           <button type="button" className={`${rd.btnText} ${styles.categoryAdd}`} onClick={() => setCategoryDialogOpen(true)}>+ Категория</button>
         </div>
         <div className={ui.list}>
-          {flat.length ? flat.map((category) => (
+          {flat.length ? flat.map((category, index) => {
+            const groupKey = category.menuId ?? "";
+            const hasPrev = flat.slice(0, index).some((c) => (c.menuId ?? "") === groupKey);
+            const hasNext = flat.slice(index + 1).some((c) => (c.menuId ?? "") === groupKey);
+            // Реальное число блюд (не отфильтрованное) — для запрета удаления.
+            const dishCount = categories.find((c) => c.id === category.id)?.dishes.length ?? 0;
+            return (
             <div key={category.id}>
-              {categoryId === "all" && <p className={ui.dayDivider}>{category.name}</p>}
+              {categoryId === "all" && (
+                <div className={styles.categoryHead}>
+                  <p className={ui.dayDivider}>{category.name}</p>
+                  <span className={styles.categoryActions}>
+                    <button type="button" aria-label={`Поднять категорию ${category.name} выше`} disabled={pending || !hasPrev} onClick={() => moveCategory(category.id, "up")}><AdminIcon name="up" size={15} /></button>
+                    <button type="button" aria-label={`Опустить категорию ${category.name} ниже`} disabled={pending || !hasNext} onClick={() => moveCategory(category.id, "down")}><AdminIcon name="down" size={15} /></button>
+                    <button type="button" aria-label={`Переименовать категорию ${category.name}`} disabled={pending} onClick={() => setRenaming({ id: category.id, name: category.name })}><AdminIcon name="edit" size={15} /></button>
+                    <button type="button" className={styles.categoryDelete} aria-label={`Удалить категорию ${category.name}`} disabled={pending || dishCount > 0} title={dishCount > 0 ? "В категории есть блюда — сначала удалите или перенесите их" : undefined} onClick={() => setDeleting({ id: category.id, name: category.name, dishCount })}><AdminIcon name="trash" size={15} /></button>
+                  </span>
+                </div>
+              )}
               {category.dishes.map((dish) => (
                 <div key={dish.id} className={`${styles.menuRow} ${dish.image ? styles.hasPhoto : ""} ${selected?.id === dish.id && !creating ? styles.menuRowSelected : ""}`}>
                   <button type="button" className={ui.orderOpen} aria-label={`Открыть блюдо ${dish.name}`} aria-pressed={selected?.id === dish.id && !creating} onClick={() => select(dish.id)} />
@@ -154,7 +181,8 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
               ))}
               {category.dishes.length === 0 && <p className={ui.empty}>В этой категории блюд нет.</p>}
             </div>
-          )) : <p className={ui.empty}>По этим условиям блюд нет.</p>}
+            );
+          }) : <p className={ui.empty}>По этим условиям блюд нет.</p>}
         </div>
       </section>
       <section className={ui.detailPanel} aria-label="Выбранное блюдо">
@@ -198,6 +226,38 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
           </div>
         </form>
       </dialog>
+
+      <dialog ref={renameDialogRef} className={rd.dialog} onClose={() => setRenaming(null)}>
+        <form className={rd.dialogBody} onSubmit={(event) => {
+          event.preventDefault();
+          if (!renaming || !renaming.name.trim()) return;
+          startTransition(async () => {
+            setError("");
+            try { await renameCategory(renaming.id, renaming.name.trim()); setRenaming(null); router.refresh(); }
+            catch (cause) { setError(errorText(cause)); }
+          });
+        }}>
+          <h2 className={rd.dialogTitle}>Переименовать категорию</h2>
+          <label className={rd.field}><span>Название</span>
+            <input className={rd.input} value={renaming?.name ?? ""} onChange={(event) => setRenaming((current) => current ? { ...current, name: event.target.value } : current)} maxLength={120} required autoComplete="off" />
+          </label>
+          <div className={rd.dialogActions} style={{ marginTop: 24 }}>
+            <button type="button" className={rd.btn} onClick={() => setRenaming(null)}>Отмена</button>
+            <button type="submit" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !renaming?.name.trim()}>Сохранить</button>
+          </div>
+        </form>
+      </dialog>
+
+      <ConfirmDialog request={deleting ? {
+        title: "Удалить категорию?",
+        text: `«${deleting.name}» исчезнет из меню и витрины.`,
+        acceptLabel: "Удалить",
+        onAccept: () => startTransition(async () => {
+          setError("");
+          try { await deleteCategory(deleting.id); router.refresh(); }
+          catch (cause) { setError(errorText(cause)); }
+        }),
+      } : null} onClose={() => setDeleting(null)} />
     </div>
   );
 }

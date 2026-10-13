@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupCategoriesByMenu, menuSwitchItems, resolveMenuName, syncSources } from "@/lib/multi-menu";
+import { groupCategoriesByMenu, menuSwitchItems, resolveMenuName, syncSources, visibleMenuCategories } from "@/lib/multi-menu";
 
 const menus = [
   { id: "khinkali", name: "Хинкальная" },
@@ -78,5 +78,14 @@ describe("multi-menu helpers", () => {
     expect(menuSwitchItems(menus, [{ id: "c1", menuId: "pirogi" }])).toEqual([
       { id: "pirogi", name: "Пироги и пицца" },
     ]);
+  });
+
+  it("visibleMenuCategories: скрывает категории без доступных блюд (issue #43)", () => {
+    const cats = [
+      { id: "c1", dishes: [{ available: true }, { available: false }] },
+      { id: "c2", dishes: [{ available: false }] },
+      { id: "c3", dishes: [] },
+    ];
+    expect(visibleMenuCategories(cats).map((c) => c.id)).toEqual(["c1"]);
   });
 });

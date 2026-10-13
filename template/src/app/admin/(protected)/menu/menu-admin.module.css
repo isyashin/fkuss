@@ -11,6 +11,15 @@
 .menuFilterRow select { min-width: 0; min-height: 44px; padding: 10px 27px 10px 12px; border: 1px solid var(--rd-field-line, #cdd3cc); border-radius: 6px; background: var(--admin-surface); color: var(--admin-text); font: inherit; font-size: 13px; }
 .categoryAdd { justify-self: start; }
 
+/* Заголовок категории в списке: название + действия (порядок/переименование/удаление) */
+.categoryHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.categoryHead > p { flex: 1; min-width: 0; }
+.categoryActions { display: flex; flex: none; gap: 2px; padding-right: 27px; }
+.categoryActions button { display: grid; place-items: center; min-width: 44px; height: 44px; padding: 0 6px; border: 0; background: transparent; color: #77847a; font: inherit; cursor: pointer; }
+.categoryActions button:hover:not(:disabled) { color: var(--admin-text); }
+.categoryActions button:disabled { opacity: .35; cursor: default; }
+.categoryActions .categoryDelete:hover:not(:disabled) { color: #b3261e; }
+
 .menuRow { position: relative; width: 100%; min-height: 78px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 13px; padding: 14px 27px 14px 24px; border: 0; border-bottom: 1px solid var(--admin-line); border-left: 3px solid transparent; background: transparent; color: var(--admin-text); text-align: left; font: inherit; }
 .menuRow.hasPhoto { min-height: 91px; grid-template-columns: 54px minmax(0, 1fr) auto; }
 .menuRow:hover { background: #eef1ec; }
@@ -56,6 +65,7 @@
 @media (max-width: 760px) {
   .menuTools { padding: 0 20px 16px; }
   .menuRow { padding: 13px 20px 13px 17px; }
+  .categoryActions { padding-right: 20px; }
   /* Сохранение — над нижней навигацией, кнопки во всю ширину (макет) */
   .menuSavebar { position: fixed; right: 0; bottom: 64px; left: 0; margin: 0; padding: 10px 20px; box-shadow: 0 -5px 22px #20272310; }
   .menuSavebar > span { display: none; }

@@ -118,6 +118,14 @@ export function subscribeSoundEnabled(listener: () => void): () => void {
   };
 }
 
+/** Включение звука с пробным воспроизведением (кнопка на доске заказов).
+    Браузер разрешает звук только по жесту пользователя — проверяем его здесь. */
+export async function enableTabSound(): Promise<void> {
+  await playAdminSound(state.sound);
+  setNotificationsError(null);
+  writeSoundEnabled(true);
+}
+
 function tabId(): string {
   try {
     const KEY = "admin-tab-id";

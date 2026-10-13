@@ -5,6 +5,7 @@ import { getSiteSettings } from "@/lib/site";
 import { isGuestCabinetEnabled } from "@/lib/guest-cabinet";
 import { getPrisma } from "@/lib/db";
 import { orderStatusLabel } from "@/lib/order-status";
+import { formatPhoneDisplay } from "@/lib/guest-contact";
 import { RepeatOrderButton } from "@/components/account/repeat-order-button";
 import { CancelOrderButton } from "@/components/account/cancel-order-button";
 import styles from "@/components/account/account.module.css";
@@ -68,7 +69,7 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
         <h2 className={styles.h2}>Детали</h2>
         <div className={styles.facts} style={{ marginTop: 0 }}>
           <div className={styles.fact}><span>Имя</span>{order.customerName}</div>
-          <div className={styles.fact}><span>Телефон</span>{order.customerPhone}</div>
+          <div className={styles.fact}><span>Телефон</span>{formatPhoneDisplay(order.customerPhone)}</div>
           {order.addressText && <div className={styles.fact}><span>Адрес</span>{order.addressText}</div>}
           {order.desiredTime && <div className={styles.fact}><span>Время</span>{order.desiredTime}</div>}
           <div className={styles.fact}>

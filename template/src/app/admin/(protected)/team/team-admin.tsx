@@ -46,7 +46,7 @@ function TeamRow({ user }: { user: TeamUser }) {
         const result = await changeTeamUser(user.id, { name, role, active, ...(password ? { password } : {}) });
         if (!result.ok) { setError(result.error); return; }
         setPassword(""); setSaved(true); router.refresh();
-      } catch { setError("Не удалось сохранить сотрудника"); }
+      } catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось сохранить сотрудника"); }
     });
   };
   return <form className={styles.row} onSubmit={save}>

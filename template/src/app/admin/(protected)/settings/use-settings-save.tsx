@@ -106,6 +106,7 @@ export function SettingsRevProvider({ rev, children }: { rev: number; children: 
 
 /** Сохранение секции с обнаружением конфликта вкладок (F04).
     Возвращает элемент диалога — его нужно отрендерить в дереве редактора.
+    errorMessage — текст последней непредвиденной ошибки (иначе null).
     saveFn: по умолчанию saveSettings; можно передать другой версионируемый
     action с любым входом (например, savePricing для правил цен).
     Action возвращает новую серверную ревизию — хук принимает её, чтобы
@@ -115,6 +116,7 @@ export function useSettingsSave<TInput = ContentSettings>(
 ) {
   const router = useRouter();
   const [conflict, setConflict] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const lastNextRef = useRef<TInput | null>(null);
   const actionRef = useRef(saveFn ?? (saveSettings as unknown as (input: TInput, expectedRev?: number | null, force?: boolean) => Promise<number | "conflict">));
 
@@ -124,6 +126,7 @@ export function useSettingsSave<TInput = ContentSettings>(
       подхватывало устаревший закэшированный фрагмент с полным объектом. */
   async function save(next: TInput, force = false): Promise<"ok" | "conflict" | "error"> {
     lastNextRef.current = next;
+    setErrorMessage(null);
     try {
       const result = await actionRef.current(next, getSettingsRev(), force);
       if (result === "conflict") {
@@ -139,6 +142,7 @@ export function useSettingsSave<TInput = ContentSettings>(
         setConflict(true);
         return "conflict";
       }
+      setErrorMessage(error instanceof Error ? error.message : null);
       return "error";
     }
   }
@@ -176,7 +180,7 @@ export function useSettingsSave<TInput = ContentSettings>(
     />
   ) : null;
 
-  return { save, control };
+  return { save, control, errorMessage };
 }
 
 export function SettingsConflictDialog({ onRefresh, onOverwrite, onClose }: {

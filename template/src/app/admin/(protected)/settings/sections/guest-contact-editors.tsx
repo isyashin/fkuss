@@ -57,8 +57,7 @@ export function NotifyChannelsEditor({ settings }: { settings: ContentSettings }
   const [saved, setSaved] = useState(settings.channels);
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const { save: saveWithRev, control: revControl } = useSettingsSave();
-  // F21: сохранение появляется только при изменениях.
+  const { save: saveWithRev, control: revControl, errorMessage } = useSettingsSave();
   const dirty = JSON.stringify(channels) !== JSON.stringify(saved);
   // P1-2: после «Обновить» берём свежие данные.
   const settingsEpoch = useSettingsEpoch();
@@ -80,7 +79,7 @@ export function NotifyChannelsEditor({ settings }: { settings: ContentSettings }
       setStatus(null);
       try {
         const next: ContentSettings = { ...settings, channels };
-        const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
+        const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error(errorMessage ?? "Не удалось сохранить"); return; }
         setSaved(channels);
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
@@ -121,12 +120,10 @@ export function NotifyChannelsEditor({ settings }: { settings: ContentSettings }
         </label>
       </fieldset>
     </div>
-    {dirty && (
-    <div className={styles.saveBar}>
-      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
+    <div className={styles.saveBar} data-dirty={dirty || undefined}>
+      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !dirty} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
     </div>
-    )}
     {!dirty && status && <p className={rd.saved} role="status">{status.text}</p>}
   {revControl}</section>;
 }

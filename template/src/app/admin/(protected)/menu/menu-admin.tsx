@@ -17,6 +17,10 @@ import styles from "./menu-admin.module.css";
 const errorText = (error: unknown) => error instanceof Error ? error.message : "Не удалось сохранить изменение";
 const rub = (value: number) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
 
+// Вес/объём — только цифры, разделители и единицы (г, кг, мл, л): ввод «abc» бессмыслен.
+const WEIGHT_FORBIDDEN = /[^\d\s.,гклм]/gi;
+const sanitizeWeight = (value: string) => value.replace(WEIGHT_FORBIDDEN, "");
+
 async function uploadDishPhoto(dishId: string, file: File): Promise<void> {
   const form = new FormData();
   form.append("file", file);
@@ -333,7 +337,8 @@ function DishEditor({ dish, categories, menus, onBack, onDeleted }: { dish: Dish
         </div>
         <div className={styles.menuPriceRow}>
           <label className={rd.field}><span>Вес / объём</span>
-            <input className={rd.input} value={form.weight} onChange={(event) => setForm({ ...form, weight: event.target.value })} maxLength={50} />
+            <input className={rd.input} value={form.weight} onChange={(event) => setForm({ ...form, weight: sanitizeWeight(event.target.value) })} maxLength={50} />
+            <small className={rd.hint} style={{ display: "block", marginTop: 6 }}>Только цифры и единицы: 350 г, 0,5 л.</small>
           </label>
           <label className={rd.field}><span>Режим цены</span>
             <select className={rd.select} value={form.priceMode} onChange={(event) => {
@@ -444,7 +449,8 @@ function NewDishEditor({ categories, menus, defaultCategoryId, onClose, onCreate
           </label>
         </div>
         <label className={rd.field}><span>Вес / объём</span>
-          <input className={rd.input} value={form.weight} onChange={(event) => setForm({ ...form, weight: event.target.value })} maxLength={50} />
+          <input className={rd.input} value={form.weight} onChange={(event) => setForm({ ...form, weight: sanitizeWeight(event.target.value) })} maxLength={50} />
+          <small className={rd.hint} style={{ display: "block", marginTop: 6 }}>Только цифры и единицы: 350 г, 0,5 л.</small>
         </label>
         <label className={rd.field}><span>Описание</span>
           <textarea className={rd.textarea} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={3} />

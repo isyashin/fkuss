@@ -35,7 +35,7 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
   const [baseline, setBaseline] = useState(initial);
   const [savedRevision, setSavedRevision] = useState(initialRevision);
   const [conflict, setConflict] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<RestaurantContactsFieldErrors>({});
   // F06: уход с несохранёнными правками спрашивает подтверждение (навигация
   // по секциям перехватывается через реестр грязных форм).
@@ -82,7 +82,7 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
       if (Object.keys(errors).length > 0) return;
     }
     startTransition(async () => {
-      setSaveError(false);
+      setSaveError("");
       try {
         const result = await saveRestaurant(next, focus, savedRevision, force);
         if (result === "conflict") {
@@ -100,8 +100,8 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
         router.refresh();
-      } catch {
-        setSaveError(true);
+      } catch (cause) {
+        setSaveError(cause instanceof Error ? cause.message : "Не удалось сохранить. Попробуйте ещё раз.");
       }
     });
   }
@@ -113,12 +113,12 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
       setBaseline(fresh.input);
       setSavedRevision(fresh.rev);
       setConflict(false);
-      setSaveError(false);
+      setSaveError("");
       setFieldErrors({});
       setSaved(false);
       router.refresh();
-    } catch {
-      setSaveError(true);
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : "Не удалось сохранить. Попробуйте ещё раз.");
     }
   }
 
@@ -293,7 +293,7 @@ export function RestaurantAdmin({ initial, initialRevision, logoUrl = "", focus 
           {pending ? "Сохраняю…" : "Сохранить"}
         </button>
         {saved && <span className="text-green-600">Сохранено ✓</span>}
-        {saveError && <span role="alert" className="text-red-600">Не удалось сохранить. Попробуйте ещё раз.</span>}
+        {saveError && <span role="alert" className="text-red-600">Не удалось сохранить: {saveError}</span>}
       </div>
       {conflict && <SettingsConflictDialog
         onRefresh={() => { void acceptFresh(); }}

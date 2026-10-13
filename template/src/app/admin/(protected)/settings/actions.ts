@@ -5,7 +5,7 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin-auth";
 import { guestContactSchema, type ContentSettings } from "@/lib/content-schema";
-import { validateSettingsMutation, validateThemeMutation, validateBackgroundMutation } from "@/lib/admin-settings-validation";
+import { validateSettingsMutation, validatePreOrderMutation, validateThemeMutation, validateBackgroundMutation } from "@/lib/admin-settings-validation";
 import { resolveContentPath } from "@/lib/content-dir";
 import { applyAdminSettings, type AdminSettingsInput } from "@/lib/admin-settings-service";
 import { getSiteSettings } from "@/lib/site";
@@ -139,5 +139,19 @@ export async function savePricing(pricing: { globalMode: string; globalPercent: 
   revalidatePath("/admin/menu");
   revalidatePath("/menu");
   revalidatePath("/");
+  return rev;
+}
+
+/** Предзаказ: отдельный ключ settings — пишем только его, остальное не трогаем. */
+export async function savePreOrder(preOrder: unknown, expectedRev?: number | null, force = false): Promise<number | "conflict"> {
+  await guard();
+  const parsed = validatePreOrderMutation(preOrder);
+  const prisma = getPrisma();
+  const { writeSettingsVersioned } = await import("@/lib/admin-settings-version");
+  const rev = await writeSettingsVersioned(prisma, (current) => ({ ...current, preOrder: parsed }), expectedRev ?? null, force);
+  if (rev === "conflict") return "conflict";
+  revalidatePath("/admin/settings");
+  revalidatePath("/");
+  revalidatePath("/menu");
   return rev;
 }

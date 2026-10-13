@@ -21,6 +21,7 @@ import { SoundSettings } from "./sound-settings";
 import { normalizeGuestCabinet } from "@/lib/guest-cabinet";
 import { ThemeEditor } from "./sections/theme-editor";
 import { DeliveryEditor } from "./sections/delivery-editor";
+import { PreOrderEditor } from "./sections/preorder-editor";
 import { PaymentLoyaltyEditor, PricingEditor, BookingEditor } from "./sections/editors";
 import { GuestContactEditor, NotifyChannelsEditor } from "./sections/guest-contact-editors";
 import { TeamAdmin } from "../team/team-admin";
@@ -40,7 +41,7 @@ export const dynamic = "force-dynamic";
 const GROUPS: { group: string; items: { id: string; title: string }[] }[] = [
   { group: "Ресторан", items: [{ id: "restaurant", title: "Данные и контакты" }, { id: "hours", title: "Часы работы" }] },
   { group: "Сайт", items: [{ id: "theme", title: "Оформление" }, { id: "pages", title: "Страницы" }, { id: "gallery", title: "Фотографии" }, { id: "promos", title: "Акции" }, { id: "banquets", title: "Банкеты" }, { id: "print", title: "Печатные материалы" }] },
-  { group: "Заказы и брони", items: [{ id: "delivery", title: "Доставка и самовывоз" }, { id: "payment", title: "Оплата и бонусы" }, { id: "booking", title: "Бронирование" }] },
+  { group: "Заказы и брони", items: [{ id: "delivery", title: "Доставка и самовывоз" }, { id: "preorder", title: "Предзаказ" }, { id: "payment", title: "Оплата и бонусы" }, { id: "booking", title: "Бронирование" }] },
   { group: "Меню", items: [{ id: "pricing", title: "Правила цен" }, { id: "sync", title: "Импорт из Яндекс.Еды" }] },
   { group: "Связь", items: [{ id: "guest-contact", title: "Связь с гостем" }, { id: "notify", title: "Уведомления" }, { id: "cabinet", title: "Личный кабинет гостя" }, { id: "sound", title: "Звук уведомлений" }] },
   { group: "Доступ и подписка", items: [{ id: "team", title: "Сотрудники" }, { id: "billing", title: "Подписка" }] },
@@ -171,6 +172,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       case "banquets": return <SectionBanquets settings={settings} />;
       case "print": return <SectionPrint />;
       case "delivery": return <><DeliveryEditor settings={settings} /><SectionDeliveryZones settings={settings} /></>;
+      case "preorder": return <PreOrderEditor settings={settings} />;
       case "payment": return <PaymentLoyaltyEditor settings={settings} theme={theme} />;
       case "booking": return <BookingEditor settings={settings} />;
       case "pricing": return <PricingEditor settings={settings} theme={theme} />;

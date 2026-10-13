@@ -130,6 +130,12 @@
 .toggleList { display: grid; gap: 4px; margin-bottom: 14px; }
 .toggleRow { display: flex; align-items: center; gap: 11px; min-height: 44px; font-size: 13px; cursor: pointer; color: var(--rd-field-text, #3b473f); }
 .toggleRow input { width: 19px; height: 19px; margin: 0; accent-color: var(--success, #30694a); }
+
+/* Редактор слотов предзаказа: строка времени + удаление, строка добавления */
+.slotLabel { display: block; margin-bottom: 4px; font-size: 12.5px; font-weight: 600; color: var(--rd-field-text, #3b473f); }
+.slotRow { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.slotRow input[type="time"] { min-height: 44px; }
+.slotRow .slotRemove { flex: none; min-width: 44px; min-height: 44px; }
 .divider { height: 1px; margin: 18px 0; background: var(--line, #e2e4df); }
 
 @media (max-width: 900px) {

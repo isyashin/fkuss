@@ -18,9 +18,12 @@ test("пустая категория видна в админке меню и �
   await createDialog.getByLabel("Название").fill("E2E Пустая категория");
   await createDialog.getByRole("button", { name: "Добавить" }).click();
 
-  // Видна в списке с пометкой и доступными кнопками управления
-  await expect(page.getByText("E2E Пустая категория")).toBeVisible();
-  await expect(page.getByText("Пустая — скрыта на витрине.")).toBeVisible();
+  // Видна в списке с пометкой и доступными кнопками управления.
+  // Список — <section aria-label="Список блюд">; имя категории также попадает
+  // в <option> фильтра, поэтому ищем точно по абзацу-заголовку в списке.
+  const list = page.getByRole("region", { name: "Список блюд" });
+  await expect(list.locator("p").filter({ hasText: /^E2E Пустая категория$/ })).toBeVisible();
+  await expect(list.getByText("Пустая — скрыта на витрине.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Поднять категорию E2E Пустая категория выше" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Переименовать категорию E2E Пустая категория" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Удалить категорию E2E Пустая категория" })).toBeEnabled();
@@ -30,7 +33,7 @@ test("пустая категория видна в админке меню и �
   const renameDialog = page.locator("dialog").filter({ visible: true });
   await renameDialog.getByLabel("Название").fill("E2E Пустая категория 2");
   await renameDialog.getByRole("button", { name: "Сохранить" }).click();
-  await expect(page.getByText("E2E Пустая категория 2")).toBeVisible();
+  await expect(list.locator("p").filter({ hasText: /^E2E Пустая категория 2$/ })).toBeVisible();
 
   // На витрине пустая категория не появляется
   await gotoAdmin(page, "/menu");
@@ -61,7 +64,9 @@ test("«Удалить блюдо» кликабельна целиком, saveb
   await expect(deleteButton).toBeVisible();
 
   // Вся площадь кнопки принадлежит ей: центр и края не перекрыты savebar.
-  const fullyClickable = await deleteButton.evaluate((element) => {
+  // Диагностика: если что-то перекрывает, в ошибке видно, какой элемент
+  // вернул elementFromPoint для каждой контрольной точки.
+  const probe = await deleteButton.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const points: Array<[number, number]> = [
       [rect.left + rect.width / 2, rect.top + rect.height / 2],
@@ -69,12 +74,16 @@ test("«Удалить блюдо» кликабельна целиком, saveb
       [rect.right - 2, rect.bottom - 2],
       [rect.left + rect.width / 2, rect.bottom - 2],
     ];
-    return points.every(([x, y]) => {
+    const hits = points.map(([x, y]) => {
       const hit = document.elementFromPoint(x, y);
-      return hit !== null && (hit === element || element.contains(hit));
+      const label = hit
+        ? `${hit.tagName}.${String((hit as HTMLElement).className).slice(0, 80)}«${(hit.textContent ?? "").trim().slice(0, 40)}»`
+        : "null";
+      return { x: Math.round(x), y: Math.round(y), label, own: hit !== null && (hit === element || element.contains(hit)) };
     });
+    return { rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }, scrollY: Math.round(window.scrollY), innerHeight: window.innerHeight, hits };
   });
-  expect(fullyClickable).toBe(true);
+  expect(probe.hits.every((hit) => hit.own), JSON.stringify(probe)).toBe(true);
 
   // Клик по центру открывает диалог подтверждения (не уходит в savebar).
   await deleteButton.click();

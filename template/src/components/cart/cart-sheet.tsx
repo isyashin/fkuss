@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart/store";
 import { dishImageUrl } from "@/lib/assets";
 import { tariffPrice, tariffLines, zoneTariffs, type ZoneTariff } from "@/lib/order/pricing";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { GuestChannels, PreferredChannel } from "@/lib/guest-contact";
+import { normalizeContactPhone } from "@/lib/guest-contact";
 import { DeliveryMap } from "@/components/cart/delivery-map";
 import { loadYmaps, type YSuggestView } from "@/components/cart/ymaps";
 
@@ -13,13 +15,14 @@ function formatPrice(price: number): string {
   return `${price.toLocaleString("ru-RU")} ₽`;
 }
 
-type Step = "cart" | "form" | "success";
+type Step = "cart" | "form";
+
+type FieldErrors = { name?: string; phone?: string; address?: string };
 
 /** Корзина + оформление заказа — нижняя шторка */
 export function CartSheet({
   delivery,
   loyalty,
-  whatsapp,
   guestContact,
   paymentProvider = "none",
   bonusBalance = 0,
@@ -31,7 +34,6 @@ export function CartSheet({
 }: {
   delivery: ContentSettings["delivery"];
   loyalty: ContentSettings["loyalty"];
-  whatsapp: ContentSettings["channels"]["whatsapp"];
   guestContact: GuestChannels;
   paymentProvider?: string;
   bonusBalance?: number;
@@ -44,10 +46,10 @@ export function CartSheet({
   onClose: () => void;
 }) {
   const { items, setQuantity, clear, total } = useCart();
+  const router = useRouter();
   const [step, setStep] = useState<Step>("cart");
   const [error, setError] = useState("");
-  const [orderNumber, setOrderNumber] = useState<number | null>(null);
-  const [orderText, setOrderText] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
   const [type, setType] = useState<"delivery" | "pickup">(delivery.enabled ? "delivery" : "pickup");
@@ -267,8 +269,21 @@ export function CartSheet({
   const preOrderDates = [...new Set(preOrder.slots.map((s) => s.date))];
   const preOrderTimes = preOrder.slots.filter((s) => s.date === preOrderDate);
 
+  // Кнопка активна всегда: недозаполненные поля подсвечиваем по нажатию,
+  // чтобы гость видел, что именно не так (issue #59).
+  function validateForm(): boolean {
+    const errors: FieldErrors = {};
+    if (!form.name.trim()) errors.name = "Укажите имя";
+    if (!form.phone.trim()) errors.phone = "Укажите телефон";
+    else if (!normalizeContactPhone(form.phone)) errors.phone = "Проверьте номер — нужно 11 цифр, например +7 999 000-11-22";
+    if (type === "delivery" && !form.address.trim()) errors.address = "Укажите адрес доставки";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
   async function submit() {
     setError("");
+    if (!validateForm()) return;
     setSubmitting(true);
     // Слоты доставки отправляем только для доставки с выбранным окном:
     // иначе самовывоз с scheduled-вариантом в настройках шлёт пустую дату
@@ -316,17 +331,9 @@ export function CartSheet({
         globalThis.location.assign(data.confirmationUrl);
         return;
       }
-      const text = [
-        `Заказ №${data.orderNumber}`,
-        ...items.map((i) => `${i.name} × ${i.quantity}`),
-        `Итого: ${orderTotal.toLocaleString("ru-RU")} ₽`,
-        `Гость: ${form.name}, ${form.phone}`,
-        type === "delivery" ? `Адрес: ${form.address}` : "Самовывоз",
-      ].join("\n");
-      setOrderText(text);
-      setOrderNumber(data.orderNumber);
-      setStep("success");
+      // Оплата при получении: общий success-экран, как после онлайн-оплаты.
       clear();
+      router.push(`/order/success?n=${data.orderNumber}`);
     } catch {
       setError("Нет связи. Попробуйте ещё раз.");
     } finally {
@@ -342,7 +349,6 @@ export function CartSheet({
           <h2 className="text-xl">
             {step === "cart" && "Корзина"}
             {step === "form" && "Оформление"}
-            {step === "success" && "Заказ принят"}
           </h2>
           <button onClick={onClose} className="min-w-11 min-h-11 text-xl" aria-label="Закрыть">
             ×
@@ -350,6 +356,18 @@ export function CartSheet({
         </div>
 
         {step === "cart" && (
+          items.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-lg font-medium">Корзина пуста</p>
+              <p className="text-muted mt-1">Загляните в меню — выберите блюда.</p>
+              <button
+                onClick={onClose}
+                className="mt-5 min-h-12 px-8 rounded-full bg-accent text-white font-medium"
+              >
+                К меню
+              </button>
+            </div>
+          ) : (
           <>
             <div className="space-y-3">
               {items.map((item) => {
@@ -396,12 +414,12 @@ export function CartSheet({
             )}
             <button
               onClick={() => setStep("form")}
-              disabled={items.length === 0}
               className="mt-5 w-full min-h-12 rounded-full bg-accent text-white font-medium text-lg disabled:opacity-50"
             >
               Оформить · {formatPrice(itemsTotal)}
             </button>
           </>
+          )
         )}
 
         {step === "form" && (
@@ -527,11 +545,13 @@ export function CartSheet({
                       geoSeq.current += 1; // ответ по старому адресу не нужен
                       setGeo({ status: "idle" });
                       setForm({ ...form, address: e.target.value });
+                      if (fieldErrors.address) setFieldErrors((current) => ({ ...current, address: undefined }));
                     }}
                     placeholder="Улица, дом, квартира"
                     autoComplete="off"
                     className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
                   />
+                  {fieldErrors.address && <p role="alert" className="text-red-600 text-sm mt-1">{fieldErrors.address}</p>}
                 </label>
 
                 {geoActive && (
@@ -661,22 +681,30 @@ export function CartSheet({
               <span className="text-sm text-muted">Имя</span>
               <input
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value });
+                  if (fieldErrors.name) setFieldErrors((current) => ({ ...current, name: undefined }));
+                }}
                 autoComplete="name"
                 className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
               />
+              {fieldErrors.name && <p role="alert" className="text-red-600 text-sm mt-1">{fieldErrors.name}</p>}
             </label>
             <label className="block">
               <span className="text-sm text-muted">Телефон</span>
               <input
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, phone: e.target.value });
+                  if (fieldErrors.phone) setFieldErrors((current) => ({ ...current, phone: undefined }));
+                }}
                 type="tel"
                 inputMode="tel"
                 autoComplete="tel"
                 placeholder="+7 ___ ___-__-__"
                 className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
               />
+              {fieldErrors.phone && <p role="alert" className="text-red-600 text-sm mt-1">{fieldErrors.phone}</p>}
             </label>
             <fieldset className="space-y-1">
               <legend className="text-sm text-muted mb-1">Как с вами связаться</legend>
@@ -795,9 +823,6 @@ export function CartSheet({
                 disabled={
                   submitting ||
                   belowMinOrder ||
-                  !form.name ||
-                  !form.phone ||
-                  (type === "delivery" && !form.address) ||
                   (type === "delivery" && geoActive && !geoResolved) ||
                   (type === "delivery" && noDeliveryAvailable) ||
                   (type === "delivery" && selectedOption?.mode === "scheduled" && (!deliveryDate || !slotStart)) ||
@@ -811,28 +836,6 @@ export function CartSheet({
           </div>
         )}
 
-        {step === "success" && (
-          <div className="text-center py-8">
-            <p className="text-5xl mb-4">✓</p>
-            <p className="text-xl font-medium">Заказ №{orderNumber} принят</p>
-            <p className="text-muted mt-2">Мы свяжемся с вами выбранным способом для подтверждения.</p>
-            {whatsapp.enabled && whatsapp.phone && (
-              <a
-                href={`https://wa.me/${whatsapp.phone.replace(/\D/g, "")}?text=${encodeURIComponent(orderText)}`}
-                target="_blank"
-                rel="noopener"
-                className="mt-5 inline-flex items-center justify-center min-h-12 px-6 rounded-full bg-[#25D366] text-white font-medium"
-              >
-                Дублировать заказ в WhatsApp
-              </a>
-            )}
-            <div>
-              <button onClick={onClose} className="mt-4 min-h-12 px-8 rounded-full bg-accent text-white font-medium">
-                Отлично
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

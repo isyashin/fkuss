@@ -8,7 +8,7 @@ import { StatusPill } from "../status-pill";
 import { ConfirmDialog } from "../confirm-dialog";
 import styles from "../admin-ui.module.css";
 import { GuestContactActions } from "../guest-contact-actions";
-import type { GuestChannels } from "@/lib/guest-contact";
+import { formatPhoneDisplay, type GuestChannels } from "@/lib/guest-contact";
 import { formatAdminDate } from "@/lib/admin-date";
 
 const statusNames: Record<string, string> = { new: "Новая", confirmed: "Подтверждена", rejected: "Отклонена", cancelled: "Отменена" };
@@ -51,7 +51,7 @@ export function BookingCard({ booking, guestContact, timeZone, when, onBack }: {
     <section className={styles.detailSection}>
       <div className={styles.facts}>
         <div className={styles.fact}><span>Гостей</span><strong>{booking.guests}</strong></div>
-        <div className={styles.fact}><span>Телефон</span><strong>{booking.customerPhone}</strong></div>
+        <div className={styles.fact}><span>Телефон</span><strong>{formatPhoneDisplay(booking.customerPhone)}</strong></div>
       </div>
       {booking.comment && <p className={styles.note}>{booking.comment}</p>}
     </section>

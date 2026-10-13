@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPrisma } from "@/lib/db";
 import { getBonusBalance } from "@/lib/loyalty";
+import { formatPhoneDisplay } from "@/lib/guest-contact";
 import { orderStatusLabel } from "@/lib/order-status";
 import type { Customer } from "@/generated/prisma/client";
 import { LogoutButton } from "./logout-button";
@@ -104,7 +105,7 @@ export async function AccountDashboard({ customer, ordersPage }: { customer: Cus
           <div className={styles.facts} style={{ marginTop: 0, marginBottom: 14 }}>
             <div className={styles.fact}><span>Email</span>{customer.email}</div>
             <div className={styles.fact}><span>Имя</span>{customer.name || "—"}</div>
-            <div className={styles.fact}><span>Телефон</span>{customer.phone || "—"}</div>
+            <div className={styles.fact}><span>Телефон</span>{formatPhoneDisplay(customer.phone) || "—"}</div>
           </div>
           <ProfileForm initialName={customer.name} initialPhone={customer.phone} />
         </div>

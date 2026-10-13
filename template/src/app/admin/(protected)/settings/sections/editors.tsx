@@ -15,7 +15,7 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
   const [saved, setSaved] = useState({ payment: settings.payment, loyalty: settings.loyalty });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const { save: saveWithRev, control: revControl } = useSettingsSave();
+  const { save: saveWithRev, control: revControl, errorMessage } = useSettingsSave();
   // P1-2: после «Обновить» берём свежие данные, свою правку применяем повторно.
   const settingsEpoch = useSettingsEpoch();
   useResetSettingsOnEpoch(settingsEpoch, () => {
@@ -32,7 +32,7 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
       try {
         const next: ContentSettings = { ...settings, payment, loyalty };
         const revResult = await saveWithRev(next);
-        if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
+        if (revResult !== "ok") { if (revResult === "error") throw new Error(errorMessage ?? "Не удалось сохранить"); return; }
         setSaved({ payment, loyalty });
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
@@ -61,10 +61,10 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
       </label>
     </div>
     <p className={styles.note}>Ключи провайдера хранятся в настройках среды сайта.</p>
-    {dirty && <div className={styles.saveBar}>
-      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
+    <div className={styles.saveBar} data-dirty={dirty || undefined}>
+      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !dirty} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
-    </div>}
+    </div>
     {status && !dirty && <p className={rd.saved} role="status">{status.text}</p>}
   {revControl}</section>;
 }
@@ -76,7 +76,7 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
   const [saved, setSaved] = useState({ mode: settings.pricing.globalMode, percent: settings.pricing.globalPercent });
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const { save: saveWithRev, control: revControl } = useSettingsSave<{ globalMode: string; globalPercent: number }>(savePricing);
+  const { save: saveWithRev, control: revControl, errorMessage } = useSettingsSave<{ globalMode: string; globalPercent: number }>(savePricing);
   // P1-2: после «Обновить» берём свежие данные, свою правку применяем повторно.
   const settingsEpoch = useSettingsEpoch();
   useResetSettingsOnEpoch(settingsEpoch, () => {
@@ -93,7 +93,7 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
       try {
         const pricing = { globalMode: mode, globalPercent: percent };
         const revResult = await saveWithRev(pricing);
-        if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
+        if (revResult !== "ok") { if (revResult === "error") throw new Error(errorMessage ?? "Не удалось сохранить"); return; }
         setSaved({ mode, percent });
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
@@ -117,10 +117,10 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
         <input className={rd.input} type="number" value={percent} disabled={mode !== "coefficient"} onChange={(e) => setPercent(Number(e.target.value))} />
       </label>
     </div>
-    {dirty && <div className={styles.saveBar}>
-      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
+    <div className={styles.saveBar} data-dirty={dirty || undefined}>
+      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !dirty} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
-    </div>}
+    </div>
     {status && !dirty && <p className={rd.saved} role="status">{status.text}</p>}
   {revControl}</section>;
 }
@@ -131,7 +131,7 @@ export function BookingEditor({ settings }: { settings: ContentSettings }) {
   const [saved, setSaved] = useState(settings.booking);
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
-  const { save: saveWithRev, control: revControl } = useSettingsSave();
+  const { save: saveWithRev, control: revControl, errorMessage } = useSettingsSave();
   // P1-2: после «Обновить» берём свежие данные, свою правку применяем повторно.
   const settingsEpoch = useSettingsEpoch();
   useResetSettingsOnEpoch(settingsEpoch, () => {
@@ -146,7 +146,7 @@ export function BookingEditor({ settings }: { settings: ContentSettings }) {
       setStatus(null);
       try {
         const next: ContentSettings = { ...settings, booking };
-        const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
+        const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error(errorMessage ?? "Не удалось сохранить"); return; }
         setSaved(booking);
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
@@ -174,10 +174,10 @@ export function BookingEditor({ settings }: { settings: ContentSettings }) {
         </label>
       </div>
     )}
-    {dirty && <div className={styles.saveBar}>
-      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
+    <div className={styles.saveBar} data-dirty={dirty || undefined}>
+      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !dirty} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
-    </div>}
+    </div>
     {status && !dirty && <p className={rd.saved} role="status">{status.text}</p>}
   {revControl}</section>;
 }

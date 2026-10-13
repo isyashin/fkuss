@@ -7,12 +7,32 @@ import type { Promo } from "@/generated/prisma/client";
 const inputCls = "w-full min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15 bg-card";
 const labelCls = "block text-xs text-muted";
 
+/** 2026-10-01 → «1 окт 2026». Не-ISO значения показываем как есть. */
+function formatPromoDate(value: string): string {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" });
+}
+
 /** Период показа акции: строка для списка. */
 function periodText(promo: Promo): string {
-  if (promo.activeFrom && promo.activeTo) return `${promo.activeFrom} — ${promo.activeTo}`;
-  if (promo.activeFrom) return `с ${promo.activeFrom}`;
-  if (promo.activeTo) return `до ${promo.activeTo}`;
+  if (promo.activeFrom && promo.activeTo) return `${formatPromoDate(promo.activeFrom)} — ${formatPromoDate(promo.activeTo)}`;
+  if (promo.activeFrom) return `с ${formatPromoDate(promo.activeFrom)}`;
+  if (promo.activeTo) return `до ${formatPromoDate(promo.activeTo)}`;
   return "постоянная";
+}
+
+/** Живой предпросмотр карточки акции — как на витрине. */
+function PromoPreview({ title, text }: { title: string; text: string }) {
+  return (
+    <div>
+      <p className={labelCls}>Так выглядит на сайте</p>
+      <div className="mt-1 bg-card rounded-[var(--radius)] p-5 shadow-sm">
+        <h3 className="text-lg">{title.trim() || "Заголовок акции"}</h3>
+        <p className="text-muted mt-1">{text.trim() || "Текст акции"}</p>
+      </div>
+    </div>
+  );
 }
 
 export function PromosAdmin({ promos }: { promos: Promo[] }) {
@@ -91,19 +111,20 @@ export function PromosAdmin({ promos }: { promos: Promo[] }) {
             rows={2}
             className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15 bg-card"
           /></label>
-          <label className={labelCls}>Показывать с (YYYY-MM-DD)<input
+          <label className={labelCls}>Показывать с<input
             type="date"
             value={form.activeFrom}
             onChange={(e) => setForm({ ...form, activeFrom: e.target.value })}
             className={inputCls}
           /></label>
-          <label className={labelCls}>Показывать до (YYYY-MM-DD)<input
+          <label className={labelCls}>Показывать до<input
             type="date"
             value={form.activeTo}
             onChange={(e) => setForm({ ...form, activeTo: e.target.value })}
             className={inputCls}
           /></label>
         </div>
+        <PromoPreview title={form.title} text={form.text} />
         <label className="flex items-center gap-3 min-h-11 text-sm">
           <input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} className="w-5 h-5 accent-[var(--accent)]" />
           Показывать на сайте
@@ -136,9 +157,10 @@ function EditPromoForm({ promo, pending, onCancel, onSave }: {
       <div className="grid grid-cols-2 gap-3">
         <label className={labelCls}>Заголовок акции<input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputCls} /></label>
         <label className={labelCls}>Текст акции<textarea value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} rows={2} className="w-full px-3 py-2 rounded-[var(--radius)] border border-foreground/15 bg-card" /></label>
-        <label className={labelCls}>Показывать с (YYYY-MM-DD)<input type="date" value={form.activeFrom} onChange={(e) => setForm({ ...form, activeFrom: e.target.value })} className={inputCls} /></label>
-        <label className={labelCls}>Показывать до (YYYY-MM-DD)<input type="date" value={form.activeTo} onChange={(e) => setForm({ ...form, activeTo: e.target.value })} className={inputCls} /></label>
+        <label className={labelCls}>Показывать с<input type="date" value={form.activeFrom} onChange={(e) => setForm({ ...form, activeFrom: e.target.value })} className={inputCls} /></label>
+        <label className={labelCls}>Показывать до<input type="date" value={form.activeTo} onChange={(e) => setForm({ ...form, activeTo: e.target.value })} className={inputCls} /></label>
       </div>
+      <PromoPreview title={form.title} text={form.text} />
       <label className="flex items-center gap-3 min-h-11 text-sm">
         <input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} className="w-5 h-5 accent-[var(--accent)]" />
         Показывать на сайте

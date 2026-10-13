@@ -73,7 +73,16 @@ export async function POST(request: Request) {
   const parsed = orderSchema.safeParse(body);
   if (!parsed.success) {
     // honeypot срабатывает здесь же: website непустой не пройдёт zod
-    return NextResponse.json({ error: "Проверьте поля заказа" }, { status: 400 });
+    const issue = parsed.error.issues[0];
+    const fieldMessages: Record<string, string> = {
+      items: "Корзина пуста — выберите блюда",
+      customerName: "Укажите имя",
+      customerPhone: "Укажите корректный телефон",
+      address: "Укажите адрес доставки",
+      type: "Выберите тип заказа",
+    };
+    const message = (issue && fieldMessages[String(issue.path[0])]) || "Проверьте поля заказа";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
   const input = parsed.data;
 

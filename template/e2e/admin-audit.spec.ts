@@ -17,7 +17,7 @@ test("F01: поиск заказов по имени фильтрует спис
   await page.getByLabel("Имя").fill(guestName);
   await page.getByLabel("Телефон").fill("+79990005544");
   await page.getByRole("button", { name: /Заказать ·/ }).click();
-  await expect(page.getByText(/Заказ №\d+ принят/)).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: /Заказ №\d+ принят/ })).toBeVisible({ timeout: 15000 });
 
   await page.goto("/admin/login");
   await loginAdminUi(page);
@@ -95,8 +95,8 @@ test("F02: добавление блюда в состав заказа рабо
   await page.getByLabel("Имя").fill("Аудит Состав");
   await page.getByLabel("Телефон").fill("+79990007766");
   await page.getByRole("button", { name: /Заказать ·/ }).click();
-  await expect(page.getByText(/Заказ №\d+ принят/)).toBeVisible({ timeout: 15000 });
-  const orderNumber = Number((await page.getByText(/Заказ №\d+ принят/).textContent())?.match(/№(\d+)/)?.[1]);
+  await expect(page.getByRole("heading", { name: /Заказ №\d+ принят/ })).toBeVisible({ timeout: 15000 });
+  const orderNumber = Number((await page.getByRole("heading", { name: /Заказ №\d+ принят/ }).textContent())?.match(/№(\d+)/)?.[1]);
 
   await page.goto("/admin/login");
   await loginAdminUi(page);

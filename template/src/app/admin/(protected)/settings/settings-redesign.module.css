@@ -148,7 +148,10 @@
   .formGrid { grid-template-columns: 1fr; }
   .saveBar { margin: 18px -20px -120px; padding: 11px 20px; box-shadow: 0 -5px 22px #20272310; }
 }
-/* F08: на телефоне панель сохранения — над нижней навигацией (64px) с safe area */
+/* F08: на телефоне панель сохранения — над нижней навигацией (64px) с safe area.
+   Плашка фиксированная: без несохранённых правок её скрываем, чтобы не перекрывать
+   форму постоянно (на десктопе кнопка «Сохранить» всегда на месте — issue #59). */
 @media (max-width: 760px) {
   .saveBar { position: fixed; right: 0; left: 0; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); margin: 0; padding: 11px 20px; z-index: 40; box-shadow: 0 -5px 22px #20272310; }
+  .saveBar:not([data-dirty]) { display: none; }
 }

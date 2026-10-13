@@ -30,9 +30,9 @@ test("цикл бонусов: заказ → выдача → кэшбэк ви
   await page.getByLabel("Телефон").fill("+79990001144");
   await page.getByLabel(/Email/).fill(email);
   await page.getByRole("button", { name: /Заказать ·/ }).click();
-  await expect(page.getByText(/Заказ №\d+ принят/)).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: /Заказ №\d+ принят/ })).toBeVisible({ timeout: 15000 });
 
-  const orderText = await page.getByText(/Заказ №\d+ принят/).textContent();
+  const orderText = await page.getByRole("heading", { name: /Заказ №\d+ принят/ }).textContent();
   const orderNumber = Number(orderText?.match(/№(\d+)/)?.[1]);
 
   // 3. Админ проводит самовывоз через все соседние стадии до выдачи

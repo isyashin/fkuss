@@ -42,7 +42,7 @@ export function ZonesTab({
   const [busy, setBusy] = useState({ drawing: false, editing: false });
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState({ text: "", error: false });
-  const { save: saveWithRev, control: revControl } = useSettingsSave();
+  const { save: saveWithRev, control: revControl, errorMessage } = useSettingsSave();
   // P1-2: после «Обновить» в диалоге конфликта зоны/geo сбрасываются к свежим данным.
   const settingsEpoch = useSettingsEpoch();
   useResetSettingsOnEpoch(settingsEpoch, () => {
@@ -93,7 +93,7 @@ export function ZonesTab({
           ...settings,
           delivery: { ...settings.delivery, zones, geo },
         };
-        const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error("Не удалось сохранить"); return; }
+        const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error(errorMessage ?? "Не удалось сохранить"); return; }
         setSavedSnapshot(JSON.stringify([zones, geo]));
         setFeedback({ text: "Сохранено", error: false });
       } catch (cause) {
@@ -150,20 +150,18 @@ export function ZonesTab({
             )}
           </div>
         )}
-        {/* F21: сохранение появляется только при изменениях */}
-        {dirty && (
-          <div className="flex items-center gap-3 ml-auto">
-            <span className="text-sm text-muted">Есть несохранённые изменения</span>
-            <button
-              type="button"
-              onClick={save}
-              disabled={pending}
-              className="min-h-11 px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50"
-            >
-              {pending ? "Сохраняю…" : "Сохранить"}
-            </button>
-          </div>
-        )}
+        {/* F21: кнопка сохранения всегда на месте; без изменений недоступна */}
+        <div className="flex items-center gap-3 ml-auto" role="group" aria-label="Сохранение зон доставки">
+          {dirty && <span className="text-sm text-muted">Есть несохранённые изменения</span>}
+          <button
+            type="button"
+            onClick={save}
+            disabled={pending || !dirty}
+            className="min-h-11 px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50"
+          >
+            {pending ? "Сохраняю…" : "Сохранить"}
+          </button>
+        </div>
         <div className="flex items-center gap-3 ml-auto">
           {feedback.text && (
             <span role={feedback.error ? "alert" : "status"} className={feedback.error ? "text-sm text-red-600" : "text-sm text-green-700"}>

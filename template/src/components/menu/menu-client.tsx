@@ -20,7 +20,6 @@ export function MenuClient({
   menu,
   delivery,
   loyalty,
-  whatsapp,
   guestContact,
   isOpen,
   paymentProvider = "none",
@@ -33,7 +32,6 @@ export function MenuClient({
   menu: Menu;
   delivery: ContentSettings["delivery"];
   loyalty: ContentSettings["loyalty"];
-  whatsapp: ContentSettings["channels"]["whatsapp"];
   guestContact: GuestChannels;
   isOpen?: boolean;
   paymentProvider?: string;
@@ -277,7 +275,6 @@ export function MenuClient({
         <CartSheet
           delivery={delivery}
           loyalty={loyalty}
-          whatsapp={whatsapp}
           guestContact={guestContact}
           paymentProvider={paymentProvider}
           bonusBalance={bonusBalance}

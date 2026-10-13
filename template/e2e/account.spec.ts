@@ -65,7 +65,7 @@ test("заказ гостя: детали, повтор и отмена из к�
   await page.getByLabel("Имя").fill("Гость Тест");
   await page.getByLabel("Телефон").fill("+79990002212");
   await page.getByRole("button", { name: /Заказать ·/ }).click();
-  await expect(page.getByText(/Заказ №\d+ принят/)).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: /Заказ №\d+ принят/ })).toBeVisible({ timeout: 15000 });
 
   // Кабинет: заказ в списке с действиями
   await page.goto("/account");

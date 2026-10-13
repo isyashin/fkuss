@@ -11,6 +11,10 @@ test("админ создаёт scheduled-вариант, гость заказ�
   const optName = `Курьер по времени ${Date.now().toString(36)}`;
   const asapName = `Экспресс 24/7 ${Date.now().toString(36)}`;
 
+  // «Сохранить» общих условий доставки теперь всегда на месте (issue #59) —
+  // скоупимся на форму варианта.
+  const variantSave = page.getByRole("group", { name: /вариант доставки/ }).getByRole("button", { name: "Сохранить" });
+
   // 1. Админка → Доставка → новый вариант
   await page.goto("/admin/login");
   await loginAdminUi(page);
@@ -24,7 +28,8 @@ test("админ создаёт scheduled-вариант, гость заказ�
   await page.getByLabel("Бесплатно от, ₽").fill("1000");
   await page.getByLabel("Часы с").fill("00:00");
   await page.getByLabel("Часы до").fill("23:59");
-  await page.getByRole("button", { name: "Сохранить" }).click();
+
+  await variantSave.click();
   await expect(page.getByText(optName)).toBeVisible({ timeout: 15000 });
 
   // ASAP-вариант 24/7 для детерминированного DEL-01 (ресторан открыт не всегда)
@@ -33,7 +38,8 @@ test("админ создаёт scheduled-вариант, гость заказ�
   await page.getByLabel("Режим").selectOption("asap");
   await page.getByLabel("Часы с").fill("00:00");
   await page.getByLabel("Часы до").fill("23:59");
-  await page.getByRole("button", { name: "Сохранить" }).click();
+
+  await variantSave.click();
   await expect(page.getByText(asapName)).toBeVisible({ timeout: 15000 });
 
   // 2. API отдаёт вариант с окнами

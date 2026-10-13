@@ -54,6 +54,17 @@ async function waitForServerPair(page: Page, expected: { cashback: number; maxSp
   throw new Error(`Сервер не вернул ожидаемую пару: ждали ${JSON.stringify(expected)}, последнее ${JSON.stringify(last)}`);
 }
 
+// Синхронизация после клика «Сохранить»: кнопка теперь всегда на месте и лишь
+// блокируется без изменений (issue #59) — ждём статус «Сохранено» в панели раздела.
+// После успеха «Сохранено» дублируется в rd.saved под формой — берём span в savebar.
+async function waitSaved(page: Page) {
+  await expect(
+    page
+      .locator('section[aria-label="Оплата и бонусы"], section[aria-label="Параметры бронирования"]')
+      .locator("span[role='status']"),
+  ).toHaveText("Сохранено", { timeout: 15000 });
+}
+
 test("F04-обновить: конфликт вкладок, «Обновить» сохраняет обе правки", async ({ browser }, testInfo) => {
   // Логика конфликта не зависит от вьюпорта; на мобильных проектах пропускаем,
   // чтобы трёхкратный прогон не раздувал CI (геометрия мобильного покрыта в admin-audit).
@@ -75,12 +86,12 @@ test("F04-обновить: конфликт вкладок, «Обновить�
     const nextCashback = initial.cashback === 33 ? 34 : 33;
     const nextMaxSpend = initial.maxSpend === 21 ? 22 : 21;
 
-    // Вкладка 1: правит кэшбэк и сохраняет. Статус «Сохранено» живёт в savebar
-    // и исчезает вместе с ней после успеха — синхронизируемся по исчезновению кнопки.
+    // Вкладка 1: правит кэшбэк и сохраняет. Синхронизируемся по статусу «Сохранено»
+    // (кнопка после успеха остаётся на месте, но блокируется — issue #59).
     await tab1.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await tab1.getByRole("button", { name: "Сохранить" }).click();
     mark("tab1 сохранила кэшбэк");
-    await tab1.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(tab1);
 
     // Вкладка 2 (устаревшая): правит предел списания → конфликт.
     await tab2.getByLabel(/Списание бонусов до/).fill(String(nextMaxSpend));
@@ -100,7 +111,7 @@ test("F04-обновить: конфликт вкладок, «Обновить�
     await tab2.getByLabel(/Списание бонусов до/).fill(String(nextMaxSpend));
     await tab2.getByRole("button", { name: "Сохранить" }).click();
     mark("tab2 повторно сохранила");
-    await tab2.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(tab2);
 
     // Обе правки на сервере: первая вкладка видит обновлённую пару после reload.
     const pair = await waitForServerPair(tab1, { cashback: nextCashback, maxSpend: nextMaxSpend });
@@ -144,12 +155,12 @@ test("F04-последовательные: две правки и два сох
 
     await page.getByLabel(/Кэшбэк/).fill(String(first));
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(page);
     mark("первое сохранение принято");
 
     await page.getByLabel(/Кэшбэк/).fill(String(second));
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(page);
     mark("второе сохранение принято");
     await expect(page.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
     mark("ложного конфликта нет");
@@ -195,10 +206,10 @@ test("F04-последовательные: двойное сохранение 
 
     await guests.fill(String(first));
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(page);
     await guests.fill(String(second));
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(page);
     await expect(page.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
 
     // Серверное значение после reload — второе сохранение.
@@ -245,7 +256,7 @@ test("F04-разделы: сохранение в оплате не затира
 
     await page.getByLabel(/Кэшбэк/).fill(String(first));
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(page);
 
     // Уходим в другой раздел и возвращаемся: редактор пересоздаётся из props.
     await gotoStable(page, "/admin/settings?section=booking");
@@ -258,7 +269,7 @@ test("F04-разделы: сохранение в оплате не затира
     // вернуть старое значение кэшбэка.
     await page.getByLabel(/Кэшбэк/).fill(String(second));
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(page);
     await expect(page.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
 
     const pair = await waitForServerPair(page, { cashback: second, maxSpend: initial.maxSpend });
@@ -331,7 +342,7 @@ test("F04-разделы: правка «Связи с гостем» не ти�
     await expect(paymentTab.getByLabel(/Кэшбэк/)).toHaveValue(String(cashbackInitial), { timeout: 15000 });
     await paymentTab.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await paymentTab.getByRole("button", { name: "Сохранить" }).click();
-    await paymentTab.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(paymentTab);
     mark("оплата сохранена после «Обновить»");
 
     // Обе правки на сервере: WhatsApp остался выключенным, кэшбэк обновлён.
@@ -395,7 +406,7 @@ test("F04-разделы: автосохранение связи → оплат
     const nextCashback = initial.cashback === 47 ? 48 : 47;
     await page.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(page);
     await expect(page.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
     const pair = await waitForServerPair(page, { cashback: nextCashback, maxSpend: initial.maxSpend });
     expect(pair.cashback).toBe(nextCashback);
@@ -453,7 +464,7 @@ test("F04-разделы: сохранение банкетов → оплата
     const nextCashback = initial.cashback === 49 ? 50 : 49;
     await page.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await page.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(page);
     await expect(page.getByText("Настройки изменены в другой вкладке")).toHaveCount(0);
     const pair = await waitForServerPair(page, { cashback: nextCashback, maxSpend: initial.maxSpend });
     expect(pair.cashback).toBe(nextCashback);
@@ -503,7 +514,7 @@ test("F04-поздняя правка: чужая запись после «Об
     // Вкладка 1 сохраняет первую правку → у вкладки 2 конфликт → «Обновить».
     await tab1.getByLabel(/Кэшбэк/).fill(String(first));
     await tab1.getByRole("button", { name: "Сохранить" }).click();
-    await tab1.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(tab1);
     await tab2.getByLabel(/Списание бонусов до/).fill(String(initial.maxSpend === 25 ? 26 : 25));
     await tab2.getByRole("button", { name: "Сохранить" }).click();
     await expect(tab2.getByText("Настройки изменены в другой вкладке")).toBeVisible({ timeout: 15000 });
@@ -518,7 +529,7 @@ test("F04-поздняя правка: чужая запись после «Об
     // Поздняя чужая правка: вкладка 1 сохраняет ещё раз до сохранения вкладки 2.
     await tab1.getByLabel(/Кэшбэк/).fill(String(late));
     await tab1.getByRole("button", { name: "Сохранить" }).click();
-    await tab1.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(tab1);
     mark("вкладка 1 сохранила позднюю правку");
 
     // Вкладка 2 применяет свою правку и сохраняет: конфликт обязан появиться.
@@ -532,7 +543,7 @@ test("F04-поздняя правка: чужая запись после «Об
     await expect(tab2.getByLabel(/Кэшбэк/)).toHaveValue(String(late), { timeout: 15000 });
     await tab2.getByLabel(/Кэшбэк/).fill(String(own));
     await tab2.getByRole("button", { name: "Сохранить" }).click();
-    await tab2.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(tab2);
     const pair = await waitForServerPair(tab1, { cashback: own, maxSpend: initial.maxSpend });
     expect(pair.cashback).toBe(own);
     mark("ПОЗДНЯЯ ПРАВКА НЕ ПОТЕРЯНА");
@@ -569,7 +580,7 @@ test("F04-перезаписать: явная перезапись затира
     await tab1.getByLabel(/Кэшбэк/).fill(String(nextCashback));
     await tab1.getByRole("button", { name: "Сохранить" }).click();
     mark("tab1 сохранила кэшбэк");
-    await tab1.getByRole("button", { name: "Сохранить" }).waitFor({ state: "hidden", timeout: 15000 });
+    await waitSaved(tab1);
 
     // Вкладка 2 правит предел списания → конфликт → «Перезаписать».
     const nextMaxSpend = initial.maxSpend === 23 ? 24 : 23;

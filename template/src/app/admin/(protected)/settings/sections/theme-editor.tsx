@@ -94,10 +94,10 @@ export function ThemeEditor({ theme }: { theme: ThemeConfig }) {
         {bg.image && <img src={contentAssetUrl(bg.image)} alt="Фон — превью" style={{ width: 180, height: 64, objectFit: "cover", borderRadius: 10, border: "1px solid var(--rd-line)" }} />}
       </div>
     </fieldset>
-    {dirty && <div className={styles.saveBar}>
-      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
+    <div className={styles.saveBar} data-dirty={dirty || undefined}>
+      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !dirty} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
-    </div>}
+    </div>
     {status && !dirty && <p className={rd.saved} role="status">{status.text}</p>}
   </section>;
 }

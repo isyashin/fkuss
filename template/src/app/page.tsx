@@ -66,7 +66,7 @@ export default async function HomePage() {
         {blocks.includes("hero") && (
           <section className="mx-auto max-w-5xl px-4 py-12 text-center">
             <h1 className="text-4xl md:text-5xl leading-tight">{restaurant.name}</h1>
-            <p className="mt-3 text-muted text-lg capitalize">{restaurant.cuisine} кухня</p>
+            <p className="mt-3 text-muted text-lg">Кухня: {restaurant.cuisine}</p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
               <a
                 href="#menu"
@@ -92,7 +92,6 @@ export default async function HomePage() {
             menu={menu}
             delivery={settings.delivery}
             loyalty={settings.loyalty}
-            whatsapp={settings.channels.whatsapp}
             guestContact={visibleGuestChannels(settings)}
             isOpen={open}
             paymentProvider={settings.payment.provider}
@@ -135,7 +134,7 @@ export default async function HomePage() {
           </section>
         )}
 
-        {blocks.includes("about") && about && (
+        {blocks.includes("about") && about && about.body.trim() !== "" && (
           <section className="mx-auto max-w-5xl px-4 py-8">
             <h2 className="text-2xl mb-3">{about.title}</h2>
             <p className="text-muted leading-relaxed max-w-2xl">{about.body}</p>

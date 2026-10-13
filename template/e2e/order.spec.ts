@@ -35,7 +35,7 @@ test("гость заказывает блюдо с главной через к
   await page.getByRole("button", { name: /Заказать ·/ }).click();
 
   // Успех: номер заказа
-  await expect(page.getByText(/Заказ №\d+ принят/)).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: /Заказ №\d+ принят/ })).toBeVisible({ timeout: 15000 });
 });
 
 test("submit чекаута виден без прокрутки на mobile-360 (elementFromPoint)", async ({ page }) => {

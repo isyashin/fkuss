@@ -12,6 +12,8 @@ import { AdminPagination } from "./admin-pagination";
 import { StatusPill } from "./status-pill";
 import { setOrderStatus } from "./actions";
 import { confirmDiscard } from "./admin-dirty";
+import { AdminIcon } from "./admin-icon";
+import { readSoundEnabled, subscribeSoundEnabled, writeSoundEnabled, enableTabSound, setNotificationsError } from "./admin-notifications-store";
 import type { CatalogCategory, DeliveryOptionChoice, DeliveryZoneChoice } from "./order-editor-types";
 import styles from "./admin-ui.module.css";
 import type { GuestChannels } from "@/lib/guest-contact";
@@ -31,6 +33,33 @@ const dishWord = (count: number) => { const form = new Intl.PluralRules("ru-RU")
 const subscribeHydration = () => () => {};
 const hydratedSnapshot = () => true;
 const serverSnapshot = () => false;
+
+/** Переключатель звука новых заказов прямо на доске (issue #59). */
+function SoundToggle() {
+  const enabled = useSyncExternalStore(subscribeSoundEnabled, readSoundEnabled, () => false);
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      className={styles.searchButton}
+      style={enabled ? undefined : { opacity: 0.55 }}
+      aria-pressed={enabled}
+      disabled={busy}
+      aria-label={enabled ? "Выключить звук новых заказов" : "Включить звук новых заказов"}
+      title={enabled ? "Звук новых заказов включён — нажмите, чтобы выключить" : "Включить звук новых заказов"}
+      onClick={() => {
+        if (enabled) { writeSoundEnabled(false); return; }
+        setBusy(true);
+        enableTabSound()
+          .catch(() => setNotificationsError("Браузер не воспроизвёл звук. Проверьте разрешение звука для сайта."))
+          .finally(() => setBusy(false));
+      }}
+    >
+      <AdminIcon name="sound" size={17} />
+      <span>{enabled ? "Звук вкл" : "Звук выкл"}</span>
+    </button>
+  );
+}
 
 /** D05: позиция списка — в модульном состоянии (без ref внутри компонента:
     react-hooks/refs запрещает чтение ref'ов даже в обработчиках JSX). */
@@ -144,7 +173,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
 
   return <div className={`${styles.dashboard} ${mobileDetail ? styles.mobileDetail : ""}`} data-order-detail-open={mobileDetail ? "" : undefined} inert={!hydrated} aria-busy={!hydrated}>
     <section className={styles.ordersPanel} aria-label="Список заказов">
-      <div className={styles.queueHead}><h1>Заказы</h1></div>
+      <div className={styles.queueHead}><h1>Заказы</h1><SoundToggle /></div>
       {/* F19: вкладки с клавиатурной навигацией (стрелки, Home, End) */}
       <div
         className={styles.filters}

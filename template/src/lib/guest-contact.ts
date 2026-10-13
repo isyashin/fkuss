@@ -23,6 +23,14 @@ export function normalizeContactPhone(phone: string): string | null {
   return /^[1-9]\d{9,14}$/.test(digits) ? digits : null;
 }
 
+/** Отображение российского номера с маской: +7 (999) 000-11-22.
+    Некорректный или не-РФ номер возвращаем как есть. */
+export function formatPhoneDisplay(phone: string): string {
+  const digits = normalizeContactPhone(phone);
+  if (!digits || digits.length !== 11 || !digits.startsWith("7")) return phone;
+  return `+7 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 9)}-${digits.slice(9, 11)}`;
+}
+
 /** Ни одна ссылка не создаётся при некорректном номере; выбранный канал не подменяется. */
 export function contactLinks(phone: string, preferred: PreferredChannel | null, channels: GuestChannels): GuestContactLink[] {
   const digits = normalizeContactPhone(phone);

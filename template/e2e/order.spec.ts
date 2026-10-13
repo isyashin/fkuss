@@ -38,6 +38,44 @@ test("гость заказывает блюдо с главной через к
   await expect(page.getByText(/Заказ №\d+ принят/)).toBeVisible({ timeout: 15000 });
 });
 
+test("submit чекаута виден без прокрутки на mobile-360 (elementFromPoint)", async ({ page }) => {
+  await page.goto("/menu");
+
+  await page.getByRole("button", { name: /Хачапури по-аджарски/ }).click();
+  await page.getByRole("button", { name: /Добавить ·/ }).click();
+  // Два блюда — проходим минимальную сумму доставки (800 ₽)
+  await page.getByRole("button", { name: /Хачапури по-аджарски/ }).click();
+  await page.getByRole("button", { name: /Добавить ·/ }).click();
+  await page.getByRole("button", { name: /Корзина · 2/ }).click();
+  await page.getByRole("button", { name: /Оформить ·/ }).click();
+
+  // Доставка + адрес: форма длинная и гарантированно не помещается в шторку
+  await page.getByRole("button", { name: "Доставка" }).click();
+  await page.getByLabel("Адрес").fill("ул. Тестовая, 1");
+  await page.getByLabel("Имя").fill("Тест E2E");
+  await page.getByLabel("Телефон").fill("+79990001458");
+
+  const scroller = page.locator('[role="dialog"] .overflow-y-auto');
+  await expect
+    .poll(async () => scroller.evaluate((el) => el.scrollHeight - el.clientHeight))
+    .toBeGreaterThan(100);
+
+  const submit = page.getByRole("button", { name: /Заказать ·/ });
+  await expect(submit).toBeEnabled();
+
+  // Гость прокрутил форму наверх: submit всё равно должен быть на экране и кликабелен
+  await scroller.evaluate((el) => {
+    el.scrollTop = 0;
+  });
+  const clickable = await submit.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    if (r.bottom > window.innerHeight || r.top < 0) return false;
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return hit === el || (hit !== null && el.contains(hit));
+  });
+  expect(clickable).toBe(true);
+});
+
 test("форма брони отправляется", async ({ page }) => {
   await page.goto("/booking");
   // Будущий будний день + уникальный слот прогона (вместимость слота не накапливается между прогонами)

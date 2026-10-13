@@ -10,7 +10,12 @@ export default async function AdminMenuPage() {
   const [categories, menus] = await Promise.all([
     prisma.category.findMany({
       orderBy: { position: "asc" },
-      include: { dishes: { orderBy: { position: "asc" } } },
+      include: {
+        dishes: {
+          orderBy: { position: "asc" },
+          include: { modifierGroups: { orderBy: { position: "asc" }, include: { modifiers: true } } },
+        },
+      },
     }),
     prisma.menuGroup.findMany({ orderBy: { position: "asc" } }),
   ]);

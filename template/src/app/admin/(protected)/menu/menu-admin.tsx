@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addCategory, addDish, deleteCategory, deleteDish, renameCategory, reorderCategory, updateCategoryMenu, updateDish } from "./actions";
+import { addCategory, addDish, addModifier, addModifierGroup, deleteCategory, deleteDish, deleteModifier, deleteModifierGroup, renameCategory, reorderCategory, updateCategoryMenu, updateDish, updateModifierGroup, type ModifierActionResult } from "./actions";
 import { dishImageUrl } from "@/lib/assets";
 import { AdminIcon } from "../admin-icon";
-import type { Category, Dish } from "@/generated/prisma/client";
+import type { Category, Dish, Modifier, ModifierGroup } from "@/generated/prisma/client";
 import ui from "../admin-ui.module.css";
 import rd from "../admin-redesign.module.css";
 import { useDirtyGuard, confirmDiscard } from "../admin-dirty";
@@ -45,8 +45,10 @@ function draftFromDish(dish: Dish) {
   };
 }
 type DishDraft = ReturnType<typeof draftFromDish>;
+type DishWithModifiers = Dish & { modifierGroups: (ModifierGroup & { modifiers: Modifier[] })[] };
+type CategoryWithDishes = Category & { dishes: DishWithModifiers[] };
 
-export function MenuAdmin({ categories, menus }: { categories: (Category & { dishes: Dish[] })[]; menus: { id: string; name: string }[] }) {
+export function MenuAdmin({ categories, menus }: { categories: CategoryWithDishes[]; menus: { id: string; name: string }[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [menuId, setMenuId] = useState("all");
@@ -262,7 +264,7 @@ export function MenuAdmin({ categories, menus }: { categories: (Category & { dis
   );
 }
 
-function DishEditor({ dish, categories, menus, onBack, onDeleted }: { dish: Dish; categories: (Category & { dishes: Dish[] })[]; menus: { id: string; name: string }[]; onBack: () => void; onDeleted: () => void }) {
+function DishEditor({ dish, categories, menus, onBack, onDeleted }: { dish: DishWithModifiers; categories: CategoryWithDishes[]; menus: { id: string; name: string }[]; onBack: () => void; onDeleted: () => void }) {
   const router = useRouter();
   const [form, setForm] = useState<DishDraft>(() => draftFromDish(dish));
   const [saved, setSaved] = useState<DishDraft>(() => draftFromDish(dish));
@@ -369,6 +371,7 @@ function DishEditor({ dish, categories, menus, onBack, onDeleted }: { dish: Dish
           <textarea className={rd.textarea} value={form.composition} onChange={(event) => setForm({ ...form, composition: event.target.value })} rows={2} />
         </label>
       </div>
+      <DishModifiersEditor dish={dish} />
       <div className={styles.menuStatusAction}>
         {!dish.manualAvailable
           ? <button type="button" className={rd.btn} disabled={pending} onClick={toggleStop}>Снять со стопа</button>
@@ -398,7 +401,7 @@ function DishEditor({ dish, categories, menus, onBack, onDeleted }: { dish: Dish
   );
 }
 
-function NewDishEditor({ categories, menus, defaultCategoryId, onClose, onCreated }: { categories: (Category & { dishes: Dish[] })[]; menus: { id: string; name: string }[]; defaultCategoryId: string; onClose: () => void; onCreated: (id: string) => void }) {
+function NewDishEditor({ categories, menus, defaultCategoryId, onClose, onCreated }: { categories: CategoryWithDishes[]; menus: { id: string; name: string }[]; defaultCategoryId: string; onClose: () => void; onCreated: (id: string) => void }) {
   const router = useRouter();
   const [form, setForm] = useState({ name: "", price: 0, weight: "", composition: "", description: "", categoryId: defaultCategoryId });
   const [photo, setPhoto] = useState<File | null>(null);
@@ -467,6 +470,161 @@ function NewDishEditor({ categories, menus, defaultCategoryId, onClose, onCreate
           </div>
         </div>
       </form>
+    </div>
+  );
+}
+
+interface GroupDraft {
+  name: string;
+  required: boolean;
+  maxSelected: number;
+}
+
+const emptyGroupDraft: GroupDraft = { name: "", required: false, maxSelected: 1 };
+
+/** Управление группами модификаторами блюда: создание, лимиты, варианты, удаление. */
+function DishModifiersEditor({ dish }: { dish: DishWithModifiers }) {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [pending, startTransition] = useTransition();
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [groupDraft, setGroupDraft] = useState<GroupDraft>(emptyGroupDraft);
+  const [editing, setEditing] = useState<(GroupDraft & { id: string }) | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState<{ id: string; name: string } | null>(null);
+  const [deletingModifier, setDeletingModifier] = useState<{ id: string; name: string } | null>(null);
+  const [variantDrafts, setVariantDrafts] = useState<Record<string, { name: string; price: string }>>({});
+  const groupDialogRef = useRef<HTMLDialogElement>(null);
+  const editDialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => { const dialog = groupDialogRef.current; if (!dialog) return; if (creatingGroup && !dialog.open) dialog.showModal(); if (!creatingGroup && dialog.open) dialog.close(); }, [creatingGroup]);
+  useEffect(() => { const dialog = editDialogRef.current; if (!dialog) return; if (editing && !dialog.open) dialog.showModal(); if (!editing && dialog.open) dialog.close(); }, [editing]);
+
+  const run = (action: Promise<ModifierActionResult>) => startTransition(async () => {
+    setError("");
+    const result = await action;
+    if (!result.ok) { setError(result.error); return; }
+    router.refresh();
+  });
+
+  const submitGroupDialog = (close: () => void, save: () => Promise<ModifierActionResult>) => startTransition(async () => {
+    setError("");
+    const result = await save();
+    if (!result.ok) { setError(result.error); return; }
+    close();
+    router.refresh();
+  });
+
+  const variantDraft = (groupId: string) => variantDrafts[groupId] ?? { name: "", price: "" };
+  const setVariantDraft = (groupId: string, draft: { name: string; price: string }) =>
+    setVariantDrafts((current) => ({ ...current, [groupId]: draft }));
+
+  return (
+    <section className={styles.modifiers} aria-label="Модификаторы блюда">
+      <div className={styles.modifiersHead}>
+        <h3>Модификаторы</h3>
+        <button type="button" className={`${rd.btnText} ${styles.categoryAdd}`} disabled={pending} onClick={() => { setGroupDraft(emptyGroupDraft); setCreatingGroup(true); }}>+ Группа</button>
+      </div>
+      <p className={rd.hint}>Обязательные группы проверяются при добавлении в корзину на витрине.</p>
+      {dish.modifierGroups.length === 0 && <p className={ui.empty}>Групп модификаторов нет.</p>}
+      {dish.modifierGroups.map((group) => {
+        const draft = variantDraft(group.id);
+        const price = draft.price === "" ? NaN : Number(draft.price);
+        const canAddVariant = !pending && draft.name.trim().length > 0 && Number.isFinite(price) && price >= 0;
+        return (
+          <div key={group.id} className={styles.modifierGroup}>
+            <div className={styles.modifierGroupHead}>
+              <strong>{group.name}</strong>
+              <span className={styles.modifierBadges}>
+                {group.minSelected > 0 && <StatusPill tone="source">обязательно</StatusPill>}
+                {group.maxSelected > 1 && <StatusPill tone="neutral">{group.maxSelected >= 99 ? "без лимита" : `до ${group.maxSelected}`}</StatusPill>}
+              </span>
+              <span className={styles.categoryActions}>
+                <button type="button" aria-label={`Изменить группу ${group.name}`} disabled={pending} onClick={() => setEditing({ id: group.id, name: group.name, required: group.minSelected > 0, maxSelected: group.maxSelected })}><AdminIcon name="edit" size={15} /></button>
+                <button type="button" className={styles.categoryDelete} aria-label={`Удалить группу ${group.name}`} disabled={pending} onClick={() => setDeletingGroup({ id: group.id, name: group.name })}><AdminIcon name="trash" size={15} /></button>
+              </span>
+            </div>
+            {group.modifiers.map((modifier) => (
+              <div key={modifier.id} className={styles.modifierRow}>
+                <span className={styles.modifierName}>{modifier.name}</span>
+                <span className={styles.modifierPrice}>{modifier.price > 0 ? `+${rub(modifier.price)}` : "0 ₽"}</span>
+                <button type="button" className={styles.categoryDelete} aria-label={`Удалить вариант ${modifier.name}`} disabled={pending} onClick={() => setDeletingModifier({ id: modifier.id, name: modifier.name })}><AdminIcon name="trash" size={15} /></button>
+              </div>
+            ))}
+            <div className={styles.modifierAddRow}>
+              <input className={rd.input} value={draft.name} onChange={(event) => setVariantDraft(group.id, { ...draft, name: event.target.value })} placeholder="Новый вариант" aria-label={`Название варианта для группы ${group.name}`} maxLength={200} />
+              <input className={rd.input} type="number" min={0} max={1000000} step={1} value={draft.price} onChange={(event) => setVariantDraft(group.id, { ...draft, price: event.target.value })} placeholder="Надбавка, ₽" aria-label={`Надбавка цены для варианта группы ${group.name}`} />
+              <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={!canAddVariant}
+                onClick={() => run(addModifier(dish.id, group.id, { name: draft.name.trim(), price }).then((result) => { if (result.ok) setVariantDraft(group.id, { name: "", price: "" }); return result; }))}>
+                Добавить
+              </button>
+            </div>
+          </div>
+        );
+      })}
+      {error && <p className={ui.error} role="alert">{error}</p>}
+
+      <dialog ref={groupDialogRef} className={rd.dialog} onClose={() => setCreatingGroup(false)}>
+        <form className={rd.dialogBody} onSubmit={(event) => {
+          event.preventDefault();
+          if (!groupDraft.name.trim()) return;
+          submitGroupDialog(() => setCreatingGroup(false), () => addModifierGroup(dish.id, { name: groupDraft.name.trim(), required: groupDraft.required, maxSelected: groupDraft.maxSelected }));
+        }}>
+          <h2 className={rd.dialogTitle}>Новая группа модификаторов</h2>
+          <label className={rd.field}><span>Название</span>
+            <input className={rd.input} value={groupDraft.name} onChange={(event) => setGroupDraft({ ...groupDraft, name: event.target.value })} maxLength={200} required autoComplete="off" />
+          </label>
+          <ModifierGroupLimits draft={groupDraft} onChange={setGroupDraft} pending={pending} />
+          <div className={rd.dialogActions} style={{ marginTop: 24 }}>
+            <button type="button" className={rd.btn} onClick={() => setCreatingGroup(false)}>Отмена</button>
+            <button type="submit" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !groupDraft.name.trim()}>Добавить</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog ref={editDialogRef} className={rd.dialog} onClose={() => setEditing(null)}>
+        <form className={rd.dialogBody} onSubmit={(event) => {
+          event.preventDefault();
+          if (!editing || !editing.name.trim()) return;
+          submitGroupDialog(() => setEditing(null), () => updateModifierGroup(editing.id, { name: editing.name.trim(), required: editing.required, maxSelected: editing.maxSelected }));
+        }}>
+          <h2 className={rd.dialogTitle}>Изменить группу</h2>
+          <label className={rd.field}><span>Название</span>
+            <input className={rd.input} value={editing?.name ?? ""} onChange={(event) => setEditing((current) => current ? { ...current, name: event.target.value } : current)} maxLength={200} required autoComplete="off" />
+          </label>
+          {editing && <ModifierGroupLimits draft={editing} onChange={(draft) => setEditing((current) => current ? { ...current, ...draft } : current)} pending={pending} />}
+          <div className={rd.dialogActions} style={{ marginTop: 24 }}>
+            <button type="button" className={rd.btn} onClick={() => setEditing(null)}>Отмена</button>
+            <button type="submit" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !editing?.name.trim()}>Сохранить</button>
+          </div>
+        </form>
+      </dialog>
+
+      <ConfirmDialog request={deletingGroup ? {
+        title: "Удалить группу?",
+        text: `«${deletingGroup.name}» и её варианты исчезнут из витрины.`,
+        acceptLabel: "Удалить",
+        onAccept: () => run(deleteModifierGroup(deletingGroup.id)),
+      } : null} onClose={() => setDeletingGroup(null)} />
+      <ConfirmDialog request={deletingModifier ? {
+        title: "Удалить вариант?",
+        text: `«${deletingModifier.name}» исчезнет из витрины.`,
+        acceptLabel: "Удалить",
+        onAccept: () => run(deleteModifier(deletingModifier.id)),
+      } : null} onClose={() => setDeletingModifier(null)} />
+    </section>
+  );
+}
+
+function ModifierGroupLimits({ draft, onChange, pending }: { draft: GroupDraft; onChange: (draft: GroupDraft) => void; pending: boolean }) {
+  return (
+    <div className={styles.modifierLimits}>
+      <label className={styles.modifierRequired}>
+        <input type="checkbox" checked={draft.required} disabled={pending} onChange={(event) => onChange({ ...draft, required: event.target.checked })} />
+        Обязательный выбор
+      </label>
+      <label className={rd.field}><span>Максимум выборов (99 — без лимита)</span>
+        <input className={rd.input} type="number" min={1} max={99} step={1} value={draft.maxSelected} disabled={pending} onChange={(event) => onChange({ ...draft, maxSelected: Number(event.target.value) })} />
+      </label>
     </div>
   );
 }

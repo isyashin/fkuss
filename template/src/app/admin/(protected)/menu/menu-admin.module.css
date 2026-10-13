@@ -55,6 +55,27 @@
 .menuDelete { justify-self: start; margin: 16px 0 0 -9px; }
 .menuDetailInner { }
 
+/* Модификаторы блюда в редакторе */
+.modifiers { display: grid; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--admin-line); }
+.modifiersHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.modifiersHead h3 { margin: 0; font-size: 15px; font-weight: 650; color: var(--admin-text); }
+.modifierGroup { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid var(--admin-line); border-radius: 8px; background: var(--admin-surface); }
+.modifierGroupHead { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.modifierGroupHead strong { min-width: 0; overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; color: var(--admin-text); }
+.modifierGroupHead .categoryActions { margin-left: auto; padding-right: 0; }
+.modifierBadges { display: flex; flex: none; gap: 6px; }
+.modifierRow { display: grid; grid-template-columns: minmax(0, 1fr) auto 44px; align-items: center; gap: 8px; min-height: 44px; border-top: 1px solid var(--admin-line); }
+.modifierName { min-width: 0; overflow: hidden; font-size: 13.5px; text-overflow: ellipsis; white-space: nowrap; color: var(--admin-text); }
+.modifierPrice { font-size: 13px; font-weight: 620; white-space: nowrap; color: var(--admin-muted); }
+.modifierRow .categoryDelete { display: grid; place-items: center; min-width: 44px; height: 44px; padding: 0 6px; border: 0; background: transparent; color: #77847a; font: inherit; cursor: pointer; }
+.modifierRow .categoryDelete:hover:not(:disabled) { color: #b3261e; }
+.modifierRow .categoryDelete:disabled { opacity: .35; cursor: default; }
+.modifierAddRow { display: grid; grid-template-columns: minmax(0, 1fr) 110px auto; align-items: end; gap: 8px; padding-top: 8px; border-top: 1px solid var(--admin-line); }
+.modifierAddRow button { min-height: 44px; }
+.modifierLimits { display: grid; gap: 14px; margin-top: 14px; }
+.modifierRequired { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13.5px; color: var(--admin-text); cursor: pointer; }
+.modifierRequired input { width: 18px; height: 18px; accent-color: var(--admin-accent); }
+
 @media (max-width: 970px) {
   .menuLayout { grid-template-columns: minmax(300px, 350px) minmax(0, 1fr); }
   .menuSavebar { margin-inline: -29px; padding-inline: 29px; }
@@ -73,4 +94,5 @@
   .menuSavebar > div button { flex: 1; }
   .menuDetailInner { padding-bottom: 150px; }
   .menuPriceRow { grid-template-columns: 1fr; }
+  .modifierAddRow { grid-template-columns: 1fr; }
 }

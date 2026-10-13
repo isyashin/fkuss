@@ -76,11 +76,11 @@ describe("shop sw — GET API витрины: network-first (офлайн — п
   });
 });
 
-describe("shop sw — документы и статика: stale-while-revalidate", () => {
-  it("навигация по страницам витрины — swr", () => {
-    expect(decide(`${ORIGIN}/`, { mode: "navigate" })).toBe("swr");
-    expect(decide(`${ORIGIN}/delivery`, { mode: "navigate" })).toBe("swr");
-    expect(decide(`${ORIGIN}/?promo=1`, { mode: "navigate" })).toBe("swr");
+describe("shop sw — документы: network-first, статика: stale-while-revalidate", () => {
+  it("навигация по страницам витрины — network-first (свежий HTML после правок в админке)", () => {
+    expect(decide(`${ORIGIN}/`, { mode: "navigate" })).toBe("network-first");
+    expect(decide(`${ORIGIN}/delivery`, { mode: "navigate" })).toBe("network-first");
+    expect(decide(`${ORIGIN}/?promo=1`, { mode: "navigate" })).toBe("network-first");
   });
 
   it("статика — swr независимо от mode", () => {

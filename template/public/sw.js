@@ -1,9 +1,9 @@
 /* Service worker витрины (scope /, issue #52).
-   Документы и статика — stale-while-revalidate; GET API витрины —
-   network-first (офлайн — последний сохранённый ответ); документ без сети
-   и без кэша — заглушка /offline.html. POST/заказы/оплата/админка — только
-   сеть, кэш запрещён. Правила выбора стратегии — в sw-strategy.js
-   (юнит-тесты: tests/shop-sw.test.ts). */
+   Документы и GET API витрины — network-first (онлайн всегда свежий ответ,
+   офлайн — последний сохранённый); хешированная статика —
+   stale-while-revalidate; документ без сети и без кэша — заглушка
+   /offline.html. POST/заказы/оплата/админка — только сеть, кэш запрещён.
+   Правила выбора стратегии — в sw-strategy.js (юнит-тесты: tests/shop-sw.test.ts). */
 importScripts("/sw-strategy.js");
 
 var STRATEGY = self.ShopSwStrategy;
@@ -62,13 +62,14 @@ async function swrResponse(request) {
   return response || offlineFallback(request);
 }
 
-/* Network-first: свежесть важнее скорости; офлайн — последний кэш. */
+/* Network-first: свежесть важнее скорости; офлайн — последний кэш,
+   для документа без кэша — заглушка /offline.html. */
 async function networkFirstResponse(request) {
   try {
     return await fetchAndCache(request, STRATEGY.PAGE_CACHE);
   } catch {
     var cached = await caches.match(request);
-    return cached || Response.error();
+    return cached || offlineFallback(request);
   }
 }
 

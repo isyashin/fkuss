@@ -5,8 +5,8 @@
   "use strict";
 
   /* Версия кэша: бамп при правке стратегий/прекэша — на activate
-     старые кэши удаляются. */
-  var VERSION = "v1";
+     старые кэши удаляются. v2: документы перешли с swr на network-first. */
+  var VERSION = "v2";
   var STATIC_CACHE = "fkuss-shop-static-" + VERSION;
   var PAGE_CACHE = "fkuss-shop-pages-" + VERSION;
 
@@ -50,8 +50,12 @@
    * Стратегия обработки запроса витрины:
    *  "pass-through"  — чужой origin / не http(s) — SW не вмешивается;
    *  "network-only"  — только сеть, кэш запрещён (POST, заказы, админка);
-   *  "network-first" — сеть, при сбое — последний кэш (GET API витрины);
-   *  "swr"           — кэш сразу + фоновое обновление (документы, статика).
+   *  "network-first" — свежий ответ онлайн, офлайн — последний кэш
+   *                    (GET API витрины И документы: HTML не отдаём
+   *                    устаревшим, иначе витрина «замораживается» после
+   *                    правок в админке до протухания кэша);
+   *  "swr"           — кэш сразу + фоновое обновление (только хешированная
+   *                    статика: чанки, шрифты, оптимизированные фото).
    */
   function decideStrategy(input, origin) {
     var url;
@@ -67,7 +71,7 @@
     var pathname = url.pathname;
     if (startsWithAny(pathname, NETWORK_FIRST_PREFIXES)) return "network-first";
     if (startsWithAny(pathname, NETWORK_ONLY_PREFIXES)) return "network-only";
-    if (input.mode === "navigate") return "swr";
+    if (input.mode === "navigate") return "network-first";
     if (startsWithAny(pathname, STATIC_PREFIXES)) return "swr";
     return "pass-through";
   }

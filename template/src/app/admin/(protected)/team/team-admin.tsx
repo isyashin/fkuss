@@ -30,10 +30,11 @@ function TeamRow({ user }: { user: TeamUser }) {
     setRevokeError("");
     startTransition(async () => {
       try {
-        await revokePushDevice(subscriptionId);
+        const result = await revokePushDevice(subscriptionId);
+        if (!result.ok) { setRevokeError(result.error); return; }
         router.refresh();
-      } catch (cause) {
-        setRevokeError(cause instanceof Error ? cause.message : "Не удалось отключить устройство");
+      } catch {
+        setRevokeError("Не удалось отключить устройство");
       }
     });
   };
@@ -42,9 +43,10 @@ function TeamRow({ user }: { user: TeamUser }) {
     setError(""); setSaved(false);
     startTransition(async () => {
       try {
-        await changeTeamUser(user.id, { name, role, active, ...(password ? { password } : {}) });
+        const result = await changeTeamUser(user.id, { name, role, active, ...(password ? { password } : {}) });
+        if (!result.ok) { setError(result.error); return; }
         setPassword(""); setSaved(true); router.refresh();
-      } catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось сохранить сотрудника"); }
+      } catch { setError("Не удалось сохранить сотрудника"); }
     });
   };
   return <form className={styles.row} onSubmit={save}>
@@ -86,9 +88,10 @@ export function TeamAdmin({ users }: { users: TeamUser[] }) {
     event.preventDefault(); setError("");
     startTransition(async () => {
       try {
-        await createTeamUser({ login, name, role, password });
+        const result = await createTeamUser({ login, name, role, password });
+        if (!result.ok) { setError(result.error); return; }
         setLogin(""); setName(""); setPassword(""); setRole("staff"); router.refresh();
-      } catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось добавить сотрудника"); }
+      } catch { setError("Не удалось добавить сотрудника"); }
     });
   };
   return <div className={styles.page}>

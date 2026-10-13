@@ -53,6 +53,35 @@ test("истёкшая сессия: ?next= возвращает в нужный
   await expect(page).toHaveURL(/\/admin\/bookings/);
 });
 
+test("/admin/orders без сессии редиректит на логин, а не 404", async ({ page }) => {
+  await page.goto("/admin/orders");
+  await expect(page).toHaveURL(/\/admin\/login\?next=%2Fadmin%2Forders$/);
+});
+
+test("/admin/orders для вошедшего ведёт на дашборд заказов", async ({ page }) => {
+  await page.goto("/admin/login");
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
+
+  await gotoAdmin(page, "/admin/orders");
+  await expect(page).toHaveURL(/\/admin(\?.*)?$/);
+  await expect(page.getByRole("region", { name: "Список заказов" })).toBeVisible();
+});
+
+test("карточка заказа открывается по /admin/orders/{id} без 404", async ({ page, request }) => {
+  test.skip(!process.env.DATABASE_URL, "нужен DATABASE_URL тестовой БД");
+  const order = await createPickupOrder(request);
+
+  await page.goto("/admin/login");
+  await loginAdminUi(page);
+  await expect(page).toHaveURL(/\/admin$/);
+
+  await gotoAdmin(page, `/admin/orders/${order.id}`);
+  await expect(page).toHaveURL(new RegExp(`\\/admin\\?selected=${order.id}$`));
+  const detail = page.getByRole("region", { name: "Детали заказа" });
+  await expect(detail).toContainText(new RegExp(`Заказ №\\s*${order.number}`), { timeout: 20_000 });
+});
+
 test("вход с внешним next отклоняется — после входа корень админки", async ({ page }) => {
   await page.goto("/admin/login?next=https%3A%2F%2Fevil.example%2Fadmin");
   await loginAdminUi(page);

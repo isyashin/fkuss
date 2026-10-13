@@ -7,3 +7,15 @@ export function formatAdminDate(date: Date, timeZone: string): string {
   const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
   return `${part("day")}.${part("month")}.${part("year")}, ${part("hour")}:${part("minute")}`;
 }
+
+/** Время заказа в TZ ресторана (список заказов). Некорректная TZ —
+    как в nowInTimeZone — откатывается к Europe/Moscow. */
+export function formatAdminTime(date: Date, timeZone: string): string {
+  let tz = timeZone;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+  } catch {
+    tz = "Europe/Moscow";
+  }
+  return new Intl.DateTimeFormat("ru-RU", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(date);
+}

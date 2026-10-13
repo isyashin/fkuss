@@ -45,7 +45,9 @@
 .menuSavebar {
   position: sticky; bottom: 0; z-index: 2;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  margin: 26px calc(-1 * clamp(32px, 5vw, 72px)) -90px;
+  /* #50: нижний отступ должен оставаться 0, иначе «Удалить блюдо» заезжает
+     под панель и она перехватывает клики (z-index 2). */
+  margin: 26px calc(-1 * clamp(32px, 5vw, 72px)) 0;
   padding: 13px clamp(32px, 5vw, 72px);
   border-top: 1px solid var(--admin-line);
   background: #fffffff2;

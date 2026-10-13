@@ -34,6 +34,7 @@
   "pricing": { "globalMode": "yandex", "globalPercent": 0 },
   "sync": { "enabled": false, "placeSlug": "", "intervalMinutes": 60 },
   "booking": { "enabled": true, "slotMinutes": 30, "maxGuestsPerSlot": 20, "minHoursAhead": 2 },
+  "preOrder": { "enabled": false, "slots": [], "daysAhead": 1, "minAheadMinutes": 30 },
   "captcha": { "provider": "none" },
   "timezone": "Europe/Moscow"
 }

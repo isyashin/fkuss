@@ -70,6 +70,15 @@ export function CartSheet({
   const [deliveryDate, setDeliveryDate] = useState("");
   const [slotStart, setSlotStart] = useState("");
 
+  // Предзаказ ко времени из настроек (самовывоз / доставка без вариантов)
+  const [preOrder, setPreOrder] = useState<{ enabled: boolean; slots: { date: string; time: string }[] }>({
+    enabled: false,
+    slots: [],
+  });
+  const [preOrderMode, setPreOrderMode] = useState<"asap" | "scheduled">("asap");
+  const [preOrderDate, setPreOrderDate] = useState("");
+  const [preOrderTime, setPreOrderTime] = useState("");
+
   useEffect(() => {
     fetch("/api/delivery/slots")
       .then((r) => r.json())
@@ -78,6 +87,7 @@ export function CartSheet({
         setOptions(opts);
         // F03: выбираем первый доступный — недоступные варианты не предлагаем.
         setDeliveryOptionId(opts.find((o: { available?: boolean }) => o.available)?.id ?? "");
+        setPreOrder(data.preOrder ?? { enabled: false, slots: [] });
       })
       .catch(() => {});
   }, []);
@@ -236,6 +246,24 @@ export function CartSheet({
     : [];
   const optionSlots = selectedOption?.windows.filter((w) => w.date === deliveryDate) ?? [];
 
+  // Предзаказ: самовывоз всегда, доставка — только без настроенных вариантов
+  // (варианты со scheduled-режимом уже дают выбор времени доставки)
+  const preOrderApplicable =
+    preOrder.enabled && preOrder.slots.length > 0 && (type === "pickup" || options.length === 0);
+  // Сброс выбора, когда предзаказ перестал применяться (варианты доставки подгрузились)
+  const [prevPreOrderApplicable, setPrevPreOrderApplicable] = useState(false);
+  if (preOrderApplicable !== prevPreOrderApplicable) {
+    setPrevPreOrderApplicable(preOrderApplicable);
+    if (!preOrderApplicable && preOrderMode !== "asap") {
+      setPreOrderMode("asap");
+      setPreOrderDate("");
+      setPreOrderTime("");
+    }
+  }
+  const preOrderSelected = preOrderApplicable && preOrderMode === "scheduled";
+  const preOrderDates = [...new Set(preOrder.slots.map((s) => s.date))];
+  const preOrderTimes = preOrder.slots.filter((s) => s.date === preOrderDate);
+
   async function submit() {
     setError("");
     setSubmitting(true);
@@ -271,6 +299,8 @@ export function CartSheet({
             ? optionSlots.find((s) => s.start === slotStart)?.end ?? null
             : null,
           deliveryOptionId: selectedOption?.id ?? null,
+          preOrderDate: preOrderSelected ? preOrderDate : null,
+          preOrderTime: preOrderSelected ? preOrderTime : null,
         }),
       });
       const data = await response.json();
@@ -554,6 +584,70 @@ export function CartSheet({
               </>
             )}
 
+            {preOrderApplicable && (
+              <fieldset className="space-y-1">
+                <legend className="text-sm text-muted mb-1">
+                  Время {type === "delivery" ? "доставки" : "самовывоза"}
+                </legend>
+                <label className="flex items-center gap-2 min-h-11 text-sm">
+                  <input
+                    type="radio"
+                    name="preorder-mode"
+                    checked={preOrderMode === "asap"}
+                    onChange={() => setPreOrderMode("asap")}
+                  />
+                  Как можно скорее
+                </label>
+                <label className="flex items-center gap-2 min-h-11 text-sm">
+                  <input
+                    type="radio"
+                    name="preorder-mode"
+                    checked={preOrderMode === "scheduled"}
+                    onChange={() => setPreOrderMode("scheduled")}
+                  />
+                  Предзаказ ко времени
+                </label>
+                {preOrderMode === "scheduled" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block">
+                      <span className="text-sm text-muted">Дата</span>
+                      <select
+                        value={preOrderDate}
+                        onChange={(e) => {
+                          setPreOrderDate(e.target.value);
+                          setPreOrderTime("");
+                        }}
+                        className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+                      >
+                        <option value="">Выберите</option>
+                        {preOrderDates.map((d) => (
+                          <option key={d} value={d}>
+                            {new Date(`${d}T12:00:00`).toLocaleDateString("ru-RU", { day: "numeric", month: "short", weekday: "short" })}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-sm text-muted">Время</span>
+                      <select
+                        value={preOrderTime}
+                        onChange={(e) => setPreOrderTime(e.target.value)}
+                        disabled={!preOrderDate}
+                        className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+                      >
+                        <option value="">{preOrderDate ? "Выберите" : "Сначала дата"}</option>
+                        {preOrderTimes.map((s) => (
+                          <option key={s.time} value={s.time}>
+                            {s.time}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
+              </fieldset>
+            )}
+
             <label className="block">
               <span className="text-sm text-muted">Имя</span>
               <input
@@ -696,7 +790,8 @@ export function CartSheet({
                   (type === "delivery" && !form.address) ||
                   (type === "delivery" && geoActive && !geoResolved) ||
                   (type === "delivery" && noDeliveryAvailable) ||
-                  (type === "delivery" && selectedOption?.mode === "scheduled" && (!deliveryDate || !slotStart))
+                  (type === "delivery" && selectedOption?.mode === "scheduled" && (!deliveryDate || !slotStart)) ||
+                  (preOrderSelected && (!preOrderDate || !preOrderTime))
                 }
                 className="flex-1 min-h-12 rounded-full bg-accent text-white font-medium text-lg disabled:opacity-50"
               >

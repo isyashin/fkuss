@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/db";
 import { generateWindows, isOptionAvailableOn, type DeliveryOptionRule } from "@/lib/delivery/slots";
+import { generatePreOrderSlots, normalizePreOrder } from "@/lib/order/preorder";
 import { getSiteSettings } from "@/lib/site";
 
 const DEFAULT_TZ = "Europe/Moscow";
@@ -36,5 +37,10 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ options: result, tz });
+  return NextResponse.json({
+    options: result,
+    // Предзаказ ко времени (самовывоз / доставка без вариантов)
+    preOrder: { enabled: normalizePreOrder(settings.preOrder).enabled, slots: generatePreOrderSlots(settings.preOrder, now, tz) },
+    tz,
+  });
 }

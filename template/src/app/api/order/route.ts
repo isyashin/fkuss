@@ -11,6 +11,7 @@ import { getSiteSettings } from "@/lib/site";
 import { getPaymentProvider } from "@/lib/payments";
 import type { PaymentProvider } from "@/lib/payments/types";
 import { preferredChannelInputSchema } from "@/lib/guest-contact";
+import { formatPreOrderSlot, isValidPreOrderSlot } from "@/lib/order/preorder";
 
 const orderSchema = z.object({
   items: z
@@ -39,6 +40,9 @@ const orderSchema = z.object({
   deliverySlotStart: z.string().regex(/^\d{2}:\d{2}$/).nullable().default(null),
   deliverySlotEnd: z.string().regex(/^\d{2}:\d{2}$/).nullable().default(null),
   deliveryOptionId: z.string().nullable().default(null),
+  // Предзаказ ко времени (самовывоз / доставка без вариантов)
+  preOrderDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+  preOrderTime: z.string().regex(/^\d{2}:\d{2}$/).nullable().default(null),
   // honeypot: у людей пустое
   website: z.string().max(0).optional(),
 });
@@ -264,6 +268,21 @@ export async function POST(request: Request) {
       }
       desiredTimeText = `${input.deliveryDate} ${input.deliverySlotStart}–${input.deliverySlotEnd}`;
     }
+  }
+
+  // Предзаказ ко времени: применяется к самовывозу и к доставке без вариантов.
+  // Слот валидируется сервером по настройкам: только разрешённые, не прошедшие.
+  if (input.preOrderDate !== null || input.preOrderTime !== null) {
+    const preOrderApplies = input.type === "pickup" || configuredOptions.length === 0;
+    if (
+      !preOrderApplies ||
+      input.preOrderDate === null ||
+      input.preOrderTime === null ||
+      !isValidPreOrderSlot(settings.preOrder, input.preOrderDate, input.preOrderTime, now, tz)
+    ) {
+      return NextResponse.json({ error: "Выбранное время предзаказа недоступно" }, { status: 400 });
+    }
+    desiredTimeText = formatPreOrderSlot(input.preOrderDate, input.preOrderTime, now, tz);
   }
 
   // Зоны на карте (geo-режим): сервер сам геокодирует адрес и определяет зону.

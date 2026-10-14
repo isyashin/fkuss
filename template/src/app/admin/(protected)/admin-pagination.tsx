@@ -1,16 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ADMIN_PAGE_SIZE, adminListHref, type BookingListQuery, type OrderListQuery } from "@/lib/admin-list-query";
+import { adminListHref, type BookingListQuery, type OrderListQuery } from "@/lib/admin-list-query";
 import styles from "./admin-ui.module.css";
 
-export function AdminPagination({ base, query, page, pageCount, total }: { base: "/admin" | "/admin/bookings"; query: OrderListQuery | BookingListQuery; page: number; pageCount: number; total: number }) {
-  const start = total === 0 ? 0 : (page - 1) * ADMIN_PAGE_SIZE + 1;
-  const end = Math.min(total, page * ADMIN_PAGE_SIZE);
+export function AdminPagination({ base, query, page, pageCount }: { base: "/admin" | "/admin/bookings"; query: OrderListQuery | BookingListQuery; page: number; pageCount: number }) {
   const href = (target: number) => adminListHref(base, { ...query, page: target });
 
   return <div className={styles.pagination}>
-    <span className={styles.muted}>Показано {start}–{end} из {total}</span>
     <nav aria-label="Страницы списка" className={styles.pageLinks}>
       {page > 1 ? <Link href={href(page - 1)} prefetch={false}>← Назад</Link> : <span aria-disabled="true">← Назад</span>}
       <span>Страница {page} из {pageCount}</span>

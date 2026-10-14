@@ -117,7 +117,7 @@ export function BookingsDashboard({ bookings, counts, query, page, pageCount, gu
           </div>
         </div>;
       }) : <p className={styles.empty}>Броней по этим условиям нет.</p>}</div>
-      <AdminPagination base="/admin/bookings" query={query} page={page} pageCount={pageCount} total={query.mode === "history" ? counts.history : query.mode === "new" ? counts.pending : counts.upcoming}/>
+      <AdminPagination base="/admin/bookings" query={query} page={page} pageCount={pageCount}/>
     </section>
     <section className={styles.detailPanel} aria-label="Детали брони">
       {selected ? <BookingCard key={selected.id} booking={selected} guestContact={guestContact} timeZone={timeZone} when={bookingWhen(selected)} onBack={closeDetail}/>

@@ -189,8 +189,8 @@
   .mobileDetail .ordersPanel { display: none; }
   .mobileDetail .detailPanel { display: block; }
   .mobileDetail[data-order-detail-open] .detailPanel { position: fixed; inset: 0; z-index: 30; overflow-y: auto; overscroll-behavior: contain; background: var(--admin-surface); }
-  .orderDetailBar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 7px; min-height: 62px; padding: 0 16px; border-bottom: 1px solid var(--admin-line); background: var(--admin-surface); }
-  .orderDetailBar .backButton { display: grid; place-items: center; width: 44px; height: 44px; flex: none; margin: 0; padding: 0; border: 0; background: transparent; color: var(--admin-accent); font: inherit; font-size: 28px; font-weight: 500; line-height: 1; cursor: pointer; }
+  .orderDetailBar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 7px; min-height: 62px; padding: 0; border-bottom: 1px solid var(--admin-line); background: var(--admin-surface); }
+  .orderDetailBar .backButton { display: grid; place-items: center start; width: 44px; height: 44px; flex: none; margin: 0; padding: 0; border: 0; background: transparent; color: var(--admin-accent); font: inherit; font-size: 28px; font-weight: 500; line-height: 1; cursor: pointer; }
   .orderDetailBar strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 680; color: var(--admin-text); }
   /* Кнопка возврата броней/меню — только прямой потомок детали
      (у заказа своя стрелка внутри .orderDetailBar, она не должна перекрываться) */

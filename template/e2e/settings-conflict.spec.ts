@@ -5,7 +5,7 @@ import { loginAdminUi } from "./login-admin";
 // «Обновить» загружает свежие значения и сохраняет обе правки,
 // «Перезаписать» явно затирает чужую правку.
 
-const SECTION = "/admin/settings?section=payment";
+const SECTION = "/admin/settings?section=loyalty";
 
 // router.refresh() админки прерывает goto — повторяем переход.
 // НЕ ждём networkidle: админка постоянно опрашивает /api/admin/events.
@@ -60,7 +60,7 @@ async function waitForServerPair(page: Page, expected: { cashback: number; maxSp
 async function waitSaved(page: Page) {
   await expect(
     page
-      .locator('section[aria-label="Оплата и бонусы"], section[aria-label="Параметры бронирования"]')
+      .locator('section[aria-label="Бонусы и лояльность"], section[aria-label="Параметры бронирования"]')
       .locator("span[role='status']"),
   ).toHaveText("Сохранено", { timeout: 15000 });
 }

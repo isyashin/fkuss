@@ -8,11 +8,10 @@ import type { ThemeConfig } from "@/lib/content";
 import rd from "../../admin-redesign.module.css";
 import styles from "../settings-redesign.module.css";
 
-/** Оплата и бонусы: провайдер оплаты + программа лояльности. */
-export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSettings; theme: ThemeConfig }) {
+/** Оплата: только провайдер онлайн-оплаты (бонусы — отдельная секция «Гости»). */
+export function PaymentEditor({ settings }: { settings: ContentSettings }) {
   const [payment, setPayment] = useState(settings.payment);
-  const [loyalty, setLoyalty] = useState(settings.loyalty);
-  const [saved, setSaved] = useState({ payment: settings.payment, loyalty: settings.loyalty });
+  const [saved, setSaved] = useState(settings.payment);
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
   const { save: saveWithRev, control: revControl, errorMessage } = useSettingsSave();
@@ -20,20 +19,19 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
   const settingsEpoch = useSettingsEpoch();
   useResetSettingsOnEpoch(settingsEpoch, () => {
     setPayment(settings.payment);
-    setLoyalty(settings.loyalty);
-    setSaved({ payment: settings.payment, loyalty: settings.loyalty });
+    setSaved(settings.payment);
     setStatus(null);
   });
-  const dirty = JSON.stringify(payment) !== JSON.stringify(saved.payment) || JSON.stringify(loyalty) !== JSON.stringify(saved.loyalty);
+  const dirty = JSON.stringify(payment) !== JSON.stringify(saved);
 
   function save() {
     startTransition(async () => {
       setStatus(null);
       try {
-        const next: ContentSettings = { ...settings, payment, loyalty };
+        const next: ContentSettings = { ...settings, payment };
         const revResult = await saveWithRev(next);
         if (revResult !== "ok") { if (revResult === "error") throw new Error(errorMessage ?? "Не удалось сохранить"); return; }
-        setSaved({ payment, loyalty });
+        setSaved(payment);
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
         setStatus({ text: cause instanceof Error ? cause.message : "Не удалось сохранить", error: true });
@@ -41,9 +39,9 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
     });
   }
 
-  return <section className={styles.editorCard} aria-label="Оплата и бонусы">
-    <h2 className={styles.editorTitle}>Оплата и бонусы</h2>
-    <p className={styles.editorHint}>Онлайн-оплата и программа лояльности гостей.</p>
+  return <section className={styles.editorCard} aria-label="Оплата">
+    <h2 className={styles.editorTitle}>Оплата</h2>
+    <p className={styles.editorHint}>Онлайн-оплата заказов на сайте.</p>
     <div className={styles.formGrid}>
       <label className={rd.field}><span>Онлайн-оплата заказов</span>
         <select className={rd.input} value={payment.provider} onChange={(e) => setPayment({ ...payment, provider: e.target.value as typeof payment.provider })}>
@@ -52,7 +50,51 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
           <option value="yookassa">ЮKassa</option>
         </select>
       </label>
-      <span />
+    </div>
+    <p className={styles.note}>Ключи провайдера хранятся в настройках среды сайта.</p>
+    <div className={styles.saveBar} data-dirty={dirty || undefined}>
+      <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !dirty} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
+      {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
+    </div>
+    {status && !dirty && <p className={rd.saved} role="status">{status.text}</p>}
+  {revControl}</section>;
+}
+
+/** Бонусы и лояльность: программа лояльности гостей (секция «Гости»). */
+export function LoyaltyEditor({ settings }: { settings: ContentSettings }) {
+  const [loyalty, setLoyalty] = useState(settings.loyalty);
+  const [saved, setSaved] = useState(settings.loyalty);
+  const [pending, startTransition] = useTransition();
+  const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
+  const { save: saveWithRev, control: revControl, errorMessage } = useSettingsSave();
+  // P1-2: после «Обновить» берём свежие данные, свою правку применяем повторно.
+  const settingsEpoch = useSettingsEpoch();
+  useResetSettingsOnEpoch(settingsEpoch, () => {
+    setLoyalty(settings.loyalty);
+    setSaved(settings.loyalty);
+    setStatus(null);
+  });
+  const dirty = JSON.stringify(loyalty) !== JSON.stringify(saved);
+
+  function save() {
+    startTransition(async () => {
+      setStatus(null);
+      try {
+        const next: ContentSettings = { ...settings, loyalty };
+        const revResult = await saveWithRev(next);
+        if (revResult !== "ok") { if (revResult === "error") throw new Error(errorMessage ?? "Не удалось сохранить"); return; }
+        setSaved(loyalty);
+        setStatus({ text: "Сохранено", error: false });
+      } catch (cause) {
+        setStatus({ text: cause instanceof Error ? cause.message : "Не удалось сохранить", error: true });
+      }
+    });
+  }
+
+  return <section className={styles.editorCard} aria-label="Бонусы и лояльность">
+    <h2 className={styles.editorTitle}>Бонусы и лояльность</h2>
+    <p className={styles.editorHint}>Программа лояльности гостей: начисление и списание бонусов.</p>
+    <div className={styles.formGrid}>
       <label className={rd.field}><span>Кэшбэк, %</span>
         <input className={rd.input} type="number" min={0} max={100} value={loyalty.cashbackPercent} onChange={(e) => setLoyalty({ ...loyalty, cashbackPercent: Number(e.target.value) })} />
       </label>
@@ -60,7 +102,6 @@ export function PaymentLoyaltyEditor({ settings, theme }: { settings: ContentSet
         <input className={rd.input} type="number" min={0} max={100} value={loyalty.maxSpendPercent} onChange={(e) => setLoyalty({ ...loyalty, maxSpendPercent: Number(e.target.value) })} />
       </label>
     </div>
-    <p className={styles.note}>Ключи провайдера хранятся в настройках среды сайта.</p>
     <div className={styles.saveBar} data-dirty={dirty || undefined}>
       <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !dirty} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}

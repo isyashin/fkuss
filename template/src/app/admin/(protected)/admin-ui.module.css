@@ -11,11 +11,11 @@
 
 /* Режимы очереди — вкладки прототипа */
 .filters { display: flex; gap: 4px; padding: 0 16px; border-bottom: 1px solid var(--admin-line); overflow-x: auto; scrollbar-width: none; }
-.filters a { position: relative; flex: none; min-height: 48px; display: inline-flex; align-items: center; gap: 5px; padding: 0 11px; border: 0; color: #68766b; text-decoration: none; font-size: 12.5px; font-weight: 560; white-space: nowrap; }
+.filters a { position: relative; flex: none; min-height: 48px; display: inline-flex; align-items: center; gap: 5px; padding: 0 11px; border: 0; color: var(--admin-muted); text-decoration: none; font-size: 12.5px; font-weight: 560; white-space: nowrap; }
 .filters a:hover { color: var(--admin-text); }
 .filters a[aria-current="page"] { color: var(--admin-text); font-weight: 700; }
 .filters a[aria-current="page"]::after { content: ""; position: absolute; right: 9px; bottom: -1px; left: 9px; height: 2px; background: var(--admin-accent); }
-.filters .count { color: #88928a; font-size: 11px; font-weight: 500; }
+.filters .count { color: var(--admin-muted); font-size: 11px; font-weight: 500; }
 
 /* Поиск + тип: queue-tools */
 .queueTools { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 8px; padding: 19px 27px 16px; }
@@ -28,16 +28,16 @@
 .queueToolsSingle { grid-template-columns: minmax(0, 1fr) auto; }
 .queueToolsSingle .searchReset { grid-column: 1 / -1; }
 .searchButton { min-width: 0; min-height: 44px; padding: 0 15px; border: 1px solid var(--rd-btn-line, #cbd1ca); border-radius: 6px; background: var(--admin-surface); color: var(--rd-btn-text, #344039); cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 650; }
-.searchButton:hover { border-color: #89978c; background: #f7f9f6; }
+.searchButton:hover { border-color: var(--rd-field-line-hover); background: var(--admin-surface-2); }
 
 /* Разделители дней в хронологических списках (брони) */
-.dayDivider { margin: 0; padding: 17px 27px 8px; color: #77847a; font-size: 11px; font-weight: 700; letter-spacing: .045em; text-transform: uppercase; }
+.dayDivider { margin: 0; padding: 17px 27px 8px; color: var(--admin-muted); font-size: 11px; font-weight: 700; letter-spacing: .045em; text-transform: uppercase; }
 .bookingRow { min-height: 88px; }
 
 /* Строки очереди — «тихие», без карточек */
 .list { padding-bottom: 24px; }
 .orderPreview { position: relative; width: 100%; min-height: 103px; display: grid; gap: 6px; padding: 18px 27px 18px 24px; border: 0; border-bottom: 1px solid var(--admin-line); border-left: 3px solid transparent; background: transparent; color: var(--admin-text); text-align: left; font: inherit; cursor: pointer; }
-.orderPreview:hover { background: #eef1ec; }
+.orderPreview:hover { background: var(--admin-surface-2); }
 .orderPreview.selectedPreview { border-left-color: var(--admin-accent); background: var(--admin-surface); }
 .orderLead, .orderGuest, .orderSummary { display: contents; }
 .rowTop, .rowBottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
@@ -45,7 +45,7 @@
 .rowTop time { margin-left: 6px; color: var(--admin-muted); font-size: 12px; font-weight: 450; }
 .rowPerson { overflow: hidden; font-size: 14px; font-weight: 590; text-overflow: ellipsis; white-space: nowrap; color: var(--admin-text); }
 .rowBottom span { min-width: 0; overflow: hidden; color: var(--admin-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.rowBottom b { flex: none; color: #3a463d; font-size: 13px; font-weight: 650; white-space: nowrap; }
+.rowBottom b { flex: none; color: var(--admin-text); font-size: 13px; font-weight: 650; white-space: nowrap; }
 .orderOpen { position: absolute; inset: 0; border: 0; border-radius: 0; background: transparent; cursor: pointer; }
 .orderOpen:focus-visible { outline: 2px solid var(--admin-accent); outline-offset: -2px; }
 .orderType, .deliveryType, .pickupType { display: none; }
@@ -77,45 +77,45 @@
 .detailSection:last-child { border-bottom: 0; }
 .sectionTitle { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 18px; }
 .sectionTitle h3 { margin: 0; font-size: 15px; font-weight: 680; letter-spacing: -.015em; color: var(--admin-text); }
-.textButton { min-height: 44px; padding: 0 9px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #617065; font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.textButton { min-height: 44px; padding: 0 9px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--admin-muted); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
 .textButton:hover { background: var(--rd-bg, #f7f8f5); color: var(--admin-text); }
 .textButton.danger { color: var(--admin-danger, #a3473b); }
 
 .contactName { margin: 0 0 11px; font-size: 19px; font-weight: 610; letter-spacing: -.025em; color: var(--admin-text); overflow-wrap: anywhere; min-width: 0; }
 .contactDetails { min-width: 0; }
 .contactActions { display: flex; flex-wrap: wrap; gap: 8px; }
-.contactDetails > a.contactPhone, .contactActions a, .contactLinks a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 13px; border: 1px solid var(--admin-line); border-radius: 6px; color: #39493d; text-decoration: none; font-size: 12.5px; font-weight: 600; background: var(--admin-surface); }
+.contactDetails > a.contactPhone, .contactActions a, .contactLinks a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 13px; border: 1px solid var(--admin-line); border-radius: 6px; color: var(--admin-text); text-decoration: none; font-size: 12.5px; font-weight: 600; background: var(--admin-surface); }
 .contactDetails > a.contactPhone:hover, .contactActions a:hover, .contactLinks a:hover { background: var(--rd-bg, #f7f8f5); }
 .contactLinks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .contactPhone { overflow-wrap: anywhere; }
 .contactDetails small { display: block; margin-top: 8px; color: var(--admin-muted); font-size: 11.5px; }
-.contactIcon { position: relative; z-index: 2; flex: 0 0 44px; width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--admin-line); border-radius: 6px; background: var(--admin-surface); color: #39493d; font-size: 11px; font-weight: 700; text-decoration: none; }
+.contactIcon { position: relative; z-index: 2; flex: 0 0 44px; width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--admin-line); border-radius: 6px; background: var(--admin-surface); color: var(--admin-text); font-size: 11px; font-weight: 700; text-decoration: none; }
 .contactIcon:hover { background: var(--rd-bg, #f7f8f5); }
 
 .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 19px 24px; }
 .fact { min-width: 0; display: grid; align-content: start; gap: 5px; }
-.fact > span { color: #7b887c; font-size: 11.5px; }
+.fact > span { color: var(--admin-muted); font-size: 11.5px; }
 .fact strong, .fact > div { overflow-wrap: anywhere; font-size: 13.5px; line-height: 1.45; font-weight: 590; color: var(--admin-text); }
 .orderInfo { display: contents; }
 .orderInfo > div { display: grid; align-content: start; gap: 5px; }
-.orderInfo > div > span { color: #7b887c; font-size: 11.5px; }
+.orderInfo > div > span { color: var(--admin-muted); font-size: 11.5px; }
 .orderInfo strong { overflow-wrap: anywhere; font-size: 13.5px; line-height: 1.45; font-weight: 590; color: var(--admin-text); }
 
 .note { margin: 17px 0 0; padding: 13px 15px; border-left: 2px solid var(--rd-note-line, #d5aa76); background: var(--rd-note-bg, #fbf8f2); color: var(--rd-note-text, #594e3e); font-size: 12.5px; line-height: 1.5; }
 
 /* Состав заказа */
-.itemRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 18px; padding: 13px 0; border-bottom: 1px solid #edf0eb; font-size: 13px; }
+.itemRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 18px; padding: 13px 0; border-bottom: 1px solid var(--admin-line); font-size: 13px; }
 .itemRow:last-child { border-bottom: 0; }
 .itemRow strong { font-weight: 590; color: var(--admin-text); }
 .itemRow small { grid-column: 1; color: var(--admin-muted); font-size: 11.5px; }
 .itemRow b { grid-column: 2; grid-row: 1 / 3; align-self: center; font-weight: 650; white-space: nowrap; color: var(--admin-text); }
 .lineItems { display: grid; }
-.lineItem { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 18px; padding: 13px 0; border-bottom: 1px solid #edf0eb; font-size: 13px; }
+.lineItem { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 18px; padding: 13px 0; border-bottom: 1px solid var(--admin-line); font-size: 13px; }
 .lineItem:last-child { border-bottom: 0; }
 .lineItem > strong { font-weight: 590; color: var(--admin-text); }
 .lineItem > small { grid-column: 1; color: var(--admin-muted); font-size: 11.5px; }
 .lineItem > b { grid-column: 2; grid-row: 1 / 3; align-self: center; font-weight: 650; white-space: nowrap; color: var(--admin-text); }
-.menuBadge { display: inline-flex; align-items: center; min-height: 20px; padding: 1px 7px; margin-right: 6px; border-radius: 4px; background: #eef0eb; color: #657064; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.menuBadge { display: inline-flex; align-items: center; min-height: 20px; padding: 1px 7px; margin-right: 6px; border-radius: 4px; background: var(--admin-surface-2); color: var(--admin-muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
 .menuSummary { margin: 2px 0 10px; color: var(--admin-muted); font-size: 12px; }
 .sumLines { display: grid; gap: 10px; margin-top: 22px; padding-top: 17px; border-top: 1px solid var(--admin-line); }
 .sumLine, .summaryLine { display: flex; justify-content: space-between; gap: 15px; color: var(--admin-muted); font-size: 12.5px; }
@@ -156,7 +156,7 @@
 }
 @media (max-width: 760px) {
   .dashboard { display: block; margin: -16px -14px calc(-84px - env(safe-area-inset-bottom)); min-height: 0; }
-  .ordersPanel { position: static; height: auto; min-height: calc(100vh - 120px); overflow: visible; border-right: 0; background: #f6f7f3; }
+  .ordersPanel { position: static; height: auto; min-height: calc(100vh - 120px); overflow: visible; border-right: 0; background: var(--admin-surface-2); }
   .queueHead { padding: 30px 20px 17px; }
   .queueHead h1 { font-size: 28px; }
   .filters { padding-inline: 10px; }
@@ -171,14 +171,14 @@
   .orderGroupCount { display: flex; align-items: center; gap: 12px; color: var(--admin-muted); font-size: 13px; font-weight: 550; }
   .orderGroupCount::after { content: ""; width: 8px; height: 8px; margin-right: 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); }
   .orderGroupToggle[aria-expanded="true"] .orderGroupCount::after { transform: rotate(225deg) translateY(-2px); }
-  .orderMobileCard { overflow: hidden; margin: 6px 0 10px; border: 1px solid #dde3da; border-radius: 10px; background: #fff; }
-  .orderMobileCardNew { border-color: #d9ad9c; }
+  .orderMobileCard { overflow: hidden; margin: 6px 0 10px; border: 1px solid var(--admin-line); border-radius: 10px; background: var(--admin-surface); }
+  .orderMobileCardNew { border-color: var(--admin-accent); }
   .orderCardOpen { width: 100%; min-height: 94px; display: grid; gap: 7px; padding: 15px 16px; border: 0; background: transparent; color: var(--admin-text); text-align: left; font: inherit; cursor: pointer; }
-  .orderCardOpen:active { background: #f8f3ef; }
+  .orderCardOpen:active { background: var(--admin-accent-soft); }
   .orderCardTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .orderCardTop strong { font-size: 18px; letter-spacing: -.025em; color: var(--admin-text); }
   .orderCardTop time { color: var(--admin-muted); font-size: 13px; }
-  .orderCardMeta { color: #46554a; font-size: 14px; }
+  .orderCardMeta { color: var(--admin-text); font-size: 14px; }
   .orderCardRoute { color: var(--admin-muted); font-size: 13px; }
   .orderCardAction { display: block; width: calc(100% - 24px); min-height: 48px; margin: 0 12px 12px; border: 1px solid var(--admin-accent); border-radius: 7px; background: var(--admin-accent); color: #fff; font: inherit; font-size: 14px; font-weight: 680; cursor: pointer; }
   .orderCardAction:active { background: var(--admin-accent-hover); }
@@ -188,13 +188,13 @@
   .detailPanel { display: none; }
   .mobileDetail .ordersPanel { display: none; }
   .mobileDetail .detailPanel { display: block; }
-  .mobileDetail[data-order-detail-open] .detailPanel { position: fixed; inset: 0; z-index: 30; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
-  .orderDetailBar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 7px; min-height: 62px; padding: 0 16px; border-bottom: 1px solid var(--admin-line); background: #fff; }
+  .mobileDetail[data-order-detail-open] .detailPanel { position: fixed; inset: 0; z-index: 30; overflow-y: auto; overscroll-behavior: contain; background: var(--admin-surface); }
+  .orderDetailBar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 7px; min-height: 62px; padding: 0 16px; border-bottom: 1px solid var(--admin-line); background: var(--admin-surface); }
   .orderDetailBar .backButton { display: grid; place-items: center; width: 44px; height: 44px; flex: none; margin: 0; padding: 0; border: 0; background: transparent; color: var(--admin-accent); font: inherit; font-size: 28px; font-weight: 500; line-height: 1; cursor: pointer; }
   .orderDetailBar strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 680; color: var(--admin-text); }
   /* Кнопка возврата броней/меню — только прямой потомок детали
      (у заказа своя стрелка внутри .orderDetailBar, она не должна перекрываться) */
-  .mobileDetail .detailInner > .backButton { display: inline-flex; align-items: center; min-height: 44px; margin: 0 0 18px -8px; padding: 0 8px; border: 0; background: transparent; color: #526353; font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+  .mobileDetail .detailInner > .backButton { display: inline-flex; align-items: center; min-height: 44px; margin: 0 0 18px -8px; padding: 0 8px; border: 0; background: transparent; color: var(--admin-muted); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
   /* Правила ниже — только полноэкранная деталь ЗАКАЗА ([data-order-detail-open]) */
   .mobileDetail[data-order-detail-open] .detailInner { padding: 19px 18px calc(114px + env(safe-area-inset-bottom)); }
   .mobileDetail[data-order-detail-open] .detailHeader { padding-bottom: 20px; }
@@ -214,7 +214,7 @@
   .orderMobileSummary strong { font-size: 23px; letter-spacing: -.035em; color: var(--admin-text); }
   .orderMobileSummary span { color: var(--admin-muted); font-size: 13px; }
   .orderMobileCancel { display: inline-flex; min-height: 44px; align-items: center; margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--admin-danger, #a3473b); font: inherit; font-size: 13px; font-weight: 630; cursor: pointer; }
-  .orderMobileAction { position: fixed; right: 0; bottom: 0; left: 0; z-index: 3; display: block; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--admin-line); background: #fff; }
+  .orderMobileAction { position: fixed; right: 0; bottom: 0; left: 0; z-index: 3; display: block; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--admin-line); background: var(--admin-surface); }
   .orderMobileAction .primaryAction { width: 100%; min-height: 52px; font-size: 15px; }
   /* N02: пагинация на телефоне не должна попадать под нижнюю навигацию */
   .pagination { padding: 14px 20px calc(84px + env(safe-area-inset-bottom, 0px)); }

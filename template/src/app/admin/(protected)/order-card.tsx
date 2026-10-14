@@ -15,6 +15,7 @@ import styles from "./admin-ui.module.css";
 import { GuestContactActions } from "./guest-contact-actions";
 import type { GuestChannels } from "@/lib/guest-contact";
 import { formatAdminDate } from "@/lib/admin-date";
+import { formatStoredOrderTime } from "@/lib/order/preorder";
 
 const rub = (value: number) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
 function statusTone(status: string): "new" | "success" | "danger" | "warn" {
@@ -43,6 +44,7 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
   const cancel = actions.find((action) => action.status === "cancelled");
   const next = forward[0];
   const dishes = new Map(catalog.flatMap((category) => category.dishes).map((dish) => [dish.id, dish]));
+  const desiredTime = formatStoredOrderTime(order, timeZone);
   const run = (status: string) => startTransition(async () => {
     setError("");
     try { await setOrderStatus(order.id, status); router.replace(`${window.location.pathname}${window.location.search}`, { scroll: false }); }
@@ -67,7 +69,7 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
       <p className={styles.muted}>{order.type === "delivery" ? "Доставка" : "Самовывоз"} · {formatAdminDate(order.createdAt, timeZone)}</p>
       {(() => {
         const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-        return <p className={styles.orderMobileSummary}><strong>{rub(order.total)}</strong><span>{itemCount} {itemCount === 1 ? "блюдо" : itemCount >= 2 && itemCount <= 4 ? "блюда" : "блюд"}{order.desiredTime ? ` · к ${order.desiredTime}` : ""}</span></p>;
+        return <p className={styles.orderMobileSummary}><strong>{rub(order.total)}</strong><span>{itemCount} {itemCount === 1 ? "блюдо" : itemCount >= 2 && itemCount <= 4 ? "блюда" : "блюд"}{desiredTime ? ` · к ${desiredTime}` : ""}</span></p>;
       })()}
       {next && !editing && <div className={styles.detailActions}>
         <button type="button" className={styles.primaryAction} disabled={pending} onClick={() => run(next.status)}>{next.label}</button>
@@ -80,7 +82,7 @@ export function OrderCard({ order, catalog, deliveryOptions, deliveryZones, gues
     </section>
     <section className={styles.detailSection}>
       <div className={styles.facts}>
-        {order.desiredTime && <div className={styles.fact}><span>{order.type === "delivery" ? "Доставить к" : "Забрать к"}</span><strong>{order.desiredTime}</strong></div>}
+        {desiredTime && <div className={styles.fact}><span>{order.type === "delivery" ? "Доставить к" : "Забрать к"}</span><strong>{desiredTime}</strong></div>}
         {order.type === "delivery" && <div className={styles.fact}><span>Адрес</span><strong>{order.addressText || "Не указан"}</strong></div>}
         {order.type === "delivery" && order.deliveryZoneName && <div className={styles.fact}><span>Зона доставки</span><strong>{order.deliveryZoneName}</strong></div>}
         <div className={styles.fact}><span>Оплата</span><strong>{order.paymentMethod === "online" ? `Онлайн${order.paymentStatus === "paid" ? " · оплачено" : ""}` : "При получении"}</strong></div>

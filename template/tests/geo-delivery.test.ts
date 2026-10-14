@@ -37,6 +37,19 @@ function resolver(geocode: (a: string) => Promise<GeocodeResult>, outside: "bloc
 }
 
 describe("resolveGeoDelivery", () => {
+  it("передаёт геокодеру границы включённых зон для неоднозначного адреса", async () => {
+    const disabled: DeliveryZone = { name: "Выключена", enabled: false, polygon: [[1, 1], [1, 2], [2, 2]], price: 0 };
+    let bounds: unknown;
+    await resolveGeoDelivery({
+      address: "Иваново, улица Пушкина, 10",
+      zones: [zones[0], disabled],
+      outside: "block",
+      outsidePrice: 0,
+      geocode: async (_address, area) => { bounds = area; return okAt(55.5, 37.5); },
+    });
+    expect(bounds).toEqual({ minLat: 55, minLng: 37, maxLat: 56, maxLng: 38 });
+  });
+
   it("адрес внутри полигона — зона найдена, координаты в ответе", async () => {
     const r = await resolver(async () => okAt(55.5, 37.5));
     expect(r).toEqual({ kind: "zone", zoneName: "Центр", lat: 55.5, lng: 37.5 });

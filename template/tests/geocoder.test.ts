@@ -48,6 +48,18 @@ describe("createGeocoder", () => {
     expect(url).toContain("geocode-maps.yandex.ru/v1/");
   });
 
+  it("предпочитает область зон, но не ограничивает поиск ею", async () => {
+    const fetchImpl = mockFetchJson(yandexResponse("Россия, Иваново, улица Пушкина, 4", 40.98, 57));
+    const g = createGeocoder({ apiKey: KEY, fetchImpl });
+    const bounds = { minLat: 56.99, minLng: 40.97, maxLat: 57.01, maxLng: 40.99 };
+    await g.geocode("Иваново, улица Пушкина, 10", bounds);
+    const url = new URL((fetchImpl as ReturnType<typeof vi.fn>).mock.calls[0][0] as string);
+    expect(url.searchParams.get("bbox")).toBe("40.97,56.99~40.99,57.01");
+    expect(url.searchParams.get("rspn")).not.toBe("1");
+    await g.geocode("Иваново, улица Пушкина, 10");
+    expect(fetchImpl).toHaveBeenCalledTimes(2); // без области — отдельный ключ кэша
+  });
+
   it("пустая выдача — not-found", async () => {
     const fetchImpl = mockFetchJson({ response: { GeoObjectCollection: { featureMember: [] } } });
     const g = createGeocoder({ apiKey: KEY, fetchImpl });

@@ -11,7 +11,7 @@ import { getSiteSettings } from "@/lib/site";
 import { getPaymentProvider } from "@/lib/payments";
 import type { PaymentProvider } from "@/lib/payments/types";
 import { preferredChannelInputSchema } from "@/lib/guest-contact";
-import { formatPreOrderSlot, isValidPreOrderSlot } from "@/lib/order/preorder";
+import { isValidPreOrderSlot, preOrderSnapshot } from "@/lib/order/preorder";
 
 const orderSchema = z.object({
   items: z
@@ -235,6 +235,7 @@ export async function POST(request: Request) {
   const tz = (settings as { timezone?: string }).timezone ?? "Europe/Moscow";
   const now = new Date();
   let desiredTimeText = input.desiredTime;
+  let preOrderData: ReturnType<typeof preOrderSnapshot> | null = null;
 
   if (option) {
     // Снимок режима — из найденной опции, не из тела запроса
@@ -291,7 +292,8 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json({ error: "Выбранное время предзаказа недоступно" }, { status: 400 });
     }
-    desiredTimeText = formatPreOrderSlot(input.preOrderDate, input.preOrderTime, now, tz);
+    preOrderData = preOrderSnapshot(input.preOrderDate, input.preOrderTime, tz);
+    desiredTimeText = preOrderData.desiredTime;
   }
 
   // Зоны на карте (geo-режим): сервер сам геокодирует адрес и определяет зону.
@@ -410,6 +412,9 @@ export async function POST(request: Request) {
           addressText: input.address,
           comment: input.comment,
           desiredTime: desiredTimeText,
+          preOrderDate: preOrderData?.preOrderDate ?? null,
+          preOrderTime: preOrderData?.preOrderTime ?? null,
+          preOrderTz: preOrderData?.preOrderTz ?? null,
           deliveryMode: input.type === "delivery" ? (option?.mode ?? null) : null,
           deliveryDate: input.type === "delivery" && option?.mode === "scheduled" ? input.deliveryDate : null,
           deliverySlotStart:

@@ -22,7 +22,7 @@
 
 .menuRow { position: relative; width: 100%; min-height: 78px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 13px; padding: 14px 27px 14px 24px; border: 0; border-bottom: 1px solid var(--admin-line); border-left: 3px solid transparent; background: transparent; color: var(--admin-text); text-align: left; font: inherit; }
 .menuRow.hasPhoto { min-height: 91px; grid-template-columns: 54px minmax(0, 1fr) auto; }
-.menuRow:hover { background: #eef1ec; }
+.menuRow:hover { background: var(--admin-surface-2); }
 /* D13: выбранная строка — единый признак с заказами/бронями (полоса + белый фон) */
 .menuRowSelected { border-left-color: var(--admin-accent) !important; background: var(--admin-surface) !important; }
 .dishPhoto { grid-row: 1 / 3; width: 56px; height: 56px; display: block; overflow: hidden; border: 1px solid #e7e9e3; border-radius: 5px; background: #eceee9; }
@@ -39,7 +39,7 @@
 .menuFields { display: grid; gap: 20px; padding: 24px 0 8px; }
 .menuFields :global(.field) { font-size: 13px; }
 .menuFields :global(.input), .menuFields :global(.select), .menuFields :global(.textarea) { font-size: 14px; }
-.menuFields :global(.input[readonly]) { background: #f4f6f2; color: #59665d; }
+.menuFields :global(.input[readonly]) { background: var(--admin-surface-2); color: var(--admin-muted); }
 .menuPriceRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .menuStatusAction { margin-top: 20px; }
 .menuSavebar {
@@ -50,7 +50,7 @@
   margin: 26px calc(-1 * clamp(32px, 5vw, 72px)) 0;
   padding: 13px clamp(32px, 5vw, 72px);
   border-top: 1px solid var(--admin-line);
-  background: #fffffff2;
+  background: var(--admin-surface);
 }
 .menuSavebar > span { color: var(--rd-savebar-text, #81512c); font-size: 12px; font-weight: 620; }
 .menuSavebar > div { display: flex; gap: 8px; }

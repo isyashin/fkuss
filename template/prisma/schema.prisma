@@ -239,6 +239,9 @@ model Order {
   addressText    String   @default("")
   comment        String   @default("")
   desiredTime    String   @default("") // человекочитаемый текст (обратная совместимость)
+  preOrderDate   String?  // локальная дата YYYY-MM-DD
+  preOrderTime   String?  // HH:MM
+  preOrderTz     String?  // часовой пояс ресторана в момент заказа
   // Структурированная доставка (новое; старые заказы не меняем)
   deliveryMode   String?  // asap | scheduled
   deliveryDate   String?  // локальная дата YYYY-MM-DD

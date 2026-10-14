@@ -124,7 +124,7 @@
 /* Мобильный переключатель разделов (F15) — по макету; виден только на ≤900px */
 .guard { display: contents; }
 .picker { display: none; }
-.pickerSelect { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid var(--rd-field-line, #cdd3cc); border-radius: 6px; background: var(--soft, #f7f8f5); color: var(--text, #202723); font: inherit; font-size: 14px; font-weight: 650; }
+.pickerSelect { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid var(--rd-field-line, #cdd3cc); border-radius: 6px; background: var(--surface, #fff); color: var(--text, #202723); font: inherit; font-size: 14px; font-weight: 650; }
 .note { margin: 10px 0 0; font-size: 12.5px; color: var(--muted, #68716a); }
 .note a { color: var(--accent, #ad573b); }
 .toggleList { display: grid; gap: 4px; margin-bottom: 14px; }
@@ -145,6 +145,12 @@
   .sectionsCol { display: none; }
   .editor { margin: 0 -14px; padding: 26px 20px 170px; gap: 30px; }
   .editorCard, .legacyCard { padding-bottom: 30px; }
+  /* Текущее название видно в селекторе; h2 остаётся в дереве доступности. */
+  .editor > :first-child > h2:first-child,
+  .editor > .editorCard > section:first-child > div:first-child > div:first-child > h2:first-child {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; white-space: nowrap; clip-path: inset(50%); border: 0;
+  }
   .formGrid { grid-template-columns: 1fr; }
   .saveBar { margin: 18px -20px -120px; padding: 11px 20px; box-shadow: 0 -5px 22px #20272310; }
 }

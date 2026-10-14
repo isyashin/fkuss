@@ -6,6 +6,7 @@ import { isGuestCabinetEnabled } from "@/lib/guest-cabinet";
 import { getPrisma } from "@/lib/db";
 import { orderStatusLabel } from "@/lib/order-status";
 import { formatPhoneDisplay } from "@/lib/guest-contact";
+import { formatStoredOrderTime } from "@/lib/order/preorder";
 import { RepeatOrderButton } from "@/components/account/repeat-order-button";
 import { CancelOrderButton } from "@/components/account/cancel-order-button";
 import styles from "@/components/account/account.module.css";
@@ -71,7 +72,7 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
           <div className={styles.fact}><span>Имя</span>{order.customerName}</div>
           <div className={styles.fact}><span>Телефон</span>{formatPhoneDisplay(order.customerPhone)}</div>
           {order.addressText && <div className={styles.fact}><span>Адрес</span>{order.addressText}</div>}
-          {order.desiredTime && <div className={styles.fact}><span>Время</span>{order.desiredTime}</div>}
+          {order.desiredTime && <div className={styles.fact}><span>Время</span>{formatStoredOrderTime(order, settings.timezone ?? "Europe/Moscow")}</div>}
           <div className={styles.fact}>
             <span>Оплата</span>
             {order.paymentMethod === "online"

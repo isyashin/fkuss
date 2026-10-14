@@ -2,9 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   coerceSlotTime,
   formatPreOrderSlot,
+  formatStoredOrderTime,
   generatePreOrderSlots,
   isValidPreOrderSlot,
   normalizePreOrder,
+  preOrderSnapshot,
   type PreOrderSettings,
 } from "@/lib/order/preorder";
 
@@ -109,13 +111,37 @@ describe("normalizePreOrder", () => {
 });
 
 describe("formatPreOrderSlot", () => {
-  it("сегодня и завтра — словами", () => {
-    expect(formatPreOrderSlot("2026-09-16", "10:00", NOW, TZ)).toBe("Сегодня, 10:00");
-    expect(formatPreOrderSlot("2026-09-17", "10:30", NOW, TZ)).toBe("Завтра, 10:30");
+  it("сохраняет точную дату вместо относительного 'Завтра'", () => {
+    expect(formatPreOrderSlot("2026-09-16", "10:00")).toBe("16.09.2026, 10:00");
+    expect(formatPreOrderSlot("2026-09-17", "10:30")).toBe("17.09.2026, 10:30");
   });
 
-  it("поздние даты — числом", () => {
-    expect(formatPreOrderSlot("2026-09-20", "11:00", NOW, TZ)).toContain("11:00");
+  it("дальняя дата также включает год", () => {
+    expect(formatPreOrderSlot("2026-09-20", "11:00")).toBe("20.09.2026, 11:00");
+  });
+
+  it("снимок заказа содержит абсолютные дату, время и часовой пояс", () => {
+    expect(preOrderSnapshot("2026-09-17", "10:30", TZ)).toEqual({
+      desiredTime: "17.09.2026, 10:30",
+      preOrderDate: "2026-09-17",
+      preOrderTime: "10:30",
+      preOrderTz: TZ,
+    });
+  });
+
+  it("старое 'Завтра' читается по дате создания, а не по текущему дню", () => {
+    expect(formatStoredOrderTime({
+      desiredTime: "Завтра, 10:30",
+      preOrderDate: null,
+      preOrderTime: null,
+      createdAt: new Date("2026-09-16T20:30:00Z"), // 23:30 в ресторане
+    }, TZ)).toBe("17.09.2026, 10:30");
+    expect(formatStoredOrderTime({
+      desiredTime: "как можно скорее",
+      preOrderDate: null,
+      preOrderTime: null,
+      createdAt: NOW,
+    }, TZ)).toBe("как можно скорее");
   });
 });
 

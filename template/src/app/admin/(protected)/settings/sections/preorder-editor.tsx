@@ -85,7 +85,7 @@ export function PreOrderEditor({ settings }: { settings: ContentSettings }) {
       </div>
       {slotError && <p role="alert" className={`${styles.saveStatus} ${styles.error}`}>{slotError}</p>}
     </div>
-    {dirty && <div className={styles.saveBar}>
+    {dirty && <div className={styles.saveBar} data-dirty>
       <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}
     </div>}

@@ -130,7 +130,7 @@ test("mobile section picker is the only visible heading for each settings sectio
   await adminLogin(page);
   for (const section of [
     "restaurant", "hours", "theme", "pages", "gallery", "promos", "banquets", "print", "delivery", "preorder",
-    "payment", "booking", "pricing", "sync", "guest-contact", "notify", "cabinet", "sound", "team", "billing",
+    "payment", "loyalty", "booking", "pricing", "sync", "guest-contact", "notify", "cabinet", "team", "billing",
   ]) {
     await gotoAdmin(page, `/admin/settings?section=${section}`);
     await expect(page.getByLabel("Раздел настроек")).toHaveValue(section);

@@ -150,7 +150,7 @@ test("admin menu and settings fit the viewport", async ({ page }, testInfo) => {
   else await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Данные и контакты" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Профиль:/ })).toBeVisible();
-  for (const section of ["theme", "pages", "gallery", "promos", "banquets", "print", "delivery", "payment", "booking", "sound", "pricing", "sync", "guest-contact", "notify", "cabinet", "team", "billing"]) {
+  for (const section of ["theme", "pages", "gallery", "promos", "banquets", "print", "delivery", "payment", "loyalty", "booking", "pricing", "sync", "guest-contact", "notify", "cabinet", "team", "billing"]) {
     await gotoStable(page, `/admin/settings?section=${section}`);
     if (isMobile) await expect(page.getByLabel("Раздел настроек")).toHaveValue(section);
     else await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();

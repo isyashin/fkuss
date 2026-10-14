@@ -125,6 +125,16 @@
 .guard { display: contents; }
 .picker { display: none; }
 .pickerSelect { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid var(--rd-field-line, #cdd3cc); border-radius: 6px; background: var(--surface, #fff); color: var(--text, #202723); font: inherit; font-size: 14px; font-weight: 650; }
+button.pickerSelect { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; text-align: left; }
+.pickerChevron { font-size: 16px; color: var(--muted, #68716a); }
+/* Bottom-sheet выбора раздела (мобильный): в дизайне админки, не ОС */
+.sheetOverlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; background: rgb(16 24 18 / 48%); }
+.sheet { width: 100%; max-height: 78vh; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px calc(22px + env(safe-area-inset-bottom, 0px)); border-radius: 16px 16px 0 0; background: var(--surface, #fff); color: var(--text, #202723); box-shadow: 0 -8px 30px rgb(16 24 18 / 22%); outline: none; }
+.sheetHandle { width: 42px; height: 4px; margin: 2px auto 6px; border-radius: 2px; background: var(--line, #e2e4df); }
+.sheetItem { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 46px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--text, #202723); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.sheetItem:hover { background: var(--queue, #f5f6f2); }
+.sheetItem.current { font-weight: 650; }
+.sheetCheck { color: var(--accent, #ad573b); font-size: 16px; font-weight: 700; }
 .note { margin: 10px 0 0; font-size: 12.5px; color: var(--muted, #68716a); }
 .note a { color: var(--accent, #ad573b); }
 .toggleList { display: grid; gap: 4px; margin-bottom: 14px; }

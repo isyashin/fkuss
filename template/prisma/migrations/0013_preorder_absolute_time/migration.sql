@@ -1,0 +1,3 @@
+ALTER TABLE "Order" ADD COLUMN "preOrderDate" TEXT;
+ALTER TABLE "Order" ADD COLUMN "preOrderTime" TEXT;
+ALTER TABLE "Order" ADD COLUMN "preOrderTz" TEXT;

@@ -21,8 +21,15 @@ export type GeocodeResult =
   | { ok: true; point: GeocodedPoint }
   | { ok: false; error: GeocodeError };
 
+export interface GeocodeBounds {
+  minLat: number;
+  minLng: number;
+  maxLat: number;
+  maxLng: number;
+}
+
 export interface Geocoder {
-  geocode(address: string): Promise<GeocodeResult>;
+  geocode(address: string, bounds?: GeocodeBounds): Promise<GeocodeResult>;
 }
 
 interface YandexGeocodeResponse {
@@ -64,23 +71,28 @@ export function createGeocoder(deps: {
   const cache = new Map<string, CacheEntry>();
 
   return {
-    async geocode(address: string): Promise<GeocodeResult> {
+    async geocode(address: string, bounds?: GeocodeBounds): Promise<GeocodeResult> {
       if (!apiKey) return { ok: false, error: { kind: "not-configured" } };
 
       const key = address.trim().toLowerCase().replace(/\s+/g, " ");
       if (!key) return { ok: false, error: { kind: "not-found" } };
 
-      const hit = cache.get(key);
+      const bbox = bounds
+        ? `${bounds.minLng},${bounds.minLat}~${bounds.maxLng},${bounds.maxLat}`
+        : "";
+      const cacheKey = `${key}|${bbox}`;
+      const hit = cache.get(cacheKey);
       if (hit) {
         if (hit.expiresAt > now()) return { ok: true, point: hit.point };
-        cache.delete(key);
+        cache.delete(cacheKey);
       }
 
       let response: Response;
       try {
         const url =
           `https://geocode-maps.yandex.ru/v1/?apikey=${encodeURIComponent(apiKey)}` +
-          `&geocode=${encodeURIComponent(address.trim())}&format=json&results=1&lang=ru_RU`;
+          `&geocode=${encodeURIComponent(address.trim())}&format=json&results=1&lang=ru_RU` +
+          (bbox ? `&bbox=${encodeURIComponent(bbox)}` : "");
         response = await fetchImpl(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
       } catch {
         return { ok: false, error: { kind: "unavailable" } };
@@ -117,7 +129,7 @@ export function createGeocoder(deps: {
         const oldest = cache.keys().next().value;
         if (oldest !== undefined) cache.delete(oldest);
       }
-      cache.set(key, { point, expiresAt: now() + ttlMs });
+      cache.set(cacheKey, { point, expiresAt: now() + ttlMs });
       return { ok: true, point };
     },
   };
@@ -126,13 +138,13 @@ export function createGeocoder(deps: {
 // Singleton для кода приложения: ключ из env (серверный — в браузер не отдаём).
 let singleton: Geocoder | null = null;
 
-export function geocodeAddress(address: string): Promise<GeocodeResult> {
+export function geocodeAddress(address: string, bounds?: GeocodeBounds): Promise<GeocodeResult> {
   if (!singleton) {
     singleton = createGeocoder({
       apiKey: process.env.YANDEX_GEOCODER_API_KEY ?? process.env.YANDEX_MAPS_API_KEY ?? "",
     });
   }
-  return singleton.geocode(address);
+  return singleton.geocode(address, bounds);
 }
 
 export function __resetGeocoderForTests(): void {

@@ -83,12 +83,33 @@ export function isValidPreOrderSlot(preOrder: unknown, date: string, time: strin
   return generatePreOrderSlots(preOrder, now, tz).some((s) => s.date === date && s.time === time);
 }
 
-/** Человекочитаемый текст слота для заказа и админки. */
-export function formatPreOrderSlot(date: string, time: string, now: Date, tz: string): string {
-  const today = restaurantLocal(now, tz).date;
-  let dayLabel: string;
-  if (date === today) dayLabel = "Сегодня";
-  else if (date === addDays(today, 1)) dayLabel = "Завтра";
-  else dayLabel = new Date(`${date}T12:00:00`).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
-  return `${dayLabel}, ${time}`;
+/** Абсолютная дата заказа не меняет смысл после полуночи. */
+export function formatPreOrderSlot(date: string, time: string): string {
+  const [year, month, day] = date.split("-");
+  return `${day}.${month}.${year}, ${time}`;
+}
+
+export function preOrderSnapshot(date: string, time: string, tz: string) {
+  return {
+    desiredTime: formatPreOrderSlot(date, time),
+    preOrderDate: date,
+    preOrderTime: time,
+    preOrderTz: tz,
+  };
+}
+
+/** Старые относительные строки восстанавливаем по локальной дате создания заказа. */
+export function formatStoredOrderTime(order: {
+  desiredTime: string;
+  preOrderDate?: string | null;
+  preOrderTime?: string | null;
+  createdAt: Date;
+}, tz: string): string {
+  if (order.preOrderDate && order.preOrderTime) {
+    return formatPreOrderSlot(order.preOrderDate, order.preOrderTime);
+  }
+  const legacy = /^(Сегодня|Завтра), (\d{2}:\d{2})$/.exec(order.desiredTime);
+  if (!legacy) return order.desiredTime;
+  const createdDate = restaurantLocal(order.createdAt, tz).date;
+  return formatPreOrderSlot(addDays(createdDate, legacy[1] === "Завтра" ? 1 : 0), legacy[2]);
 }

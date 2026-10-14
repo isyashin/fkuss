@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { Order, OrderItem } from "@/generated/prisma/client";
 import { orderActionsFor, orderStatusLabel } from "@/lib/order-status";
 import { formatAdminTime } from "@/lib/admin-date";
+import { formatStoredOrderTime } from "@/lib/order/preorder";
 import { adminListHref, orderListCounts, ORDER_MODES, ORDER_TYPES, type OrderListQuery } from "@/lib/admin-list-query";
 import { OrderCard } from "./order-card";
 import { AdminPagination } from "./admin-pagination";
@@ -219,7 +220,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
             <button type="button" className={styles.orderOpen} aria-label={`Открыть заказ № ${order.number}`} aria-pressed={selected?.id === order.id} onClick={() => { saveListPosition(); openOrder(order.id); }}/>
             <span className={styles.rowTop}><span><strong>№ {order.number}</strong><time>{formatAdminTime(order.createdAt, timeZone)}</time></span><StatusPill tone={statusTone(order.status)}>{orderStatusLabel(order.status)}</StatusPill></span>
             <span className={styles.rowPerson}>{order.customerName}</span>
-            <span className={styles.rowBottom}><span>{order.type === "delivery" ? "Доставка" : "Самовывоз"} · {order.desiredTime ? `к ${order.desiredTime}` : "как можно скорее"}</span><b>{rub(order.total)}</b></span>
+            <span className={styles.rowBottom}><span>{order.type === "delivery" ? "Доставка" : "Самовывоз"} · {order.desiredTime ? `к ${formatStoredOrderTime(order, timeZone)}` : "как можно скорее"}</span><b>{rub(order.total)}</b></span>
           </div>) : null}
         </div>
         <div className={styles.ordersMobileList}>
@@ -240,11 +241,11 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
                     return (
                       <article key={order.id} className={`${styles.orderMobileCard} ${order.status === "new" ? styles.orderMobileCardNew : ""}`}>
                         <button type="button" className={styles.orderCardOpen} aria-current={selected?.id === order.id}
-                          aria-label={`Открыть заказ № ${order.number}, ${rub(order.total)}, ${count} ${dishWord(count)}, ${order.type === "delivery" ? "доставка" : "самовывоз"}${order.desiredTime ? ` к ${order.desiredTime}` : ""}`}
+                          aria-label={`Открыть заказ № ${order.number}, ${rub(order.total)}, ${count} ${dishWord(count)}, ${order.type === "delivery" ? "доставка" : "самовывоз"}${order.desiredTime ? ` к ${formatStoredOrderTime(order, timeZone)}` : ""}`}
                           onClick={() => { saveListPosition(); openOrder(order.id); }}>
                           <span className={styles.orderCardTop}><strong>№ {order.number}</strong><time>{formatAdminTime(order.createdAt, timeZone)}</time></span>
                           <span className={styles.orderCardMeta}>{rub(order.total)} · {count} {dishWord(count)}</span>
-                          <span className={styles.orderCardRoute}>{order.type === "delivery" ? "Доставка" : "Самовывоз"}{order.desiredTime ? ` · к ${order.desiredTime}` : ""}</span>
+                          <span className={styles.orderCardRoute}>{order.type === "delivery" ? "Доставка" : "Самовывоз"}{order.desiredTime ? ` · к ${formatStoredOrderTime(order, timeZone)}` : ""}</span>
                         </button>
                         {quick && next && <button type="button" className={styles.orderCardAction} disabled={quickPending} onClick={() => quickAdvance(order.id, next.status)}>{next.label}</button>}
                       </article>

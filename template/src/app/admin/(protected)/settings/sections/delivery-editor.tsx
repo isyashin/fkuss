@@ -7,19 +7,11 @@ import type { ContentSettings } from "@/lib/content-schema";
 import rd from "../../admin-redesign.module.css";
 import styles from "../settings-redesign.module.css";
 
-const TIMEZONES = [
-  ["Europe/Kaliningrad", "Калининград (UTC+2)"], ["Europe/Moscow", "Москва (UTC+3)"],
-  ["Europe/Samara", "Самара (UTC+4)"], ["Asia/Yekaterinburg", "Екатеринбург (UTC+5)"],
-  ["Asia/Omsk", "Омск (UTC+6)"], ["Asia/Krasnoyarsk", "Красноярск (UTC+7)"],
-  ["Asia/Irkutsk", "Иркутск (UTC+8)"], ["Asia/Yakutsk", "Якутск (UTC+9)"],
-  ["Asia/Vladivostok", "Владивосток (UTC+10)"], ["Asia/Kamchatka", "Камчатка (UTC+12)"],
-] as const;
-
-/** Доставка и самовывоз: общие условия. Зоны и geo-режим — этой же секцией (этап 3). */
+/** Доставка и самовывоз: общие условия. Зоны и geo-режим — этой же секцией (этап 3).
+    Часовой пояс перенесён в раздел «Часы работы» (компоновка настроек 2026-10). */
 export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
   const [delivery, setDelivery] = useState(settings.delivery);
-  const [timezone, setTimezone] = useState(settings.timezone);
-  const [saved, setSaved] = useState({ delivery: settings.delivery, timezone: settings.timezone });
+  const [saved, setSaved] = useState(settings.delivery);
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
   const { save: saveWithRev, control: revControl, errorMessage } = useSettingsSave();
@@ -27,19 +19,18 @@ export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
   const settingsEpoch = useSettingsEpoch();
   useResetSettingsOnEpoch(settingsEpoch, () => {
     setDelivery(settings.delivery);
-    setTimezone(settings.timezone);
-    setSaved({ delivery: settings.delivery, timezone: settings.timezone });
+    setSaved(settings.delivery);
     setStatus(null);
   });
-  const dirty = JSON.stringify(delivery) !== JSON.stringify(saved.delivery) || timezone !== saved.timezone;
+  const dirty = JSON.stringify(delivery) !== JSON.stringify(saved);
 
   function save() {
     startTransition(async () => {
       setStatus(null);
       try {
-        const next: ContentSettings = { ...settings, delivery, timezone };
+        const next: ContentSettings = { ...settings, delivery };
         const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error(errorMessage ?? "Не удалось сохранить"); return; }
-        setSaved({ delivery, timezone });
+        setSaved(delivery);
         setStatus({ text: "Сохранено", error: false });
       } catch (cause) {
         setStatus({ text: cause instanceof Error ? cause.message : "Не удалось сохранить", error: true });
@@ -57,11 +48,6 @@ export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
     <div className={styles.formGrid}>
       <label className={rd.field}><span>Минимальная сумма заказа, ₽</span>
         <input className={rd.input} type="number" min={0} step={1} value={delivery.minOrder} onChange={(e) => setDelivery({ ...delivery, minOrder: Number(e.target.value) })} />
-      </label>
-      <label className={rd.field}><span>Часовой пояс ресторана</span>
-        <select className={rd.input} value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-          {TIMEZONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </select>
       </label>
     </div>
     <div className={styles.saveBar} data-dirty={dirty || undefined}>

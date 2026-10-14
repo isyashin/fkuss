@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 import { loginAdminUi } from "./login-admin";
 
 async function save(page: import("@playwright/test").Page) {
-  await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+  // На секции «Часы работы» две кнопки (расписание + часовой пояс) — берём первую (расписание).
+  await page.getByRole("button", { name: "Сохранить", exact: true }).first().click();
   await expect(page.getByText("Сохранено ✓")).toBeVisible({ timeout: 15_000 });
 }
 

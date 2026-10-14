@@ -22,7 +22,8 @@ import { normalizeGuestCabinet } from "@/lib/guest-cabinet";
 import { ThemeEditor } from "./sections/theme-editor";
 import { DeliveryEditor } from "./sections/delivery-editor";
 import { PreOrderEditor } from "./sections/preorder-editor";
-import { PaymentLoyaltyEditor, PricingEditor, BookingEditor } from "./sections/editors";
+import { TimezoneEditor } from "./sections/timezone-editor";
+import { PaymentEditor, LoyaltyEditor, PricingEditor, BookingEditor } from "./sections/editors";
 import { GuestContactEditor, NotifyChannelsEditor } from "./sections/guest-contact-editors";
 import { TeamAdmin } from "../team/team-admin";
 import { BillingView } from "../billing/billing-view";
@@ -40,13 +41,16 @@ export const dynamic = "force-dynamic";
 
 const GROUPS: { group: string; items: { id: string; title: string }[] }[] = [
   { group: "Ресторан", items: [{ id: "restaurant", title: "Данные и контакты" }, { id: "hours", title: "Часы работы" }] },
-  { group: "Сайт", items: [{ id: "theme", title: "Оформление" }, { id: "pages", title: "Страницы" }, { id: "gallery", title: "Фотографии" }, { id: "promos", title: "Акции" }, { id: "banquets", title: "Банкеты" }, { id: "print", title: "Печатные материалы" }] },
-  { group: "Заказы и брони", items: [{ id: "delivery", title: "Доставка и самовывоз" }, { id: "preorder", title: "Предзаказ" }, { id: "payment", title: "Оплата и бонусы" }, { id: "booking", title: "Бронирование" }] },
+  { group: "Заказы и брони", items: [{ id: "delivery", title: "Доставка и самовывоз" }, { id: "preorder", title: "Предзаказ" }, { id: "booking", title: "Бронирование" }, { id: "banquets", title: "Банкеты" }, { id: "payment", title: "Оплата" }] },
+  { group: "Гости", items: [{ id: "cabinet", title: "Личный кабинет" }, { id: "loyalty", title: "Бонусы и лояльность" }, { id: "guest-contact", title: "Связь с гостем" }] },
   { group: "Меню", items: [{ id: "pricing", title: "Правила цен" }, { id: "sync", title: "Импорт из Яндекс.Еды" }] },
-  { group: "Связь", items: [{ id: "guest-contact", title: "Связь с гостем" }, { id: "notify", title: "Уведомления" }, { id: "cabinet", title: "Личный кабинет гостя" }, { id: "sound", title: "Звук уведомлений" }] },
+  { group: "Уведомления", items: [{ id: "notify", title: "Каналы и звук" }] },
+  { group: "Сайт и продвижение", items: [{ id: "theme", title: "Оформление" }, { id: "pages", title: "Страницы" }, { id: "gallery", title: "Фотографии" }, { id: "promos", title: "Акции" }, { id: "print", title: "Печатные материалы" }] },
   { group: "Доступ и подписка", items: [{ id: "team", title: "Сотрудники" }, { id: "billing", title: "Подписка" }] },
 ];
 const VALID = new Set(GROUPS.flatMap((g) => g.items.map((i) => i.id)));
+// Старые ссылки: «Звук» слит в «Каналы и звук», «Оплата и бонусы» разделена.
+const SECTION_ALIASES: Record<string, string> = { sound: "notify" };
 
 /* Серверные обёртки секций: данные грузятся только для активной секции. */
 async function SectionRestaurant({ focus }: { focus?: "contacts" | "hours" }) {
@@ -155,7 +159,8 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
   if (!unlocked) return <PinGate />;
 
   const { section } = await searchParams;
-  const active = section && VALID.has(section) ? section : "restaurant";
+  const requested = section ? (SECTION_ALIASES[section] ?? section) : section;
+  const active = requested && VALID.has(requested) ? requested : "restaurant";
   const [settings, theme, sound, rawSettings] = await Promise.all([getSiteSettings(), getSiteTheme(), readAdminSound(getPrisma()), getPrisma().settings.findUnique({ where: { key: "settings" } })]);
   const settingsRev = readSettingsRev(rawSettings?.value ?? null);
 
@@ -164,7 +169,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       case "restaurant":
         return <SectionRestaurant focus="contacts" />;
       case "hours":
-        return <SectionRestaurant focus="hours" />;
+        return <><SectionRestaurant focus="hours" /><TimezoneEditor settings={settings} /></>;
       case "theme": return <ThemeEditor theme={theme} />;
       case "pages": return <SectionPages />;
       case "gallery": return <SectionGallery />;
@@ -173,16 +178,16 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
       case "print": return <SectionPrint />;
       case "delivery": return <><DeliveryEditor settings={settings} /><SectionDeliveryZones settings={settings} /></>;
       case "preorder": return <PreOrderEditor settings={settings} />;
-      case "payment": return <PaymentLoyaltyEditor settings={settings} theme={theme} />;
+      case "payment": return <PaymentEditor settings={settings} />;
+      case "loyalty": return <LoyaltyEditor settings={settings} />;
       case "booking": return <BookingEditor settings={settings} />;
       case "pricing": return <PricingEditor settings={settings} theme={theme} />;
       case "sync": return <SectionSync settings={settings} />;
       case "guest-contact": return <GuestContactEditor settings={settings} />;
-      case "notify": return <NotifyChannelsEditor settings={settings} />;
+      case "notify":
+        return <><NotifyChannelsEditor settings={settings} /><div className={styles.editorCard}><SoundSettings initial={publicAdminSound(sound)} /></div></>;
       case "cabinet":
         return <div className={styles.editorCard}><GuestCabinetSettings initial={normalizeGuestCabinet(settings)} /></div>;
-      case "sound":
-        return <div className={styles.editorCard}><SoundSettings initial={publicAdminSound(sound)} /></div>;
       case "team": return <SectionTeam />;
       case "billing": return <SectionBilling />;
       default: return <SectionRestaurant />;

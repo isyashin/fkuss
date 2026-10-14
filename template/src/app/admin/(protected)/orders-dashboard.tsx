@@ -257,7 +257,7 @@ export function OrdersDashboard({ orders, counts, query, page, pageCount, catalo
           }) : null}
         </div>
       </div>
-      <AdminPagination base="/admin" query={query} page={page} pageCount={pageCount} total={counts.total}/>
+      <AdminPagination base="/admin" query={query} page={page} pageCount={pageCount}/>
     </section>
     <section className={styles.detailPanel} aria-label="Детали заказа">{selected ? <OrderCard key={`${selected.id}:${selected.updatedAt.toISOString()}`} order={selected} catalog={catalog} deliveryOptions={deliveryOptions} deliveryZones={deliveryZones} guestContact={guestContact} timeZone={timeZone} onBack={closeDetail}/> : <div className={styles.detailInner}><p className={styles.empty}>Выберите заказ.</p></div>}</section>
   </div>;

@@ -134,12 +134,9 @@ test("mobile section picker is the only visible heading for each settings sectio
   ]) {
     await gotoAdmin(page, `/admin/settings?section=${section}`);
     await expect(page.getByLabel("Раздел настроек")).toHaveValue(section);
-    const title = await page.evaluate(() => {
-      const editor = document.querySelector('[class*="settings-redesign_editor__"]');
-      const h2 = editor?.querySelector("h2");
-      return h2 ? { text: h2.textContent, clipped: getComputedStyle(h2).clipPath === "inset(50%)" } : null;
-    });
-    expect(title, `${section}: section heading exists for accessibility`).not.toBeNull();
-    expect(title!.clipped, `${section}: repeated heading should be visually hidden`).toBe(true);
+    const title = page.getByRole("heading", { level: 2 }).first();
+    await expect(title, `${section}: section heading exists for accessibility`).toBeAttached();
+    expect(await title.evaluate((element) => getComputedStyle(element).clipPath),
+      `${section}: repeated heading should be visually hidden`).toBe("inset(50%)");
   }
 });

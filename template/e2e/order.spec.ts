@@ -94,6 +94,30 @@ test("форма брони отправляется", async ({ page }) => {
   await expect(page.getByText("Заявка отправлена")).toBeVisible({ timeout: 15000 });
 });
 
+test("форма брони не принимает ввод до гидратации", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "desktop", "мобильная регрессия раннего ввода");
+
+  let releaseScripts = () => {};
+  const scriptsBlocked = new Promise<void>((resolve) => { releaseScripts = resolve; });
+  await page.route(/\/_next\/static\/.*\.js(?:\?|$)/, async (route) => {
+    await scriptsBlocked;
+    await route.continue();
+  });
+
+  await page.goto("/booking", { waitUntil: "commit" });
+  const date = page.getByRole("textbox", { name: "Дата" });
+  try {
+    await date.waitFor({ state: "attached" });
+    await expect(date).toBeDisabled();
+  } finally {
+    releaseScripts();
+  }
+
+  await expect(date).toBeEnabled({ timeout: 30000 });
+  await date.fill(new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10));
+  await expect(page.getByRole("combobox", { name: "Время" })).toBeEnabled({ timeout: 15000 });
+});
+
 test("бронь вне часов работы отклоняется", async ({ request }) => {
   // 03:00 ночи — ресторан закрыт
   const response = await request.post("/api/booking", {

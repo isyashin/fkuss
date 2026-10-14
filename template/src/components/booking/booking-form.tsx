@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import type { ContentSettings } from "@/lib/content-schema";
+import { useMounted } from "@/lib/use-mounted";
 
 export function BookingForm({ booking }: { booking: ContentSettings["booking"] }) {
+  const mounted = useMounted();
   const [form, setForm] = useState({ date: "", time: "", guests: 2, name: "", phone: "", comment: "", website: "" });
   const [slots, setSlots] = useState<string[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -73,7 +75,7 @@ export function BookingForm({ booking }: { booking: ContentSettings["booking"] }
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
 
   return (
-    <div className="space-y-4">
+    <fieldset disabled={!mounted} className="m-0 min-w-0 space-y-4 border-0 p-0">
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="text-sm text-muted">Дата</span>
@@ -176,6 +178,6 @@ export function BookingForm({ booking }: { booking: ContentSettings["booking"] }
       >
         {status === "sending" ? "Отправляю…" : "Забронировать"}
       </button>
-    </div>
+    </fieldset>
   );
 }

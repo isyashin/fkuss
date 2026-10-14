@@ -58,7 +58,7 @@ test("mobile dark theme keeps orders, bookings, menu and settings readable", asy
   await gotoAdmin(page, "/admin/menu");
   expect(await textContrast(page, "section[aria-label='Список блюд']", "section[aria-label='Список блюд'] h1")).toBeGreaterThanOrEqual(4.5);
   await gotoAdmin(page, "/admin/settings?section=preorder");
-  expect(await textContrast(page, "select[class*='pickerSelect']", "select[class*='pickerSelect']")).toBeGreaterThanOrEqual(4.5);
+  expect(await textContrast(page, "button[class*='pickerSelect']", "button[class*='pickerSelect']")).toBeGreaterThanOrEqual(4.5);
 });
 
 test("mobile preorder save persists an absolute date and structured snapshot", async ({ page }, testInfo) => {

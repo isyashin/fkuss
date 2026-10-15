@@ -163,6 +163,19 @@ test("admin menu and settings fit the viewport", async ({ page }, testInfo) => {
       .slice(0, 8).map((element) => `${element.tagName.toLowerCase()}#${element.id}.${element.className?.toString().split(" ")[0]}:${Math.round(element.getBoundingClientRect().right)}`),
   }));
   expect(settingsWidth.content, `admin settings overflow on mobile: ${settingsWidth.offenders.join(", ")}`).toBeLessThanOrEqual(settingsWidth.viewport + 1);
+  if (isMobile) {
+    await page.getByRole("button", { name: /Зона «Центр/ }).click();
+    const threshold = await page.getByRole("spinbutton", { name: "Уровень 2: заказ от, ₽" }).boundingBox();
+    const price = await page.getByRole("spinbutton", { name: "Уровень 2: доставка, ₽" }).boundingBox();
+    const remove = await page.getByRole("button", { name: "Удалить уровень 2" }).boundingBox();
+    expect(threshold).not.toBeNull();
+    expect(price).not.toBeNull();
+    expect(remove).not.toBeNull();
+    expect(Math.abs(threshold!.y - price!.y), "tariff inputs should share one row").toBeLessThanOrEqual(1);
+    expect(Math.abs(price!.y - remove!.y), "tariff delete should stay in the same row").toBeLessThanOrEqual(1);
+    expect(threshold!.x + threshold!.width).toBeLessThan(price!.x);
+    expect(price!.x + price!.width).toBeLessThan(remove!.x);
+  }
 });
 
 test("admin orders use two readable columns at 1280px", async ({ page }) => {

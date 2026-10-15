@@ -9,7 +9,7 @@
  */
 import { setFaviconBadge, clearFaviconBadge } from "@/lib/favicon-badge";
 import { hasRecentAdminEvent, playAdminSound, primeAdminAudio } from "@/lib/admin-audio";
-import { DEFAULT_SOUND_REPEATS } from "@/lib/admin-sound-constants";
+import { DEFAULT_SOUND_REPEATS, SOUND_REPEAT_UNTIL_ACCEPTED } from "@/lib/admin-sound-constants";
 import type { PublicAdminSound } from "@/lib/admin-sound";
 
 /** Пауза между повторами сигнала (как раньше в компоненте). */
@@ -179,12 +179,13 @@ function shouldKeepLooping(): boolean {
 
 async function loopTick(): Promise<void> {
   if (!alertLoopActive) return;
-  if (alertLoop.remaining <= 0 || !shouldKeepLooping()) {
+  // remaining: -1 = бесконечная серия (repeats=0), пока заказ/бронь не примут
+  if (alertLoop.remaining === 0 || !shouldKeepLooping()) {
     alertLoopActive = false;
     alertLoop.kinds.clear();
     return;
   }
-  alertLoop.remaining -= 1;
+  if (alertLoop.remaining > 0) alertLoop.remaining -= 1;
   try {
     await playAdminSound(state.sound);
   } catch {
@@ -198,16 +199,17 @@ async function loopTick(): Promise<void> {
 }
 
 function startAlertLoop(kinds: string[]): void {
-  const repeats = Number.isInteger(state.sound.repeats) && state.sound.repeats > 0 ? state.sound.repeats : DEFAULT_SOUND_REPEATS;
+  const repeats = Number.isInteger(state.sound.repeats) && state.sound.repeats >= 0 ? state.sound.repeats : DEFAULT_SOUND_REPEATS;
+  const remaining = repeats === 0 ? SOUND_REPEAT_UNTIL_ACCEPTED : repeats;
   if (!alertLoopActive) {
     alertLoopActive = true;
-    alertLoop.remaining = repeats;
+    alertLoop.remaining = remaining;
     alertLoop.kinds = new Set(kinds);
     void loopTick();
     return;
   }
   for (const kind of kinds) alertLoop.kinds.add(kind);
-  alertLoop.remaining = repeats;
+  alertLoop.remaining = remaining;
 }
 
 function bindFirstGesture() {
@@ -279,6 +281,11 @@ async function poll(): Promise<void> {
 }
 
 function startPolling(): void {
+  // Перемонтирование после router.refresh() отменяет отложенную остановку серии.
+  if (stopGraceTimer !== null) {
+    window.clearTimeout(stopGraceTimer);
+    stopGraceTimer = null;
+  }
   if (started) return;
   started = true;
   bindFirstGesture();
@@ -286,13 +293,23 @@ function startPolling(): void {
   timer = window.setInterval(() => void poll(), 10_000);
 }
 
+let stopGraceTimer: number | null = null;
 function stopPolling(): void {
   if (timer !== null) {
     window.clearInterval(timer);
     timer = null;
   }
   started = false;
-  alertLoopActive = false;
+  // Звуковую серию НЕ обрываем сразу: router.refresh() на новом событии
+  // перемонтирует колокольчик — раньше серия умирала после первого сигнала.
+  // Если админка действительно закрыта (перемонтирования нет), глушим через grace.
+  if (stopGraceTimer === null && alertLoopActive) {
+    stopGraceTimer = window.setTimeout(() => {
+      alertLoopActive = false;
+      alertLoop.kinds.clear();
+      stopGraceTimer = null;
+    }, 3000);
+  }
 }
 
 /** Немедленный опрос (открытие панели — не ждём interval). */

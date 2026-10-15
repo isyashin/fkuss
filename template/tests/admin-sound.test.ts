@@ -16,10 +16,11 @@ describe("admin notification sound", () => {
       .toEqual({ selected: "standard1", customName: "", customPath: "", repeats: 3 });
   });
 
-  it("clamps sound repeats to 1..20 with default 10", () => {
+  it("clamps sound repeats to 0..20 with default 10 (0 = пока не примут)", () => {
     expect(parseSoundRepeats(undefined)).toBe(10);
     expect(parseSoundRepeats("мусор")).toBe(10);
-    expect(parseSoundRepeats(0)).toBe(10);
+    expect(parseSoundRepeats(-1)).toBe(10);
+    expect(parseSoundRepeats(0)).toBe(0);
     expect(parseSoundRepeats(1)).toBe(1);
     expect(parseSoundRepeats(3.6)).toBe(4);
     expect(parseSoundRepeats(20)).toBe(20);

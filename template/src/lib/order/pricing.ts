@@ -30,14 +30,23 @@ export interface DeliveryZone {
 
 /** Условия зоны в виде тарифов: новые tariffs или миграция из price/freeFrom */
 export function zoneTariffs(zone: DeliveryZone): ZoneTariff[] {
-  if (zone.tariffs && zone.tariffs.length > 0) {
-    return [...zone.tariffs].sort((a, b) => a.from - b.from);
+  const source = zone.tariffs && zone.tariffs.length > 0
+    ? zone.tariffs
+    : [
+        { from: 0, price: zone.price ?? 0 },
+        ...(zone.freeFrom != null && zone.freeFrom > 0 ? [{ from: zone.freeFrom, price: 0 }] : []),
+      ];
+  const sorted = [...source].sort((a, b) => a.from - b.from);
+  // При одинаковом пороге действует последний тариф; повтор той же цены дальше
+  // ничего не меняет и не должен занимать строку в редакторе или сводке.
+  const byThreshold: ZoneTariff[] = [];
+  for (const tariff of sorted) {
+    if (byThreshold.at(-1)?.from === tariff.from) byThreshold[byThreshold.length - 1] = tariff;
+    else byThreshold.push(tariff);
   }
-  const tariffs: ZoneTariff[] = [{ from: 0, price: zone.price ?? 0 }];
-  if (zone.freeFrom != null && zone.freeFrom > 0) {
-    tariffs.push({ from: zone.freeFrom, price: 0 });
-  }
-  return tariffs.sort((a, b) => a.from - b.from);
+  const effective = byThreshold.filter((tariff, i) => i === 0 || tariff.price !== byThreshold[i - 1].price);
+  // Цена первого уровня и прежде применялась ниже его порога.
+  return effective.map((tariff, i) => i === 0 ? { ...tariff, from: 0 } : tariff);
 }
 
 /** Цена доставки по тарифам: цена последнего уровня с from ≤ суммы заказа */

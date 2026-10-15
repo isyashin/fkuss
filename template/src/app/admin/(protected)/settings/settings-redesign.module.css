@@ -155,6 +155,8 @@ button.pickerSelect { display: flex; align-items: center; justify-content: space
   .sectionsCol { display: none; }
   .editor { margin: 0 -14px; padding: 26px 20px 170px; gap: 30px; }
   .editorCard, .legacyCard { padding-bottom: 30px; }
+  /* Карта не должна задавать минимальную ширину всей секции доставки. */
+  .editorCard { grid-template-columns: minmax(0, 1fr); }
   /* Текущее название видно в селекторе; h2 остаётся в дереве доступности. */
   .editor > :first-child > h2:first-child,
   .editor > .editorCard > section:first-child > div:first-child > div:first-child > h2:first-child {

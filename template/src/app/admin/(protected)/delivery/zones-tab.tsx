@@ -8,7 +8,7 @@
  */
 import { useRef, useState, useTransition } from "react";
 import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../settings/use-settings-save";
-import { tariffLines } from "@/lib/order/pricing";
+import { tariffLines, zoneTariffs } from "@/lib/order/pricing";
 import { defaultZonePolygon } from "@/lib/delivery/geo";
 import type { ContentSettings } from "@/lib/content-schema";
 import { ZoneMap, zoneColor } from "./zone-map";
@@ -16,6 +16,10 @@ import { TariffEditor } from "./tariff-editor";
 
 type Zone = ContentSettings["delivery"]["zones"][number];
 type Geo = ContentSettings["delivery"]["geo"];
+
+// Старые price/freeFrom и повторяющие цену пороги показываем как один список
+// реальных изменений цены. Сохранение других настроек не помечает форму грязной.
+const editableZones = (zones: Zone[]) => zones.map((zone) => ({ ...zone, tariffs: zoneTariffs(zone) }));
 
 export function ZonesTab({
   settings,
@@ -26,14 +30,14 @@ export function ZonesTab({
   restaurantCenter: { lat: number; lng: number } | null;
   ymapsKey: string;
 }) {
-  const [zones, setZones] = useState<Zone[]>(settings.delivery.zones);
+  const [zones, setZones] = useState<Zone[]>(() => editableZones(settings.delivery.zones));
   const [geo, setGeo] = useState<Geo>(
     settings.delivery.geo ?? { enabled: false, outside: "block", outsidePrice: 0 },
   );
   const [savedSnapshot, setSavedSnapshot] = useState(() =>
     // F21: снапшот строится из тех же значений, что и начальное состояние —
     // иначе форма «грязная» сразу после открытия (geo undefined vs дефолт).
-    JSON.stringify([settings.delivery.zones, settings.delivery.geo ?? { enabled: false, outside: "block", outsidePrice: 0 }]),
+    JSON.stringify([editableZones(settings.delivery.zones), settings.delivery.geo ?? { enabled: false, outside: "block", outsidePrice: 0 }]),
   );
   const [selected, setSelected] = useState<number | null>(null);
   const [drawToken, setDrawToken] = useState(0);
@@ -46,7 +50,7 @@ export function ZonesTab({
   // P1-2: после «Обновить» в диалоге конфликта зоны/geo сбрасываются к свежим данным.
   const settingsEpoch = useSettingsEpoch();
   useResetSettingsOnEpoch(settingsEpoch, () => {
-    const freshZones = settings.delivery.zones;
+    const freshZones = editableZones(settings.delivery.zones);
     const freshGeo = settings.delivery.geo ?? { enabled: false, outside: "block", outsidePrice: 0 };
     setZones(freshZones);
     setGeo(freshGeo);
@@ -89,12 +93,14 @@ export function ZonesTab({
     startTransition(async () => {
       setFeedback({ text: "", error: false });
       try {
+        const nextZones = editableZones(zones);
         const next: ContentSettings = {
           ...settings,
-          delivery: { ...settings.delivery, zones, geo },
+          delivery: { ...settings.delivery, zones: nextZones, geo },
         };
         const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error(errorMessage ?? "Не удалось сохранить"); return; }
-        setSavedSnapshot(JSON.stringify([zones, geo]));
+        setZones(nextZones);
+        setSavedSnapshot(JSON.stringify([nextZones, geo]));
         setFeedback({ text: "Сохранено", error: false });
       } catch (cause) {
         setFeedback({
@@ -288,7 +294,7 @@ export function ZonesTab({
 
                   <div className="px-4 pb-4 pt-2 space-y-3">
                     <TariffEditor
-                      tariffs={zone.tariffs ?? [{ from: 0, price: zone.price ?? 300 }]}
+                      tariffs={zone.tariffs ?? zoneTariffs(zone)}
                       onChange={(tariffs) => updateZone(i, { tariffs })}
                     />
 

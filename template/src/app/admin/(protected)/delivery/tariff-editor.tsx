@@ -1,6 +1,6 @@
 "use client";
 
-/** Компактный редактор тарифов зоны: «Цена 300 ₽», уровни — «От 2 000 ₽ → 0 ₽». */
+/** Компактный редактор тарифов зоны: каждый уровень — «От X ₽ → Y ₽». */
 import type { ZoneTariff } from "@/lib/order/pricing";
 
 export function TariffEditor({
@@ -17,15 +17,20 @@ export function TariffEditor({
     onChange(rows.map((t, i) => (i === index ? { ...t, ...patch } : t)));
   }
 
+  function remove(index: number) {
+    const next = rows.filter((_, i) => i !== index);
+    onChange(next.map((tariff, i) => i === 0 ? { ...tariff, from: 0 } : tariff));
+  }
+
   return (
     <div className="space-y-2">
       {rows.map((tariff, i) => (
         <div key={i} className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted">От</span>
           {i === 0 ? (
-            <span className="text-sm text-muted w-12">Цена</span>
+            <span className="text-sm min-h-11 inline-flex items-center">0 ₽ →</span>
           ) : (
             <>
-              <span className="text-sm text-muted">От</span>
               <input
                 type="number"
                 min={0}
@@ -51,7 +56,7 @@ export function TariffEditor({
           {rows.length > 1 && (
             <button
               type="button"
-              onClick={() => onChange(rows.filter((_, index) => index !== i))}
+              onClick={() => remove(i)}
               className="text-xs text-red-600 min-h-11 px-2"
               aria-label={`Удалить уровень ${i + 1}`}
             >

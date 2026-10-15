@@ -12,7 +12,10 @@ export function TariffEditor({
 }) {
   const rows = tariffs.length > 0 ? tariffs : [{ from: 0, price: 300 }];
   const inputCls = "w-full min-w-0 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
-  const rowCls = "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2";
+  const rowCls = "grid items-center gap-2";
+  // Явная сетка: Tailwind не генерировал arbitrary grid-cols для этой строки,
+  // и на 360 px поля растягивались друг под другом.
+  const rowStyle = { gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) 44px" };
 
   function update(index: number, patch: Partial<ZoneTariff>) {
     onChange(rows.map((t, i) => (i === index ? { ...t, ...patch } : t)));
@@ -25,12 +28,12 @@ export function TariffEditor({
 
   return (
     <div className="space-y-2 max-w-md min-w-0">
-      <div className={`${rowCls} text-xs text-muted`}>
+      <div className={`${rowCls} text-xs text-muted`} style={rowStyle}>
         <span>Заказ от, ₽</span>
         <span>Доставка, ₽</span>
       </div>
       {rows.map((tariff, i) => (
-        <div key={i} className={rowCls}>
+        <div key={i} className={rowCls} style={rowStyle}>
           {i === 0 ? (
             <span aria-label="Уровень 1: заказ от, ₽" className="min-h-11 px-3 inline-flex items-center text-sm">0</span>
           ) : (

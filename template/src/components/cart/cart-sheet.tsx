@@ -59,7 +59,11 @@ export function CartSheet({
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "online">("cash");
   const [preferredChannel, setPreferredChannel] = useState<PreferredChannel>("phone");
   const [bonusSpend, setBonusSpend] = useState(0);
-  const [form, setForm] = useState({ address: initialAddress, name: "", phone: "", email: "", comment: "", website: "" });
+  const [form, setForm] = useState({
+    city: "", street: initialAddress.includes(",") ? "" : initialAddress, house: "",
+    entrance: "", apartment: "", intercom: "",
+    name: "", phone: "", email: "", comment: "", website: "",
+  });
 
   // Варианты доставки и окна (если настроены)
   const [options, setOptions] = useState<{
@@ -172,15 +176,18 @@ export function CartSheet({
     }
   }, []);
 
+  const geoAddress = [form.city, form.street, form.house].map((s) => s.trim()).filter(Boolean).join(", ");
+
   // Определение зоны с задержкой, чтобы не дёргать геокодер на каждую букву.
   // Сброс состояния — в onChange адреса (ниже), здесь только планируем запрос.
   useEffect(() => {
     if (!geoActive || type !== "delivery") return;
-    const address = form.address.trim();
+    if (!form.city.trim() || !form.street.trim() || !form.house.trim()) return;
+    const address = geoAddress;
     if (address.length < 6) return;
     const timer = setTimeout(() => void lookupZone(address), 600);
     return () => clearTimeout(timer);
-  }, [geoActive, type, form.address, lookupZone]);
+  }, [geoActive, type, form.city, form.street, form.house, geoAddress, lookupZone]);
 
   // Подсказки адресов (JS API). Без ключа или без suggest в пакете ключа —
   // просто свободный ввод; асинхронную ошибку Suggest глушим, чтобы не сорить консолью.
@@ -198,9 +205,10 @@ export function CartSheet({
         try {
           suggest = new ymaps.SuggestView(addressRef.current, { results: 5 });
           suggest.events.add("select", (e) => {
-            const item = e.get("item") as { value?: string } | undefined;
+            const item = e.get("item") as { value?: string; displayName?: string } | undefined;
             if (item?.value) {
-              setForm((f) => ({ ...f, address: item.value ?? f.address }));
+              // displayName — короткая форма (улица без города/региона)
+              setForm((f) => ({ ...f, street: item.displayName || item.value || f.street }));
             }
           });
         } catch {
@@ -276,7 +284,9 @@ export function CartSheet({
     if (!form.name.trim()) errors.name = "Укажите имя";
     if (!form.phone.trim()) errors.phone = "Укажите телефон";
     else if (!normalizeContactPhone(form.phone)) errors.phone = "Проверьте номер — нужно 11 цифр, например +7 999 000-11-22";
-    if (type === "delivery" && !form.address.trim()) errors.address = "Укажите адрес доставки";
+    if (type === "delivery" && (!form.city.trim() || !form.street.trim() || !form.house.trim())) {
+      errors.address = "Заполните город, улицу и дом";
+    }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -289,6 +299,12 @@ export function CartSheet({
     // иначе самовывоз с scheduled-вариантом в настройках шлёт пустую дату
     // и серверная схема отклоняет заказ.
     const scheduledDelivery = type === "delivery" && selectedOption?.mode === "scheduled";
+    const addressExtras = [
+      form.entrance.trim() && `подъезд ${form.entrance.trim()}`,
+      form.apartment.trim() && `кв. ${form.apartment.trim()}`,
+      form.intercom.trim() && `домофон ${form.intercom.trim()}`,
+    ].filter(Boolean).join(", ");
+    const fullAddress = addressExtras ? `${geoAddress}, ${addressExtras}` : geoAddress;
     try {
       const response = await fetch("/api/order", {
         method: "POST",
@@ -301,7 +317,13 @@ export function CartSheet({
           })),
           type,
           zoneName: type === "delivery" ? zoneName : null,
-          address: form.address,
+          address: fullAddress,
+          addressCity: form.city.trim(),
+          addressStreet: form.street.trim(),
+          addressHouse: form.house.trim(),
+          addressEntrance: form.entrance.trim(),
+          addressApartment: form.apartment.trim(),
+          addressIntercom: form.intercom.trim(),
           customerName: form.name,
           customerPhone: form.phone,
           preferredChannel,
@@ -536,23 +558,35 @@ export function CartSheet({
                     </select>
                   </label>
                 )}
-                <label className="block">
-                  <span className="text-sm text-muted">Адрес</span>
-                  <input
-                    ref={addressRef}
-                    value={form.address}
-                    onChange={(e) => {
-                      geoSeq.current += 1; // ответ по старому адресу не нужен
-                      setGeo({ status: "idle" });
-                      setForm({ ...form, address: e.target.value });
-                      if (fieldErrors.address) setFieldErrors((current) => ({ ...current, address: undefined }));
-                    }}
-                    placeholder="Улица, дом, квартира"
-                    autoComplete="off"
-                    className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
-                  />
-                  {fieldErrors.address && <p role="alert" className="text-red-600 text-sm mt-1">{fieldErrors.address}</p>}
-                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    ["city", "Город", true],
+                    ["street", "Улица", true],
+                    ["house", "Дом", false],
+                    ["entrance", "Подъезд", false],
+                    ["apartment", "Квартира", false],
+                    ["intercom", "Домофон", false],
+                  ] as const).map(([key, label, wide]) => (
+                    <label key={key} className={`block ${wide ? "col-span-2" : ""}`}>
+                      <span className="text-sm text-muted">
+                        {label}{["city", "street", "house"].includes(key) && <span aria-hidden="true"> *</span>}
+                      </span>
+                      <input
+                        ref={key === "street" ? addressRef : undefined}
+                        value={form[key]}
+                        onChange={(e) => {
+                          geoSeq.current += 1; // ответ по старому адресу не нужен
+                          setGeo({ status: "idle" });
+                          setForm({ ...form, [key]: e.target.value });
+                          if (fieldErrors.address) setFieldErrors((current) => ({ ...current, address: undefined }));
+                        }}
+                        autoComplete="off"
+                        className="mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+                      />
+                    </label>
+                  ))}
+                  {fieldErrors.address && <p role="alert" className="col-span-2 text-red-600 text-sm mt-1">{fieldErrors.address}</p>}
+                </div>
 
                 {geoActive && (
                   <div className="space-y-2" data-testid="geo-zone">
@@ -594,7 +628,7 @@ export function CartSheet({
                         <p className="text-sm text-red-600">Не удалось проверить адрес.</p>
                         <button
                           type="button"
-                          onClick={() => void lookupZone(form.address.trim())}
+                          onClick={() => void lookupZone(geoAddress)}
                           className="text-sm underline min-h-11"
                         >
                           Повторить

@@ -27,6 +27,13 @@ const orderSchema = z.object({
   type: z.enum(["delivery", "pickup"]),
   zoneName: z.string().nullable().default(null),
   address: z.string().max(300).default(""),
+  // Структурированный адрес (город/улица/дом обязательны при их использовании).
+  addressCity: z.string().max(100).default(""),
+  addressStreet: z.string().max(150).default(""),
+  addressHouse: z.string().max(30).default(""),
+  addressEntrance: z.string().max(30).default(""),
+  addressApartment: z.string().max(30).default(""),
+  addressIntercom: z.string().max(60).default(""),
   customerName: z.string().min(1).max(100),
   customerPhone: z.string().min(5).max(20),
   preferredChannel: preferredChannelInputSchema,
@@ -203,6 +210,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Бонусы недоступны: личный кабинет отключён" }, { status: 400 });
   }
 
+  // Структурированный адрес: гео-проверка идёт по «город, улица, дом»,
+  // подъезд/квартира/домофон — только в сохраняемую строку.
+  const structuredAddress =
+    input.type === "delivery" &&
+    Boolean(input.addressCity.trim() || input.addressStreet.trim() || input.addressHouse.trim());
+  const geoAddress = structuredAddress
+    ? `${input.addressCity.trim()}, ${input.addressStreet.trim()}, ${input.addressHouse.trim()}`
+    : input.address;
+  const addressExtras = structuredAddress
+    ? [
+        input.addressEntrance.trim() && `подъезд ${input.addressEntrance.trim()}`,
+        input.addressApartment.trim() && `кв. ${input.addressApartment.trim()}`,
+        input.addressIntercom.trim() && `домофон ${input.addressIntercom.trim()}`,
+      ].filter(Boolean).join(", ")
+    : "";
+  const storedAddress = structuredAddress
+    ? (addressExtras ? `${geoAddress}, ${addressExtras}` : geoAddress)
+    : input.address;
+
   // Варианты доставки с интервалами: если есть включённые — цена и время от них,
   // зоны не применяются (единое начисление, без двойной платы)
   if (input.type === "delivery") {
@@ -210,8 +236,11 @@ export async function POST(request: Request) {
     if (!settings.delivery.enabled) {
       return NextResponse.json({ error: "Доставка временно недоступна" }, { status: 400 });
     }
-    if (!input.address.trim()) {
+    if (!structuredAddress && !input.address.trim()) {
       return NextResponse.json({ error: "Укажите адрес доставки" }, { status: 400 });
+    }
+    if (structuredAddress && (!input.addressCity.trim() || !input.addressStreet.trim() || !input.addressHouse.trim())) {
+      return NextResponse.json({ error: "Заполните город, улицу и дом" }, { status: 400 });
     }
   } else if (!settings.delivery.pickupEnabled) {
     return NextResponse.json({ error: "Самовывоз временно недоступен" }, { status: 400 });
@@ -310,7 +339,7 @@ export async function POST(request: Request) {
       geo.enabled && settings.delivery.zones.some((z) => (z.polygon?.length ?? 0) >= 3);
     if (geoActive) {
       const resolved = await resolveGeoDelivery({
-        address: input.address,
+        address: geoAddress,
         zones: settings.delivery.zones,
         outside: geo.outside,
         outsidePrice: geo.outsidePrice,
@@ -413,7 +442,7 @@ export async function POST(request: Request) {
           customerName: input.customerName,
           customerPhone: input.customerPhone,
           preferredChannel: input.preferredChannel,
-          addressText: input.address,
+          addressText: storedAddress,
           comment: input.comment,
           desiredTime: desiredTimeText,
           preOrderDate: preOrderData?.preOrderDate ?? null,

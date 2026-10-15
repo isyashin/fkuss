@@ -423,7 +423,7 @@ export function CartSheet({
         )}
 
         {step === "form" && (
-          <div className="space-y-4">
+          <div className="space-y-4 checkout-form">
             <div className="flex gap-2">
               {delivery.enabled && (
                 <button

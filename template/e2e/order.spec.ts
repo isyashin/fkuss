@@ -51,7 +51,9 @@ test("submit чекаута виден без прокрутки на mobile-360
 
   // Доставка + адрес: форма длинная и гарантированно не помещается в шторку
   await page.getByRole("button", { name: "Доставка" }).click();
-  await page.getByLabel("Адрес").fill("ул. Тестовая, 1");
+  await page.getByLabel("Город").fill("Тестов");
+  await page.getByLabel("Улица").fill("ул. Тестовая");
+  await page.getByLabel("Дом", { exact: true }).fill("1");
   await page.getByLabel("Имя").fill("Тест E2E");
   await page.getByLabel("Телефон").fill("+79990001458");
 

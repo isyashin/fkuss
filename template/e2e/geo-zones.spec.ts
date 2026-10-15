@@ -55,7 +55,9 @@ test("geo-режим: default выключен; без ключа геокоде
     await page.getByRole("button", { name: /Добавить ·/ }).click();
     await page.getByRole("button", { name: /Корзина · 1/ }).click();
     await page.getByRole("button", { name: /Оформить ·/ }).click();
-    await page.getByLabel("Адрес").fill("Москва, Тверская 1");
+    await page.getByLabel("Город").fill("Москва");
+    await page.getByLabel("Улица").fill("Тверская");
+    await page.getByLabel("Дом", { exact: true }).fill("1");
     await expect(page.getByText("Не удалось проверить адрес")).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole("button", { name: /Заказать ·/ })).toBeDisabled();
 

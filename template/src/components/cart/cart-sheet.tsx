@@ -568,8 +568,8 @@ export function CartSheet({
                     ["intercom", "Домофон", false],
                   ] as const).map(([key, label, wide]) => (
                     <label key={key} className={`block ${wide ? "col-span-2" : ""}`}>
-                      <span className="text-sm text-muted">
-                        {label}{["city", "street", "house"].includes(key) && <span aria-hidden="true"> *</span>}
+                      <span className="text-sm text-muted" data-required={["city", "street", "house"].includes(key) ? "" : undefined}>
+                        {label}
                       </span>
                       <input
                         ref={key === "street" ? addressRef : undefined}

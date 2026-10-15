@@ -52,3 +52,8 @@ h1, h2, h3 {
 .checkout-form input[type="checkbox"] {
   accent-color: var(--accent);
 }
+/* Обязательные поля: звёздочка через CSS, чтобы не попадать в accessible name */
+.checkout-form label > span[data-required]::after {
+  content: " *";
+  color: #dc2626;
+}

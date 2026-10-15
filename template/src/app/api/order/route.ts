@@ -297,12 +297,14 @@ export async function POST(request: Request) {
   }
 
   // Зоны на карте (geo-режим): сервер сам геокодирует адрес и определяет зону.
-  // Клиентскому zoneName в geo-режиме не доверяем. Варианты доставки (выше),
-  // если включены, вытесняют зоны — geo-режим не применяется.
+  // Клиентскому zoneName в geo-режиме не доверяем. Доступность адреса по зонам
+  // проверяем и при выбранном варианте доставки (иначе варианты молча отключали
+  // geo-проверку — заказы уезжали в любой город). Без ключа карт проверку для
+  // вариантов пропускаем, чтобы не ломать ранее работавшие заказы.
   let orderZoneName: string | null = null;
   let snapshotZoneName: string | null = null;
   let orderZones = settings.delivery.zones;
-  if (input.type === "delivery" && !option) {
+  if (input.type === "delivery" && (!option || process.env.YANDEX_MAPS_API_KEY)) {
     const geo = settings.delivery.geo ?? { enabled: false, outside: "block" as const, outsidePrice: 0 };
     const geoActive =
       geo.enabled && settings.delivery.zones.some((z) => (z.polygon?.length ?? 0) >= 3);
@@ -326,22 +328,24 @@ export async function POST(request: Request) {
           { status: 503 },
         );
       }
-      if (resolved.kind === "zone") {
-        orderZoneName = resolved.zoneName;
-        snapshotZoneName = resolved.zoneName;
-      } else {
-        // outside-allowed: служебная зона с ценой настройки, деньги считает calculateOrder
-        orderZoneName = OUTSIDE_ZONE_NAME;
-        snapshotZoneName = "Вне зон";
-        orderZones = [
-          ...settings.delivery.zones,
-          {
-            name: OUTSIDE_ZONE_NAME,
-            enabled: true,
-            deliveryMinutes: null,
-            tariffs: [{ from: 0, price: geo.outsidePrice }],
-          },
-        ];
+      if (!option) {
+        if (resolved.kind === "zone") {
+          orderZoneName = resolved.zoneName;
+          snapshotZoneName = resolved.zoneName;
+        } else {
+          // outside-allowed: служебная зона с ценой настройки, деньги считает calculateOrder
+          orderZoneName = OUTSIDE_ZONE_NAME;
+          snapshotZoneName = "Вне зон";
+          orderZones = [
+            ...settings.delivery.zones,
+            {
+              name: OUTSIDE_ZONE_NAME,
+              enabled: true,
+              deliveryMinutes: null,
+              tariffs: [{ from: 0, price: geo.outsidePrice }],
+            },
+          ];
+        }
       }
     }
   }

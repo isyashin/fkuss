@@ -28,7 +28,7 @@ export function TariffEditor({
         <div key={i} className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted">От</span>
           {i === 0 ? (
-            <span className="text-sm min-h-11 inline-flex items-center">0 ₽ →</span>
+            <span className="text-sm w-24 min-h-11 px-3 inline-flex items-center">0 ₽ →</span>
           ) : (
             <>
               <input

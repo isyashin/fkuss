@@ -16,10 +16,13 @@ describe("редактор тарифов зоны", () => {
 
     expect(markup).not.toContain(">Цена<");
     expect(markup).not.toContain("Уровень 3:");
-    expect(markup).toContain(">От</span>");
-    expect(markup).toContain(">0 ₽ →</span>");
+    expect(markup).toContain("Заказ от, ₽");
+    expect(markup).toContain("Доставка, ₽");
+    expect(markup).toContain('aria-label="Уровень 1: заказ от, ₽"');
     expect(markup).toContain('aria-label="Уровень 1: доставка, ₽"');
     expect(markup).toContain('aria-label="Уровень 2: заказ от, ₽"');
+    expect(markup).not.toContain('aria-label="Удалить уровень 1"');
+    expect(markup).toContain('aria-label="Удалить уровень 2"');
     expect(markup).toContain('value="4000"');
   });
 });

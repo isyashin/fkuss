@@ -246,10 +246,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Самовывоз временно недоступен" }, { status: 400 });
   }
 
-  const configuredOptions =
-    input.type === "delivery"
-      ? await prisma.deliveryOption.findMany({ orderBy: { position: "asc" } })
-      : [];
+  // «Варианты доставки» убраны из продукта: остаются только зоны (карта/тарифы).
+  // Список намеренно пуст — вся логика ниже идёт по zone-ветке, option = null.
+  const configuredOptions: import("@/generated/prisma/client").DeliveryOption[] = [];
 
   // Если варианты настроены, клиент обязан выбрать существующий включённый
   // вариант. Нельзя подменять отсутствующий/выключенный ID первым вариантом.

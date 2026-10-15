@@ -14,7 +14,7 @@ import { BanquetsAdmin } from "../banquets/banquets-admin";
 import { PagesAdmin } from "../pages/pages-admin";
 import { SyncAdmin } from "../sync/sync-admin";
 import { PrintMaterialsAdmin } from "../print-materials/print-materials-admin";
-import { DeliveryTabs } from "../delivery/delivery-tabs";
+import { ZonesTab } from "../delivery/zones-tab";
 import { geocodeAddress } from "@/lib/delivery/geocoder";
 import { GuestCabinetSettings } from "./guest-cabinet-settings";
 import { SoundSettings } from "./sound-settings";
@@ -132,11 +132,7 @@ async function SectionPrint() {
 }
 
 async function SectionDeliveryZones({ settings }: { settings: Awaited<ReturnType<typeof getSiteSettings>> }) {
-  const prisma = getPrisma();
-  const [options, restaurant] = await Promise.all([
-    prisma.deliveryOption.findMany({ orderBy: { position: "asc" } }),
-    getSiteRestaurant(),
-  ]);
+  const restaurant = await getSiteRestaurant();
   // Центр карты — геокодинг адреса ресторана (см. /admin/delivery).
   let restaurantCenter: { lat: number; lng: number } | null = null;
   if (restaurant.address.trim()) {
@@ -146,7 +142,7 @@ async function SectionDeliveryZones({ settings }: { settings: Awaited<ReturnType
   return <div className={styles.editorCard}>
     <h2 className={styles.editorTitle}>Зоны и условия доставки</h2>
     <p className={styles.editorHint}>Geo-режим: полигональные зоны на карте с тарифами. Работает при наличии ключей Яндекс.Карт в среде сайта.</p>
-    <DeliveryTabs options={options} settings={settings} restaurantCenter={restaurantCenter} ymapsKey={process.env.YANDEX_MAPS_API_KEY ?? ""} />
+    <ZonesTab settings={settings} restaurantCenter={restaurantCenter} ymapsKey={process.env.YANDEX_MAPS_API_KEY ?? ""} />
   </div>;
 }
 

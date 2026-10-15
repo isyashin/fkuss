@@ -35,12 +35,11 @@ describe("canonical order flow against PostgreSQL", () => {
     try {
       expect(await applyPaymentEvent(prisma, { orderId, paymentId: `test-${orderId}`, status: "paid" })).toBe(true);
       expect((await prisma.order.findUniqueOrThrow({ where: { id: orderId } })).status).toBe("accepted");
-      for (const status of ["cooking", "ready", "handed_to_courier"] as const) {
-        await applyAdminOrderStatus(prisma, orderId, status);
-        expect(await prisma.bonusTransaction.count({ where: { orderId, type: "accrual" } })).toBe(0);
-      }
-      await applyAdminOrderStatus(prisma, orderId, "delivered");
-      expect((await prisma.order.findUniqueOrThrow({ where: { id: orderId } })).status).toBe("delivered");
+      // Новая короткая цепочка: cooking пропускается, accepted → ready сразу финал.
+      await expect(applyAdminOrderStatus(prisma, orderId, "cooking")).rejects.toThrow("Недопустимый переход");
+      expect(await prisma.bonusTransaction.count({ where: { orderId, type: "accrual" } })).toBe(0);
+      await applyAdminOrderStatus(prisma, orderId, "ready");
+      expect((await prisma.order.findUniqueOrThrow({ where: { id: orderId } })).status).toBe("ready");
       expect(await prisma.bonusTransaction.findMany({ where: { orderId, type: "accrual" }, select: { amount: true } })).toEqual([{ amount: 50 }]);
       expect(await applyPaymentEvent(prisma, { orderId, paymentId: `test-${orderId}`, status: "paid" })).toBe(false);
     } finally { await cleanup(customerId, orderId); }

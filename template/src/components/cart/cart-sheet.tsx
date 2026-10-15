@@ -92,10 +92,7 @@ export function CartSheet({
     fetch("/api/delivery/slots")
       .then((r) => r.json())
       .then((data) => {
-        const opts = data.options ?? [];
-        setOptions(opts);
-        // F03: выбираем первый доступный — недоступные варианты не предлагаем.
-        setDeliveryOptionId(opts.find((o: { available?: boolean }) => o.available)?.id ?? "");
+        // «Варианты доставки» убраны: options остаётся пустым, гость заказывает по зонам.
         setPreOrder(data.preOrder ?? { enabled: false, slots: [] });
       })
       .catch(() => {});

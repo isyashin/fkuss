@@ -1,7 +1,14 @@
 export const ORDER_STATUS_CHAINS = {
-  delivery: ["new", "accepted", "cooking", "ready", "handed_to_courier", "delivered"],
-  pickup: ["new", "accepted", "cooking", "ready", "issued"],
+  // Упрощённый поток (по владельцу): две кнопки — «Принять заказ» и «Заказ готов».
+  delivery: ["new", "accepted", "ready"],
+  pickup: ["new", "accepted", "ready"],
 } as const;
+
+// Заказы, созданные до упрощения: промежуточные статусы доводим до финала теми же кнопками.
+const LEGACY_NEXT: Record<string, OrderStatus> = {
+  cooking: "ready",
+  handed_to_courier: "delivered",
+};
 
 export const ORDER_STATUS_CODES = ["new", "accepted", "cooking", "ready", "handed_to_courier", "delivered", "issued", "cancelled"] as const;
 export type OrderStatus = typeof ORDER_STATUS_CODES[number];
@@ -19,9 +26,9 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 };
 
 const ACTION_LABELS: Record<Exclude<OrderStatus, "new">, string> = {
-  accepted: "Принять",
+  accepted: "Принять заказ",
   cooking: "Готовится",
-  ready: "Готов",
+  ready: "Заказ готов",
   handed_to_courier: "Передан курьеру",
   delivered: "Доставлен",
   issued: "Выдан",
@@ -42,17 +49,22 @@ export function orderStatusLabel(status: string): string {
 
 export function nextOrderStatus(type: string, status: string): OrderStatus | null {
   if (!isOrderType(type)) return null;
+  const legacy = LEGACY_NEXT[status];
+  if (legacy) return legacy;
   const chain: readonly string[] = ORDER_STATUS_CHAINS[type];
   const index = chain.indexOf(status);
   return index >= 0 && index < chain.length - 1 ? chain[index + 1] as OrderStatus : null;
 }
 
 export function isFinalOrderStatus(type: string, status: string): boolean {
-  return isOrderType(type) && ORDER_STATUS_CHAINS[type].at(-1) === status;
+  if (!isOrderType(type)) return false;
+  if (status === "ready") return true;
+  // Финалы старой цепочки (заказы, созданные до упрощения)
+  return type === "delivery" ? status === "delivered" : status === "issued";
 }
 
 export function canTransitionOrder(type: string, from: string, to: string): boolean {
-  if (to === "cancelled") return isOrderType(type) && from !== "cancelled" && !isFinalOrderStatus(type, from) && (ORDER_STATUS_CHAINS[type] as readonly string[]).includes(from);
+  if (to === "cancelled") return isOrderType(type) && isOrderStatus(from) && from !== "cancelled" && !isFinalOrderStatus(type, from);
   return nextOrderStatus(type, from) === to;
 }
 

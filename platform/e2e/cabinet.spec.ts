@@ -20,7 +20,8 @@ test("владелец входит и пополняет баланс", async (
 
   // Пополнение через mock-провайдер
   const balanceBefore = await page.locator("p.pf-statValue").first().textContent();
-  await page.locator('input[type="number"]').fill("1000");
+  // A non-default amount catches early input that would otherwise silently use 1000.
+  await page.locator('input[type="number"]').fill("2000");
   const mockNavigation = page.waitForRequest(
     (request) => new URL(request.url()).pathname === "/payment/mock",
     { timeout: 20_000 },
@@ -44,5 +45,5 @@ test("владелец входит и пополняет баланс", async (
       },
       { timeout: 20000, intervals: [1000, 2000, 3000] },
     )
-    .toBe(before + 1000);
+    .toBe(before + 2000);
 });

@@ -2,17 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { topupAction } from "./topup-action";
+import { useMounted } from "@/lib/use-mounted";
 
 export function TopupForm({ slug }: { slug: string }) {
+  const mounted = useMounted();
   const [amount, setAmount] = useState("1000");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
 
   return (
     <div className="pf-actionsRow">
-      <input type="number" min={100} step={100} value={amount} onChange={(e) => setAmount(e.target.value)}
+      <input type="number" disabled={!mounted} min={100} step={100} value={amount} onChange={(e) => setAmount(e.target.value)}
         aria-label="Сумма пополнения" className="pf-input" style={{ width: 130 }} />
-      <button type="button" className="pf-btn pf-btnPrimary" disabled={pending}
+      <button type="button" className="pf-btn pf-btnPrimary" disabled={pending || !mounted}
         onClick={() =>
           startTransition(async () => {
             setError("");

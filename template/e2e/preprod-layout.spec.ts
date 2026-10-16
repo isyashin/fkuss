@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { gotoAdmin, loginAdminUi } from "./login-admin";
 
-test("profile waits for hydration even when WebKit exposes the SSR button", async ({ page }) => {
+test("profile waits for hydration even when WebKit exposes the SSR button", async ({ page }, testInfo) => {
   await gotoAdmin(page, "/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
@@ -10,7 +10,8 @@ test("profile waits for hydration even when WebKit exposes the SSR button", asyn
   await page.route("**/_next/static/chunks/*.js", async (route) => { await gate; await route.continue(); });
   try {
     await page.goto("/admin", { waitUntil: "commit" });
-    const profile = page.locator("button[aria-label^='Профиль:']:visible");
+    // Before external CSS arrives both SSR shells can be visible. Own the viewport's shell.
+    const profile = page.locator(`${testInfo.project.name === "desktop" ? "aside" : "header"} button[aria-label^='Профиль:']`);
     await expect(profile).toBeDisabled();
     release();
     await expect(profile).toBeEnabled();

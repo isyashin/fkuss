@@ -3,6 +3,7 @@ import {
   canRequestExport,
   exportRequestData,
   resolveExportArchive,
+  isExportAvailable,
 } from "@/lib/export-access";
 
 describe("export archive access", () => {
@@ -40,6 +41,15 @@ describe("export ownership and repeat state", () => {
     expect(exportRequestData(requestedAt)).toEqual({
       exportRequestedAt: requestedAt,
       exportReadyPath: null,
+      exportReadyAt: null,
+      exportExpiresAt: null,
     });
+  });
+
+  it("expires access at the deadline even when the file still exists", () => {
+    const ready = { exportReadyPath: "bistro-20261016-120000.tar.gz", exportExpiresAt: new Date("2026-10-17T12:00:00Z") };
+    expect(isExportAvailable(ready, new Date("2026-10-17T11:59:59Z"))).toBe(true);
+    expect(isExportAvailable(ready, new Date("2026-10-17T12:00:00Z"))).toBe(false);
+    expect(isExportAvailable({ ...ready, exportExpiresAt: null }, new Date("2026-10-16T12:00:00Z"))).toBe(false);
   });
 });

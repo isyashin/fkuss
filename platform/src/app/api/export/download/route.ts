@@ -2,7 +2,7 @@ import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { resolveExportArchive } from "@/lib/export-access";
+import { isExportAvailable, resolveExportArchive } from "@/lib/export-access";
 import { getSessionOwner } from "@/lib/owner-auth";
 import { getPrisma } from "@/lib/db";
 
@@ -22,6 +22,9 @@ export async function GET() {
   const abs = resolveExportArchive(exportDir, readyPath, owner.siteId);
   if (!abs) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (!site || !isExportAvailable(site)) {
+    return NextResponse.json({ error: "Срок архива истёк. Запросите новый экспорт." }, { status: 410 });
   }
 
   try {

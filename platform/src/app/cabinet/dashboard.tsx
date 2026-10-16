@@ -3,6 +3,7 @@ import { dailyChargeKopecks, daysLeft } from "@/lib/billing";
 import { TopupForm } from "./topup-form";
 import { ExportButton } from "./export-button";
 import { NotifyChannelSettings } from "./notify-channel-settings";
+import { isExportAvailable } from "@/lib/export-access";
 
 export async function OwnerDashboard({ ownerId }: { ownerId: string }) {
   const prisma = getPrisma();
@@ -109,14 +110,14 @@ export async function OwnerDashboard({ ownerId }: { ownerId: string }) {
       <div className="pf-panel" style={{ marginTop: 16 }}>
         <h2 className="pf-panelTitle">Экспорт сайта</h2>
         <p className="pf-panelHint">Архив контента и базы данных сайта появится здесь после подготовки.</p>
-        {site.exportReadyPath ? (
+        {isExportAvailable(site) ? (
           <div className="pf-actionsRow">
             <a href="/api/export/download" className="pf-btn pf-btnPrimary">Скачать архив</a>
             <span className="pf-badge pf-badgeGreen">{site.exportReadyPath}</span>
             <ExportButton slug={site.slug} requested={false} label="Подготовить новый архив" />
           </div>
         ) : (
-          <ExportButton slug={site.slug} requested={Boolean(site.exportRequestedAt)} />
+          <ExportButton slug={site.slug} requested={Boolean(site.exportRequestedAt) && !site.exportReadyPath} />
         )}
       </div>
     </>

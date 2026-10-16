@@ -35,6 +35,10 @@ describe("applyPaidTopup", () => {
         dedupeKey: `topup:${payment.id}`,
       }),
     });
+    expect(tx.site.updateMany).toHaveBeenCalledWith({
+      where: { slug: payment.siteId, state: { in: ["grace", "suspended"] }, manualSuspended: false },
+      data: { state: "active", stateChangedAt: expect.any(Date) },
+    });
   });
 
   it("does nothing when a concurrent webhook already marked the payment", async () => {

@@ -10,7 +10,7 @@ async function login(page: import("@playwright/test").Page) {
   await expect(page).toHaveURL(/\/admin$/);
 }
 
-test("админ платформы: дашборд, карточка сайта, операции и экспорт", async ({ page }) => {
+test("админ платформы: дашборд, карточка сайта, операции и экспорт", async ({ page }, testInfo) => {
   await login(page);
 
   // Дашборд
@@ -29,10 +29,11 @@ test("админ платформы: дашборд, карточка сайта
 
   // Ручная корректировка баланса
   await page.getByLabel("Сумма корректировки").fill("500");
-  await page.getByLabel("Комментарий").fill("E2E корректировка");
+  const comment = `E2E корректировка ${testInfo.project.name}-${Date.now()}`;
+  await page.getByLabel("Комментарий").fill(comment);
   await page.getByRole("button", { name: "Провести" }).click();
-  await expect(page.getByText("Ручная операция: E2E корректировка")).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText("+500.00 ₽")).toBeVisible();
+  await expect(page.getByText(`Ручная операция: ${comment}`, { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("+500.00 ₽").first()).toBeVisible();
 
   // Запрос экспорта из карточки. Сценарий не идемпотентен между проектами
   // (общая БД): на втором проекте экспорт уже запрошен — это тоже валидное

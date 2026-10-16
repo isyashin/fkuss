@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # backup.sh — бэкап всех тенантов: дамп БД + content (в т.ч. images).
 set -euo pipefail
+if [ -n "${RESTO_TOPOLOGY:-}" ]; then
+  exec python3 "$(dirname "${BASH_SOURCE[0]}")/topology.py" "$RESTO_TOPOLOGY" backup --apply
+fi
 
 BASE="${RESTO_BASE:-$HOME/resto}"
 DB_CONTAINER="${DB_CONTAINER:-template-db-1}"

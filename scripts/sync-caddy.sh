@@ -6,6 +6,9 @@
 # платформа — PLATFORM_PORT). Запуск по cron на хосте:
 #   sudo /home/ilya/resto/src/scripts/sync-caddy.sh
 set -euo pipefail
+if [ -n "${RESTO_TOPOLOGY:-}" ]; then
+  exec python3 "$(dirname "${BASH_SOURCE[0]}")/topology.py" "$RESTO_TOPOLOGY" caddy --apply
+fi
 
 # BASE от пути скрипта: при запуске через sudo HOME=/root, а скрипт лежит в <base>/src/scripts/.
 BASE="${RESTO_BASE:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)}"

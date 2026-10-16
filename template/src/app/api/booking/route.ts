@@ -4,13 +4,15 @@ import { getPrisma } from "@/lib/db";
 import { recordAdminEvent } from "@/lib/admin-events";
 import { rateLimit } from "@/lib/rate-limit";
 import { createReservationWithCapacity } from "@/lib/booking/capacity";
+import { guestPhoneSchema } from "@/lib/guest-contact";
+import { isValidLocalDate, isValidLocalTime, localMinutes } from "@/lib/local-date";
 
 const bookingSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  time: z.string().regex(/^\d{2}:\d{2}$/),
+  date: z.string().refine(isValidLocalDate),
+  time: z.string().refine(isValidLocalTime),
   guests: z.number().int().min(1).max(100),
   customerName: z.string().min(1).max(100),
-  customerPhone: z.string().min(5).max(20),
+  customerPhone: guestPhoneSchema,
   comment: z.string().max(500).default(""),
   website: z.string().max(0).optional(), // honeypot
 });
@@ -33,7 +35,10 @@ export async function POST(request: Request) {
 
   const parsed = bookingSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Проверьте поля брони" }, { status: 400 });
+    const field = parsed.error.issues[0]?.path[0];
+    const error = field === "customerPhone" ? "Укажите корректный телефон с кодом страны"
+      : field === "date" ? "Укажите существующую дату" : "Проверьте поля брони";
+    return NextResponse.json({ error }, { status: 400 });
   }
 
   // Валидация времени по часам работы ресторана
@@ -55,14 +60,11 @@ export async function POST(request: Request) {
   if (parsed.data.date < local.date) {
     return NextResponse.json({ error: "Нельзя забронировать на прошедшую дату" }, { status: 400 });
   }
-  if (parsed.data.date === local.date) {
-    const [h, m] = parsed.data.time.split(":").map(Number);
-    if (h * 60 + m < local.minutes + settings.booking.minHoursAhead * 60) {
+  if (localMinutes(parsed.data.date, parsed.data.time) < localMinutes(local.date, "00:00") + local.minutes + settings.booking.minHoursAhead * 60) {
       return NextResponse.json(
         { error: `Бронь возможна не раньше чем через ${settings.booking.minHoursAhead} ч.` },
         { status: 400 },
       );
-    }
   }
 
   if (!isValidBookingTime(schedule, parsed.data.date, parsed.data.time, settings.booking.slotMinutes)) {

@@ -63,25 +63,25 @@ export function SyncAdmin({
         </label>
 
         <div className={styles.fields}>
-        <div className="block w-full">
+        <div className={styles.sources}>
           <span className="text-sm text-muted">Источники меню (места Яндекс.Еды)</span>
           {sources.length === 0 && (
             <p className="text-sm text-muted mt-1">Источники не заданы — синхронизация не запустится.</p>
           )}
           {sources.map((source, index) => (
-            <div key={index} className="flex items-center gap-2 mt-2">
+            <div key={index} className={styles.sourceRow}>
               <input
                 value={source.placeSlug}
                 onChange={(e) => setSources(sources.map((s, i) => (i === index ? { ...s, placeSlug: e.target.value } : s)))}
                 placeholder="batono_w98td"
                 aria-label={`placeSlug источника ${index + 1}`}
-                className="flex-1 min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+                className={`${styles.sourceInput} min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15`}
               />
               <select
                 value={source.menuId ?? ""}
                 onChange={(e) => setSources(sources.map((s, i) => (i === index ? { ...s, menuId: e.target.value } : s)))}
                 aria-label={`Меню источника ${index + 1}`}
-                className="min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15"
+                className={`${styles.sourceMenu} min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15`}
               >
                 <option value="">Без меню</option>
                 {menus.map((menu) => <option key={menu.id} value={menu.id}>{menu.name}</option>)}
@@ -90,7 +90,7 @@ export function SyncAdmin({
                 type="button"
                 disabled={pending}
                 onClick={() => setSources(sources.filter((_, i) => i !== index))}
-                className="min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15"
+                className={`${styles.sourceRemove} rounded-[var(--radius)] border border-foreground/15`}
                 aria-label={`Удалить источник ${index + 1}`}
               >
                 ✕

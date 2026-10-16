@@ -30,6 +30,12 @@ export function canRequestExport(ownerSiteId: string, requestedSlug: string): bo
 export function exportRequestData(requestedAt: Date): {
   exportRequestedAt: Date;
   exportReadyPath: null;
+  exportReadyAt: null;
+  exportExpiresAt: null;
 } {
-  return { exportRequestedAt: requestedAt, exportReadyPath: null };
+  return { exportRequestedAt: requestedAt, exportReadyPath: null, exportReadyAt: null, exportExpiresAt: null };
+}
+
+export function isExportAvailable(site: { exportReadyPath?: string | null; exportExpiresAt?: Date | null }, now = new Date()): boolean {
+  return Boolean(site.exportReadyPath && site.exportExpiresAt && site.exportExpiresAt.getTime() > now.getTime());
 }

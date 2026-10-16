@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { logoutPlatformAdminAction, logoutOwnerAction } from "@/lib/logout-actions";
+import { useMounted } from "@/lib/use-mounted";
 
 function subscribe(callback: () => void) {
   window.addEventListener("storage", callback);
@@ -53,6 +54,7 @@ export function PfShell({ variant, nav, crumb, userName, userRole, children }: {
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const mounted = useMounted();
   const dark = useSyncExternalStore(subscribe, readTheme, () => false);
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -85,12 +87,12 @@ export function PfShell({ variant, nav, crumb, userName, userRole, children }: {
         <header className="pf-topbar">
           <div className="pf-crumb"><span>Fkuss / </span><strong>{crumb}</strong></div>
           <div className="pf-topActions">
-            <button type="button" className="pf-theme" onClick={toggleTheme} aria-label={dark ? "Включить светлую тему" : "Включить тёмную тему"} aria-pressed={dark}>
+            <button type="button" disabled={!mounted} className="pf-theme" onClick={toggleTheme} aria-label={dark ? "Включить светлую тему" : "Включить тёмную тему"} aria-pressed={dark}>
               <span className="pf-themeThumb" aria-hidden="true">{dark ? "☾" : "☀"}</span>
               <span>{dark ? "Тёмная" : "Светлая"}</span>
             </button>
             <div className="pf-profile">
-              <button type="button" className="pf-profileButton" onClick={() => setProfileOpen((v) => !v)} aria-expanded={profileOpen} aria-label={`Профиль: ${userName}`}>
+              <button type="button" disabled={!mounted} className="pf-profileButton" onClick={() => setProfileOpen((v) => !v)} aria-expanded={profileOpen} aria-label={`Профиль: ${userName}`}>
                 <span className="pf-avatar">{initials}</span>
                 <span className="hidden sm:block"><strong style={{ fontSize: 12 }}>{userName}</strong><br /><small className="pf-muted">{userRole}</small></span>
               </button>

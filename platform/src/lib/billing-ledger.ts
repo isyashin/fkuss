@@ -31,7 +31,7 @@ type BillingTransaction = {
   };
   site: {
     updateMany(args: {
-      where: { slug: string; state: { in: string[] } };
+      where: { slug: string; state: { in: string[] }; manualSuspended: false };
       data: { state: string; stateChangedAt: Date };
     }): Promise<unknown>;
   };
@@ -124,7 +124,7 @@ export function applyPaidTopup(
       },
     });
     await tx.site.updateMany({
-      where: { slug: payment.siteId, state: { in: ["grace", "suspended"] } },
+      where: { slug: payment.siteId, state: { in: ["grace", "suspended"] }, manualSuspended: false },
       data: { state: "active", stateChangedAt: new Date() },
     });
     return true;

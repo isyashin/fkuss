@@ -13,7 +13,7 @@ if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ ! -r "$ENV_FILE" ]; then
 fi
 
 case "$JOB" in
-  report-metrics|sync-menu|push-delivery) ;;
+  report-metrics|sync-menu|push-delivery|billing-daily) ;;
   *)
     echo "Неизвестная job: $JOB" >&2
     exit 1

@@ -7,11 +7,13 @@ import { calculateOrder, type OrderItemInput } from "@/lib/order/pricing";
 import { lockAndCheckBonusBalance } from "@/lib/order/bonus-lock";
 import { geocodeAddress } from "@/lib/delivery/geocoder";
 import { resolveGeoDelivery, OUTSIDE_ZONE_NAME } from "@/lib/delivery/zone-resolve";
-import { getSiteSettings } from "@/lib/site";
+import { getSiteRestaurant, getSiteSettings } from "@/lib/site";
 import { getPaymentProvider } from "@/lib/payments";
 import type { PaymentProvider } from "@/lib/payments/types";
-import { preferredChannelInputSchema } from "@/lib/guest-contact";
+import { guestPhoneSchema, preferredChannelInputSchema } from "@/lib/guest-contact";
 import { isValidPreOrderSlot, preOrderSnapshot } from "@/lib/order/preorder";
+import { isValidLocalDate, isValidLocalTime } from "@/lib/local-date";
+import { isOpenAt, nowInTimeZone, resolveSchedule } from "@/lib/hours";
 
 const orderSchema = z.object({
   items: z
@@ -35,7 +37,7 @@ const orderSchema = z.object({
   addressApartment: z.string().max(30).default(""),
   addressIntercom: z.string().max(60).default(""),
   customerName: z.string().min(1).max(100),
-  customerPhone: z.string().min(5).max(20),
+  customerPhone: guestPhoneSchema,
   preferredChannel: preferredChannelInputSchema,
   customerEmail: z.email().optional().or(z.literal("")),
   comment: z.string().max(500).default(""),
@@ -43,13 +45,13 @@ const orderSchema = z.object({
   bonusSpend: z.number().int().min(0).default(0),
   paymentMethod: z.enum(["cash", "online"]).default("cash"),
   deliveryMode: z.enum(["asap", "scheduled"]).default("asap"),
-  deliveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
-  deliverySlotStart: z.string().regex(/^\d{2}:\d{2}$/).nullable().default(null),
-  deliverySlotEnd: z.string().regex(/^\d{2}:\d{2}$/).nullable().default(null),
+  deliveryDate: z.string().refine(isValidLocalDate).nullable().default(null),
+  deliverySlotStart: z.string().refine(isValidLocalTime).nullable().default(null),
+  deliverySlotEnd: z.string().refine(isValidLocalTime).nullable().default(null),
   deliveryOptionId: z.string().nullable().default(null),
   // Предзаказ ко времени (самовывоз / доставка без вариантов)
-  preOrderDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
-  preOrderTime: z.string().regex(/^\d{2}:\d{2}$/).nullable().default(null),
+  preOrderDate: z.string().refine(isValidLocalDate).nullable().default(null),
+  preOrderTime: z.string().refine(isValidLocalTime).nullable().default(null),
   // honeypot: у людей пустое
   website: z.string().max(0).optional(),
 });
@@ -323,6 +325,16 @@ export async function POST(request: Request) {
     }
     preOrderData = preOrderSnapshot(input.preOrderDate, input.preOrderTime, tz);
     desiredTimeText = preOrderData.desiredTime;
+  }
+
+  // ASAP требует открытого ресторана. Явно настроенные будущие слоты
+  // предзаказа/доставки остаются доступны и после закрытия.
+  if (!preOrderData && option?.mode !== "scheduled") {
+    const restaurant = await getSiteRestaurant();
+    const local = nowInTimeZone(tz, now);
+    if (!isOpenAt(resolveSchedule(restaurant), local.date, local.time)) {
+      return NextResponse.json({ error: "Ресторан сейчас закрыт. Выберите доступное время предзаказа." }, { status: 400 });
+    }
   }
 
   // Зоны на карте (geo-режим): сервер сам геокодирует адрес и определяет зону.

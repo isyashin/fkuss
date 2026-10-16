@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginAction } from "./actions";
+import { useMounted } from "@/lib/use-mounted";
 
 export function LoginForm() {
+  const mounted = useMounted();
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -26,6 +28,7 @@ export function LoginForm() {
         Пароль платформы
         <input
           type="password"
+          disabled={!mounted}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"

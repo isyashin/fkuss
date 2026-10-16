@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { Pool } from "pg";
 
 // Полный сценарий: меню → карточка блюда → корзина → оформление заказа (без оплаты)
 
@@ -121,10 +122,16 @@ test("форма брони не принимает ввод до гидрата
 });
 
 test("бронь вне часов работы отклоняется", async ({ request }) => {
-  // 03:00 ночи — ресторан закрыт
+  // Собственная дата-исключение; общий CJM fixture открыт круглосуточно.
+  const date = new Date(Date.now() + 3 * 86400_000).toISOString().slice(0, 10);
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const original = (await pool.query('SELECT value FROM "Settings" WHERE key=\'restaurant\'')).rows[0].value;
+  const changed = { ...original, schedule: { ...original.schedule, exceptions: [{ date, open: false, from: "00:00", to: "00:00" }] } };
+  try {
+  await pool.query('UPDATE "Settings" SET value=$1::jsonb WHERE key=\'restaurant\'', [JSON.stringify(changed)]);
   const response = await request.post("/api/booking", {
     data: {
-      date: "2027-01-06",
+      date,
       time: "03:00",
       guests: 2,
       customerName: "Тест E2E",
@@ -134,4 +141,8 @@ test("бронь вне часов работы отклоняется", async (
   expect(response.status()).toBe(400);
   const data = await response.json();
   expect(data.error).toContain("часы работы");
+  } finally {
+    await pool.query('UPDATE "Settings" SET value=$1::jsonb WHERE key=\'restaurant\'', [JSON.stringify(original)]);
+    await pool.end();
+  }
 });

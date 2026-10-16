@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { setOwnerPinAction } from "./owner-pin-actions";
+import { useMounted } from "@/lib/use-mounted";
 
 /** PIN владельца сайта: просмотр и смена из админки платформы. */
 export function OwnerPinPanel({ slug, initialPin }: { slug: string; initialPin: string | null }) {
+  const mounted = useMounted();
   const [pin, setPin] = useState(initialPin ?? "");
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
@@ -16,7 +18,7 @@ export function OwnerPinPanel({ slug, initialPin }: { slug: string; initialPin: 
     <div style={{ display: "grid", gap: 10, maxWidth: 420 }}>
       <div className="pf-field">
         <span>Текущий PIN владельца (вход сотрудника во владельческие разделы сайта)</span>
-        <input value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setSaved(false); }}
+        <input disabled={!mounted} value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setSaved(false); }}
           className="pf-input" inputMode="numeric" placeholder="не задан" aria-label="PIN владельца" />
       </div>
       <div className="pf-actionsRow">

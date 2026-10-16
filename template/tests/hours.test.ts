@@ -63,12 +63,13 @@ describe("generateSlots", () => {
   it("ночной режим (через полночь)", () => {
     const slots = generateSlots(schedule, "2026-09-18", 60); // пятница до 01:00
     expect(slots).toContain("23:00");
-    expect(slots).toContain("00:00");
+    expect(slots).not.toContain("00:00"); // этот хвост относится к субботе
+    expect(generateSlots(schedule, "2026-09-19", 60)).toContain("00:00");
     expect(slots).not.toContain("01:00");
   });
 
   it("выходной — пусто", () => {
-    expect(generateSlots(schedule, "2026-09-20", 60)).toEqual([]);
+    expect(generateSlots(schedule, "2026-09-20", 60)).toEqual(["00:00"]); // хвост субботы
   });
 
   it("исключение урезает день", () => {
@@ -92,7 +93,8 @@ describe("isValidBookingTime", () => {
   });
 
   it("слот в ночном режиме", () => {
-    expect(isValidBookingTime(schedule, "2026-09-18", "00:00", 30)).toBe(true);
+    expect(isValidBookingTime(schedule, "2026-09-18", "00:00", 30)).toBe(false);
+    expect(isValidBookingTime(schedule, "2026-09-19", "00:00", 30)).toBe(true);
   });
 });
 

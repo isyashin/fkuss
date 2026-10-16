@@ -26,6 +26,8 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+__pycache__/
+*.pyc
 
 # OpenCode / IDE
 .opencode/local

@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import type { ContentSettings } from "@/lib/content-schema";
 import { useMounted } from "@/lib/use-mounted";
+import { normalizeContactPhone } from "@/lib/guest-contact";
+import { nowInTimeZone } from "@/lib/hours";
 
-export function BookingForm({ booking }: { booking: ContentSettings["booking"] }) {
+export function BookingForm({ booking, timeZone = "Europe/Moscow" }: { booking: ContentSettings["booking"]; timeZone?: string }) {
   const mounted = useMounted();
   const [form, setForm] = useState({ date: "", time: "", guests: 2, name: "", phone: "", comment: "", website: "" });
   const [slots, setSlots] = useState<string[] | null>(null);
@@ -13,7 +15,7 @@ export function BookingForm({ booking }: { booking: ContentSettings["booking"] }
   const [error, setError] = useState("");
   // Минимальная дата — через ленивый инициализатор (один раз, без impure-в-render)
   const [minDate] = useState(
-    () => new Date(Date.now() + booking.minHoursAhead * 3600_000).toISOString().slice(0, 10),
+    () => nowInTimeZone(timeZone, new Date(Date.now() + booking.minHoursAhead * 3600_000)).date,
   );
 
   // Загружаем слоты при выборе даты
@@ -33,6 +35,11 @@ export function BookingForm({ booking }: { booking: ContentSettings["booking"] }
   }, [form.date]);
 
   async function submit() {
+    if (!normalizeContactPhone(form.phone)) {
+      setError("Укажите корректный телефон с кодом страны");
+      setStatus("error");
+      return;
+    }
     setStatus("sending");
     setError("");
     try {

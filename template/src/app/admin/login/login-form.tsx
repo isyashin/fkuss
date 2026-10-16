@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginAction } from "./actions";
 import styles from "./login.module.css";
+import { useMounted } from "@/lib/use-mounted";
 
 export function LoginForm({ next }: { next?: string | null }) {
+  const mounted = useMounted();
   const router = useRouter();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -31,6 +33,7 @@ export function LoginForm({ next }: { next?: string | null }) {
     >
       <label>Логин<input
         type="text"
+        disabled={!mounted}
         value={login}
         onChange={(e) => setLogin(e.target.value)}
         placeholder="Логин"
@@ -41,6 +44,7 @@ export function LoginForm({ next }: { next?: string | null }) {
       /></label>
       <label>Пароль<input
         type="password"
+        disabled={!mounted}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Пароль"

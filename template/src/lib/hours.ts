@@ -3,6 +3,8 @@
  * Поддержка ночного режима (to < from = через полночь).
  */
 
+import { addLocalDays, isValidLocalDate, isValidLocalTime } from "./local-date";
+
 export interface DaySchedule {
   open: boolean;
   from: string; // "HH:MM"
@@ -65,25 +67,43 @@ function toTime(minutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+/** Интервалы относительно календарной даты; ночной хвост принадлежит следующему дню.
+ * Исключение по дате целиком заменяет часы этой даты, включая хвост вчерашней смены. */
+function calendarIntervals(schedule: WeeklySchedule, date: string): { from: number; to: number }[] {
+  if (!isValidLocalDate(date)) return [];
+  const intervals: { from: number; to: number }[] = [];
+  const exception = schedule.exceptions.find((entry) => entry.date === date);
+  if (!exception) {
+    const previous = getScheduleForDate(schedule, addLocalDays(date, -1));
+    if (previous.open) {
+      const from = toMinutes(previous.from);
+      const to = toMinutes(previous.to);
+      if (to <= from && to > 0) intervals.push({ from: from - 1440, to });
+    }
+  }
+  const day = getScheduleForDate(schedule, date);
+  if (day.open) {
+    const from = toMinutes(day.from);
+    const to = toMinutes(day.to);
+    intervals.push({ from, to: to <= from ? 1440 : to });
+  }
+  return intervals;
+}
+
 /** Слоты "HH:MM" внутри рабочего дня (последний слот начинается до закрытия) */
 export function generateSlots(
   schedule: WeeklySchedule,
   date: string,
   slotMinutes: number,
 ): string[] {
-  const day = getScheduleForDate(schedule, date);
-  if (!day.open) return [];
-
-  const from = toMinutes(day.from);
-  let to = toMinutes(day.to);
-  if (to <= from) to += 1440; // через полночь
-
-  const slots: string[] = [];
-  // Слот доступен, если его НАЧАЛО до закрытия (гость может прийти и за час до закрытия)
-  for (let t = from; t < to; t += slotMinutes) {
-    slots.push(toTime(t));
+  if (!Number.isInteger(slotMinutes) || slotMinutes <= 0 || slotMinutes > 1440) return [];
+  const slots = new Set<number>();
+  for (const { from, to } of calendarIntervals(schedule, date)) {
+    // Шаг сохраняется от начала смены, в том числе для её ночного хвоста.
+    const start = from < 0 ? from + Math.ceil(-from / slotMinutes) * slotMinutes : from;
+    for (let t = start; t < to; t += slotMinutes) slots.add(t);
   }
-  return slots;
+  return [...slots].sort((a, b) => a - b).map(toTime);
 }
 
 export function isValidBookingTime(
@@ -97,17 +117,9 @@ export function isValidBookingTime(
 
 /** Открыт ли ресторан в конкретные дату и время */
 export function isOpenAt(schedule: WeeklySchedule, date: string, time: string): boolean {
-  const day = getScheduleForDate(schedule, date);
-  if (!day.open) return false;
-
+  if (!isValidLocalTime(time)) return false;
   const t = toMinutes(time);
-  const from = toMinutes(day.from);
-  const to = toMinutes(day.to);
-  if (to <= from) {
-    // ночной режим: открыто если t >= from ИЛИ t < to
-    return t >= from || t < to;
-  }
-  return t >= from && t < to;
+  return calendarIntervals(schedule, date).some(({ from, to }) => t >= from && t < to);
 }
 
 /** Текущие дата и время в таймзоне ресторана — для isOpenAt (без таймзоны сервера).

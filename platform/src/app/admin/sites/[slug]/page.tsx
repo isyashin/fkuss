@@ -5,8 +5,9 @@ import { isPlatformAdmin } from "@/lib/platform-admin-auth";
 import { dailyChargeKopecks, daysLeft } from "@/lib/billing";
 import { SiteActions } from "./site-actions";
 import { ExportSiteButton } from "./export-site-button";
-import { OwnerPinPanel } from "./owner-pin-panel";
-import { getTenantOwnerPin } from "@/lib/tenant-api";
+import { Suspense } from "react";
+import { OwnerPinSection } from "./owner-pin-section";
+import { isExportAvailable } from "@/lib/export-access";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function SiteCardPage({ params }: { params: Promise<{ slug:
       <div className="pf-intro">
         <span><Link href="/admin" style={{ color: "inherit" }}>← все сайты</Link></span>
         <h1>{site.name}</h1>
-        <p>{site.domains.join(", ") || `порт ${site.port}`} · состояние: {site.state}{site.imageVersion ? ` · образ ${site.imageVersion}` : ""}</p>
+        <p>{site.domains.join(", ") || `порт ${site.port}`} · состояние: {site.manualSuspended ? "ручная пауза" : site.state}{site.imageVersion ? ` · образ ${site.imageVersion}` : ""}</p>
       </div>
 
       <div className="pf-grid pf-grid3" style={{ marginBottom: 16 }}>
@@ -80,13 +81,15 @@ export default async function SiteCardPage({ params }: { params: Promise<{ slug:
       <div className="pf-panel" style={{ marginBottom: 16 }}>
         <h2 className="pf-panelTitle">PIN владельца</h2>
         <p className="pf-panelHint">Открывает сотруднику владельческие разделы админки сайта (настройки и прочее) на сессию.</p>
-        <OwnerPinPanel slug={slug} initialPin={await getTenantOwnerPin(slug)} />
+        <Suspense fallback={<p role="status" className="pf-note">Загружаем PIN…</p>}>
+          <OwnerPinSection slug={slug} />
+        </Suspense>
       </div>
 
       <div className="pf-panel" style={{ marginBottom: 16 }}>
         <h2 className="pf-panelTitle">Экспорт сайта</h2>
         <p className="pf-panelHint">Архив content/ и дамп базы сайта для передачи клиенту.</p>
-        <ExportSiteButton slug={slug} requested={Boolean(site.exportRequestedAt) && !site.exportReadyPath} readyPath={site.exportReadyPath} />
+        <ExportSiteButton slug={slug} requested={Boolean(site.exportRequestedAt) && !site.exportReadyPath} readyPath={isExportAvailable(site) ? site.exportReadyPath : null} />
       </div>
 
       <div className="pf-panel" style={{ marginBottom: 16 }}>

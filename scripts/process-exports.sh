@@ -2,6 +2,9 @@
 # process-exports.sh — обработка запросов экспорта сайтов.
 # Запуск по cron на хосте: bash ~/resto/src/scripts/process-exports.sh
 set -euo pipefail
+if [ -n "${RESTO_TOPOLOGY:-}" ]; then
+  exec python3 "$(dirname "${BASH_SOURCE[0]}")/topology.py" "$RESTO_TOPOLOGY" exports --apply
+fi
 
 BASE="${RESTO_BASE:-$HOME/resto}"
 DB_CONTAINER="${DB_CONTAINER:-template-db-1}"
@@ -23,10 +26,10 @@ find "$EXPORT_DIR" -maxdepth 1 -type f -name '*.partial.*' -mmin +60 -delete
 # очищаем целиком, чтобы кабинет не показывал ссылку на уже удалённый файл.
 docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U resto platform <<'SQL'
 UPDATE "Site"
-SET "exportRequestedAt" = NULL, "exportReadyPath" = NULL
+SET "exportRequestedAt" = NULL, "exportReadyPath" = NULL, "exportReadyAt" = NULL, "exportExpiresAt" = NULL
 WHERE "exportReadyPath" IS NOT NULL
   AND (
-    "exportRequestedAt" < NOW() - INTERVAL '24 hours'
+    "exportExpiresAt" IS NULL OR "exportExpiresAt" <= NOW()
     OR "exportReadyPath" LIKE '%/%'
     OR "exportReadyPath" LIKE '%\\%'
   );
@@ -34,9 +37,9 @@ SQL
 
 # Сайты с незакрытым запросом экспорта
 REQUESTS=$(docker exec -i "$DB_CONTAINER" psql -U resto platform -Atc \
-  "SELECT slug FROM \"Site\" WHERE \"exportRequestedAt\" IS NOT NULL AND \"exportReadyPath\" IS NULL")
+  "SELECT slug || '|' || \"exportRequestedAt\"::text FROM \"Site\" WHERE \"exportRequestedAt\" IS NOT NULL AND \"exportReadyPath\" IS NULL")
 
-while IFS= read -r slug; do
+while IFS='|' read -r slug requested_at; do
   [ -z "$slug" ] && continue
   if [[ ! "$slug" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
     echo "✗ пропущен некорректный slug" >&2
@@ -51,10 +54,10 @@ while IFS= read -r slug; do
   if [ -n "$OUT" ] && [ -f "$OUT" ]; then
     OUT_NAME=$(basename "$OUT")
     docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U resto platform \
-      --set=slug="$slug" --set=ready_path="$OUT_NAME" <<'SQL'
+      --set=slug="$slug" --set=ready_path="$OUT_NAME" --set=requested_at="$requested_at" <<'SQL'
 UPDATE "Site"
-SET "exportReadyPath" = :'ready_path'
-WHERE slug = :'slug';
+SET "exportReadyPath" = :'ready_path', "exportReadyAt" = NOW(), "exportExpiresAt" = NOW() + INTERVAL '24 hours'
+WHERE slug = :'slug' AND "exportRequestedAt" = :'requested_at'::timestamp AND "exportReadyPath" IS NULL;
 SQL
     echo "✓ готов: $OUT_NAME"
   else

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { adjustBalance, setSiteState, setTariff } from "./actions";
+import { useMounted } from "@/lib/use-mounted";
 
 export function SiteActions({
   slug,
@@ -15,14 +16,16 @@ export function SiteActions({
   currentTariff: string | null;
   state: string;
 }) {
+  const mounted = useMounted();
   const router = useRouter();
   const [amount, setAmount] = useState("");
   const [comment, setComment] = useState("");
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
+  const [errors, setErrors] = useState<{ amount?: string; comment?: string; operation?: string }>({});
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <fieldset disabled={!mounted} style={{ display: "grid", gap: 14, border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <div className="pf-actionsRow">
         <select
           defaultValue={currentTariff ?? ""}
@@ -46,7 +49,7 @@ export function SiteActions({
             className="pf-btn pf-btnDanger"
             onClick={() => {
               const c = prompt("Причина приостановки:");
-              if (c) startTransition(async () => { await setSiteState(slug, "suspended", c); router.refresh(); });
+              if (c?.trim()) startTransition(async () => { await setSiteState(slug, "suspended", c); router.refresh(); });
             }}
           >
             Приостановить
@@ -58,7 +61,7 @@ export function SiteActions({
             className="pf-btn pf-btnOutline"
             onClick={() => {
               const c = prompt("Причина реактивации:");
-              if (c) startTransition(async () => { await setSiteState(slug, "active", c); router.refresh(); });
+              if (c?.trim()) startTransition(async () => { await setSiteState(slug, "active", c); router.refresh(); });
             }}
           >
             Реактивировать
@@ -74,6 +77,8 @@ export function SiteActions({
           onChange={(e) => setAmount(e.target.value)}
           placeholder="Сумма ₽ (+/−)"
           aria-label="Сумма корректировки"
+          aria-invalid={Boolean(errors.amount)}
+          aria-describedby={errors.amount ? "adjust-amount-error" : undefined}
           className="pf-input"
           style={{ width: 150 }}
         />
@@ -82,21 +87,33 @@ export function SiteActions({
           onChange={(e) => setComment(e.target.value)}
           placeholder="Комментарий (обязателен)"
           aria-label="Комментарий"
+          aria-invalid={Boolean(errors.comment)}
+          aria-describedby={errors.comment ? "adjust-comment-error" : undefined}
           className="pf-input"
           style={{ flex: "1 1 220px" }}
         />
         <button
           type="button"
-          disabled={pending || !amount || !comment}
+          disabled={pending || !amount}
           className="pf-btn pf-btnPrimary"
           onClick={() =>
             startTransition(async () => {
-              await adjustBalance(slug, Number(amount), comment);
-              setAmount("");
-              setComment("");
-              setMessage("Записано ✓");
-              setTimeout(() => setMessage(""), 3000);
-              router.refresh();
+              setErrors({});
+              setMessage("");
+              try {
+                const result = await adjustBalance(slug, Number(amount), comment);
+                if (!result.ok) {
+                  setErrors({ ...result.fieldErrors, operation: result.error });
+                  return;
+                }
+                setAmount("");
+                setComment("");
+                setMessage("Записано ✓");
+                setTimeout(() => setMessage(""), 3000);
+                router.refresh();
+              } catch {
+                setErrors({ operation: "Не удалось связаться с сервером. Введённые данные сохранены в форме." });
+              }
             })
           }
         >
@@ -104,6 +121,9 @@ export function SiteActions({
         </button>
         {message && <span className="pf-note" role="status">{message}</span>}
       </div>
-    </div>
+      {errors.amount && <p id="adjust-amount-error" className="pf-note" role="alert">{errors.amount}</p>}
+      {errors.comment && <p id="adjust-comment-error" className="pf-note" role="alert">{errors.comment}</p>}
+      {errors.operation && <p className="pf-note" role="alert">{errors.operation}</p>}
+    </fieldset>
   );
 }

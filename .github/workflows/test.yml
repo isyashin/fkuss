@@ -25,6 +25,8 @@ jobs:
       DATABASE_URL: postgresql://test:test@localhost:5432/template_test
     steps:
       - uses: actions/checkout@v5
+      - name: Test topology ownership and configuration
+        run: python3 -m unittest discover -s scripts/tests -p '*_test.py'
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -54,6 +56,7 @@ jobs:
         env:
           SEED_GUEST_CABINET: "1"
           SEED_TWO_MENUS: "1"
+          SEED_OPEN_ALL_DAY: "1"
       - name: Bootstrap disposable E2E owner
         working-directory: template
         shell: bash

@@ -2,6 +2,9 @@
 # export-site.sh — экспорт сайта для клиента: content + дамп БД → архив.
 # Использование: export-site.sh <slug>
 set -euo pipefail
+if [ -n "${RESTO_TOPOLOGY:-}" ]; then
+  exec python3 "$(dirname "${BASH_SOURCE[0]}")/topology.py" "$RESTO_TOPOLOGY" export --slug "${1:?slug}" --apply
+fi
 
 SLUG="${1:?Использование: export-site.sh <slug>}"
 if [[ ! "$SLUG" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then

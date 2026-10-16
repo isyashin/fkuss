@@ -78,6 +78,8 @@ export function CartSheet({
   const [deliveryOptionId, setDeliveryOptionId] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [slotStart, setSlotStart] = useState("");
+  const [asapAvailable, setAsapAvailable] = useState<boolean | null>(null);
+  const [availabilityError, setAvailabilityError] = useState(false);
 
   // Предзаказ ко времени из настроек (самовывоз / доставка без вариантов)
   const [preOrder, setPreOrder] = useState<{ enabled: boolean; slots: { date: string; time: string }[] }>({
@@ -90,15 +92,17 @@ export function CartSheet({
 
   useEffect(() => {
     fetch("/api/delivery/slots")
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error("availability"); return r.json(); })
       .then((data) => {
         const opts = data.options ?? [];
         setOptions(opts);
         // F03: выбираем первый доступный — недоступные варианты не предлагаем.
         setDeliveryOptionId(opts.find((o: { available?: boolean }) => o.available)?.id ?? "");
         setPreOrder(data.preOrder ?? { enabled: false, slots: [] });
+        setAsapAvailable(data.asapAvailable !== false);
+        if (data.asapAvailable === false && data.preOrder?.enabled && data.preOrder.slots?.length) setPreOrderMode("scheduled");
       })
-      .catch(() => {});
+      .catch(() => setAvailabilityError(true));
   }, []);
 
   const itemsTotal = total();
@@ -234,6 +238,11 @@ export function CartSheet({
         ? (delivery.geo?.outsidePrice ?? 0)
         : 0;
   const geoResolved = geo.status === "zone" || geo.status === "outside-allowed";
+  const deliveryPending = type === "delivery" && (asapAvailable === null || (geoActive && !geoResolved));
+  const deliveryQuoteText = geo.status === "loading" ? "Рассчитываем…"
+    : geo.status === "outside-blocked" ? "Адрес вне зоны"
+    : geo.status === "address-not-found" ? "Адрес не найден"
+    : geo.status === "error" ? "Не удалось рассчитать" : "Рассчитаем по адресу";
 
   const deliveryPrice =
     type === "pickup"
@@ -274,6 +283,7 @@ export function CartSheet({
     }
   }
   const preOrderSelected = preOrderApplicable && preOrderMode === "scheduled";
+  const asapBlocked = asapAvailable === false && !preOrderSelected && !(type === "delivery" && selectedOption?.mode === "scheduled");
   const preOrderDates = [...new Set(preOrder.slots.map((s) => s.date))];
   const preOrderTimes = preOrder.slots.filter((s) => s.date === preOrderDate);
 
@@ -283,7 +293,7 @@ export function CartSheet({
     const errors: FieldErrors = {};
     if (!form.name.trim()) errors.name = "Укажите имя";
     if (!form.phone.trim()) errors.phone = "Укажите телефон";
-    else if (!normalizeContactPhone(form.phone)) errors.phone = "Проверьте номер — нужно 11 цифр, например +7 999 000-11-22";
+    else if (!normalizeContactPhone(form.phone)) errors.phone = "Укажите корректный телефон с кодом страны";
     if (type === "delivery" && (!form.city.trim() || !form.street.trim() || !form.house.trim())) {
       errors.address = "Заполните город, улицу и дом";
     }
@@ -657,6 +667,7 @@ export function CartSheet({
                     type="radio"
                     name="preorder-mode"
                     checked={preOrderMode === "asap"}
+                    disabled={asapAvailable === false}
                     onChange={() => setPreOrderMode("asap")}
                   />
                   Как можно скорее
@@ -788,7 +799,7 @@ export function CartSheet({
               </div>
               <div className="flex justify-between text-muted">
                 <span>Доставка</span>
-                <span>{deliveryPrice === 0 ? "бесплатно" : formatPrice(deliveryPrice)}</span>
+                <span>{deliveryPending ? deliveryQuoteText : type === "pickup" ? "Самовывоз" : deliveryPrice === 0 ? "бесплатно" : formatPrice(deliveryPrice)}</span>
               </div>
               {bonusSpend > 0 && (
                 <div className="flex justify-between text-accent">
@@ -797,7 +808,7 @@ export function CartSheet({
                 </div>
               )}
               <div className="flex justify-between font-semibold text-lg pt-1">
-                <span>Итого</span>
+                <span>{deliveryPending ? "Без доставки" : "Итого"}</span>
                 <span>{formatPrice(finalTotal)}</span>
               </div>
 
@@ -840,6 +851,8 @@ export function CartSheet({
             </div>
 
             {error && <p className="text-red-600 text-sm">{error}</p>}
+            {asapBlocked && <p role="status" className="text-muted text-sm">Ресторан сейчас закрыт. Выберите доступное время предзаказа или вернитесь в часы работы.</p>}
+            {availabilityError && <p role="alert" className="text-red-600 text-sm">Не удалось проверить доступность заказа. Закройте корзину и попробуйте снова.</p>}
             {belowMinOrder && (
               <p className="text-red-600 text-sm">
                 Минимальная сумма заказа для доставки {formatPrice(minOrder)} — не хватает{" "}
@@ -856,6 +869,7 @@ export function CartSheet({
                 onClick={submit}
                 disabled={
                   submitting ||
+                  asapAvailable === null || asapBlocked ||
                   belowMinOrder ||
                   (type === "delivery" && geoActive && !geoResolved) ||
                   (type === "delivery" && noDeliveryAvailable) ||
@@ -864,7 +878,7 @@ export function CartSheet({
                 }
                 className="flex-1 min-h-12 rounded-full bg-accent text-white font-medium text-lg disabled:opacity-50"
               >
-                {submitting ? "Отправляю…" : paymentMethod === "online" ? `Оплатить · ${formatPrice(finalTotal)}` : `Заказать · ${formatPrice(finalTotal)}`}
+                {submitting ? "Отправляю…" : deliveryPending ? "Заказать" : paymentMethod === "online" ? `Оплатить · ${formatPrice(finalTotal)}` : `Заказать · ${formatPrice(finalTotal)}`}
               </button>
             </div>
           </div>

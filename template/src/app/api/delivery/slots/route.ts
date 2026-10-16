@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/db";
 import { generateWindows, isOptionAvailableOn, type DeliveryOptionRule } from "@/lib/delivery/slots";
 import { generatePreOrderSlots, normalizePreOrder } from "@/lib/order/preorder";
-import { getSiteSettings } from "@/lib/site";
+import { getSiteRestaurant, getSiteSettings } from "@/lib/site";
+import { isOpenAt, nowInTimeZone, resolveSchedule } from "@/lib/hours";
 
 const DEFAULT_TZ = "Europe/Moscow";
 
 /** Варианты доставки и доступные окна: GET /api/delivery/slots */
 export async function GET() {
   const prisma = getPrisma();
-  const settings = await getSiteSettings();
+  const [settings, restaurant] = await Promise.all([getSiteSettings(), getSiteRestaurant()]);
   const tz = (settings as { timezone?: string }).timezone ?? DEFAULT_TZ;
 
   const options = await prisma.deliveryOption.findMany({
@@ -18,13 +19,15 @@ export async function GET() {
   });
 
   const now = new Date();
+  const local = nowInTimeZone(tz, now);
+  const asapAvailable = isOpenAt(resolveSchedule(restaurant), local.date, local.time);
   const result = options.map((option) => {
     const rule = option as DeliveryOptionRule;
     // F03: витрина не должна предлагать вариант, который сервер отклонит
     // (ни одного дня недели / сегодняшняя дата в исключениях / нет окон).
     const available =
       option.mode === "asap"
-        ? isOptionAvailableOn(rule, now, tz)
+        ? asapAvailable && isOptionAvailableOn(rule, now, tz) && local.time >= option.hoursFrom && local.time < option.hoursTo
         : generateWindows(rule, now, tz).length > 0;
     return {
       id: option.id,
@@ -39,6 +42,7 @@ export async function GET() {
 
   return NextResponse.json({
     options: result,
+    asapAvailable,
     // Предзаказ ко времени (самовывоз / доставка без вариантов)
     preOrder: { enabled: normalizePreOrder(settings.preOrder).enabled, slots: generatePreOrderSlots(settings.preOrder, now, tz) },
     tz,

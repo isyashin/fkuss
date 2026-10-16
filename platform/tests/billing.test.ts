@@ -64,6 +64,10 @@ describe("nextState (переходы состояния сайта)", () => {
   it("suspended остаётся suspended без денег", () => {
     expect(nextState(site("suspended", 30))).toBe("suspended");
   });
+
+  it("ручная пауза сохраняется при положительном балансе", () => {
+    expect(nextState({ ...site("suspended", 30), balanceKopecks: 100_000, manualSuspended: true })).toBe("suspended");
+  });
 });
 
 describe("shouldNotify (пороги 7/3/1 дней)", () => {

@@ -18,6 +18,7 @@ export async function runBillingDaily(): Promise<string[]> {
   const sites = await prisma.site.findMany({ include: { tariff: true } });
 
   for (const site of sites) {
+    if (site.manualSuspended) continue;
     if (!site.tariff) continue;
     const daily = dailyChargeKopecks(site.tariff.monthlyPrice);
 
@@ -57,8 +58,9 @@ export async function runBillingDaily(): Promise<string[]> {
       daysInState,
     });
     if (state !== site.state) {
-      await prisma.site.update({
-        where: { slug: site.slug },
+      // Ручное действие, произошедшее после чтения списка, нельзя отменить.
+      await prisma.site.updateMany({
+        where: { slug: site.slug, manualSuspended: false, state: site.state, stateChangedAt: site.stateChangedAt },
         data: { state, stateChangedAt: new Date() },
       });
       log.push(`${site.slug}: ${site.state} → ${state}`);

@@ -43,6 +43,10 @@ async function readAndValidate<T>(file: string, schema: { parse: (v: unknown) =>
 async function main() {
   console.log("Читаю content/…");
   const restaurant = await readAndValidate("restaurant.json", restaurantSchema);
+  // Изолированные E2E проверяют расписание отдельно; остальные CJM не зависят от часов CI.
+  if (process.env.SEED_OPEN_ALL_DAY === "1") {
+    restaurant.schedule = { days: Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((day) => [day, { open: true, from: "00:00", to: "00:00" }])), exceptions: [] };
+  }
   const menu = await readAndValidate("menu.json", menuSchema);
   const promos = await readAndValidate("promos.json", promosSchema);
   const pages = await readAndValidate("pages.json", pagesSchema);
@@ -107,8 +111,8 @@ async function main() {
           mode: "asap",
           enabled: true,
           days: [0, 1, 2, 3, 4, 5, 6],
-          hoursFrom: restaurant.workHours[0]?.from ?? "10:00",
-          hoursTo: restaurant.workHours[0]?.to ?? "23:00",
+          hoursFrom: process.env.SEED_OPEN_ALL_DAY === "1" ? "00:00" : restaurant.workHours[0]?.from ?? "10:00",
+          hoursTo: process.env.SEED_OPEN_ALL_DAY === "1" ? "23:59" : restaurant.workHours[0]?.to ?? "23:00",
           price: zone.price,
           freeFrom: zone.freeFrom,
           position: 0,

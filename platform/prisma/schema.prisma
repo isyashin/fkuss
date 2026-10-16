@@ -15,6 +15,7 @@ model Site {
   port        Int      @unique
   domains     String[]
   state       String   @default("active") // active | grace | suspended
+  manualSuspended Boolean @default(false) // снимается только явным действием администратора
   siteKey     String   @unique
   tariffId    String?
   tariff      Tariff?  @relation(fields: [tariffId], references: [id])
@@ -22,6 +23,8 @@ model Site {
   stateChangedAt DateTime @default(now())
   exportRequestedAt DateTime?
   exportReadyPath  String? // путь к готовому архиву экспорта (воркер заполняет)
+  exportReadyAt   DateTime?
+  exportExpiresAt DateTime?
   lastMetricsAt  DateTime?
   createdAt   DateTime @default(now())
   ledger      BalanceTransaction[]

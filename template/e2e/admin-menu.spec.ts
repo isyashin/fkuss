@@ -1,9 +1,13 @@
 import { test, expect } from "@playwright/test";
 import { loginAdminUi, gotoAdmin } from "./login-admin";
+import { Pool } from "pg";
 
 // Issue #68: пустые категории скрыты на витрине (visibleMenuCategories), но в
 // админке меню должны быть видны и управляемы (↑↓ ✎ 🗑) с пометкой о скрытии.
-test("пустая категория видна в админке меню и скрыта на витрине", async ({ page }) => {
+test("пустая категория видна в админке меню и скрыта на витрине", async ({ page }, testInfo) => {
+  const name = `E2E Пустая категория ${testInfo.project.name}-${Date.now()}`;
+  const renamed = `${name} 2`;
+  try {
   await gotoAdmin(page, "/admin/login");
   await loginAdminUi(page);
   await expect(page).toHaveURL(/\/admin$/);
@@ -15,36 +19,44 @@ test("пустая категория видна в админке меню и �
   // поэтому сужаем до видимого — иначе strict mode violation на getByLabel.
   await page.getByRole("button", { name: "+ Категория" }).click();
   const createDialog = page.locator("dialog").filter({ visible: true });
-  await createDialog.getByLabel("Название").fill("E2E Пустая категория");
+  await createDialog.getByLabel("Название").fill(name);
   await createDialog.getByRole("button", { name: "Добавить" }).click();
 
   // Видна в списке с пометкой и доступными кнопками управления.
   // Список — <section aria-label="Список блюд">; имя категории также попадает
   // в <option> фильтра, поэтому ищем точно по абзацу-заголовку в списке.
   const list = page.getByRole("region", { name: "Список блюд" });
-  await expect(list.locator("p").filter({ hasText: /^E2E Пустая категория$/ })).toBeVisible();
-  await expect(list.getByText("Пустая — скрыта на витрине.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Поднять категорию E2E Пустая категория выше" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Переименовать категорию E2E Пустая категория" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Удалить категорию E2E Пустая категория" })).toBeEnabled();
+  const title = list.locator("p").filter({ hasText: new RegExp(`^${name}$`) });
+  await expect(title).toBeVisible();
+  await expect(title.locator("../..").getByText("Пустая — скрыта на витрине.")).toBeVisible();
+  await expect(page.getByRole("button", { name: `Поднять категорию ${name} выше` })).toBeVisible();
+  await expect(page.getByRole("button", { name: `Переименовать категорию ${name}` })).toBeEnabled();
+  await expect(page.getByRole("button", { name: `Удалить категорию ${name}` })).toBeEnabled();
 
   // Переименование работает
-  await page.getByRole("button", { name: "Переименовать категорию E2E Пустая категория" }).click();
+  await page.getByRole("button", { name: `Переименовать категорию ${name}` }).click();
   const renameDialog = page.locator("dialog").filter({ visible: true });
-  await renameDialog.getByLabel("Название").fill("E2E Пустая категория 2");
+  await renameDialog.getByLabel("Название").fill(renamed);
   await renameDialog.getByRole("button", { name: "Сохранить" }).click();
-  await expect(list.locator("p").filter({ hasText: /^E2E Пустая категория 2$/ })).toBeVisible();
+  await expect(list.locator("p").filter({ hasText: new RegExp(`^${renamed}$`) })).toBeVisible();
 
   // На витрине пустая категория не появляется
   await gotoAdmin(page, "/menu");
-  await expect(page.getByText("E2E Пустая категория 2")).toHaveCount(0);
+  await expect(page.getByText(renamed, { exact: true })).toHaveCount(0);
 
   // Удаление через UI
   await gotoAdmin(page, "/admin/menu");
-  await page.getByRole("button", { name: "Удалить категорию E2E Пустая категория 2" }).click();
+  await page.getByRole("button", { name: `Удалить категорию ${renamed}` }).click();
   await expect(page.getByText("Удалить категорию?")).toBeVisible();
   await page.getByRole("button", { name: "Удалить", exact: true }).click();
-  await expect(page.getByText("E2E Пустая категория 2")).toHaveCount(0);
+  await expect(page.getByText(renamed, { exact: true })).toHaveCount(0);
+  } finally {
+    // A failed assertion must not leave another empty category for the next browser project.
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    try {
+      await pool.query('DELETE FROM "Category" c WHERE name = ANY($1::text[]) AND NOT EXISTS (SELECT 1 FROM "Dish" d WHERE d."categoryId"=c.id)', [[name, renamed]]);
+    } finally { await pool.end(); }
+  }
 });
 
 // Issue #50: sticky-панель «Отмена/Сохранить» не должна перекрывать «Удалить блюдо».

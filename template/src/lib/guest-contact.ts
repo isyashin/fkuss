@@ -23,6 +23,10 @@ export function normalizeContactPhone(phone: string): string | null {
   return /^[1-9]\d{9,14}$/.test(digits) ? digits : null;
 }
 
+export const guestPhoneSchema = z.string().trim().max(40)
+  .refine((value) => normalizeContactPhone(value) !== null, "Укажите корректный телефон с кодом страны")
+  .transform((value) => `+${normalizeContactPhone(value)}`);
+
 /** Отображение российского номера с маской: +7 (999) 000-11-22.
     Некорректный или не-РФ номер возвращаем как есть. */
 export function formatPhoneDisplay(phone: string): string {

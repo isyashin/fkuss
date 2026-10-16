@@ -59,7 +59,7 @@ test("geo-режим: default выключен; без ключа геокоде
     await page.getByLabel("Улица").fill("Тверская");
     await page.getByLabel("Дом", { exact: true }).fill("1");
     await expect(page.getByText("Не удалось проверить адрес")).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole("button", { name: /Заказать ·/ })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /^Заказать/ })).toBeDisabled();
 
     // 6. Прямой заказ в geo-режиме — честный 503
     const order = await request.post("/api/order", {

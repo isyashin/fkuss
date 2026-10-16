@@ -17,9 +17,11 @@ export interface SiteBillingState {
   graceDays: number;
   /** сколько дней сайт уже в текущем состоянии (для grace) */
   daysInState: number;
+  manualSuspended?: boolean;
 }
 
 export function nextState(input: SiteBillingState): "active" | "grace" | "suspended" {
+  if (input.manualSuspended) return "suspended";
   if (input.balanceKopecks > 0) return "active";
   if (input.state === "active") return "grace";
   if (input.state === "grace") {

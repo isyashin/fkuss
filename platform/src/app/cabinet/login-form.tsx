@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { requestCodeAction, verifyCodeAction } from "./actions";
+import { useMounted } from "@/lib/use-mounted";
 
 export function OwnerLoginForm() {
+  const mounted = useMounted();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -19,7 +21,7 @@ export function OwnerLoginForm() {
         <>
           <label>
             Email
-            <input type="email" value={email} inputMode="email" autoComplete="email"
+            <input type="email" disabled={!mounted} value={email} inputMode="email" autoComplete="email"
               onChange={(e) => setEmail(e.target.value)} placeholder="you@example.ru" className="pf-input" />
           </label>
           {error && <p role="alert" style={{ color: "var(--pf-red)", fontSize: 13, margin: 0 }}>{error}</p>}

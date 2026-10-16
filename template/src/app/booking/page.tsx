@@ -18,7 +18,7 @@ export default async function BookingPage() {
   return (
     <main className="flex-1 mx-auto w-full max-w-xl px-4 py-8">
       <h1 className="text-3xl mb-6">Бронирование столика</h1>
-      <BookingForm booking={settings.booking} />
+      <BookingForm booking={settings.booking} timeZone={settings.timezone} />
     </main>
   );
 }

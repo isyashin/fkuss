@@ -26,7 +26,7 @@ test("пустая категория видна в админке меню и �
   // Список — <section aria-label="Список блюд">; имя категории также попадает
   // в <option> фильтра, поэтому ищем точно по абзацу-заголовку в списке.
   const list = page.getByRole("region", { name: "Список блюд" });
-  const title = list.getByText(name, { exact: true });
+  const title = list.locator("p").filter({ hasText: new RegExp(`^${name}$`) });
   await expect(title).toBeVisible();
   await expect(title.locator("../..").getByText("Пустая — скрыта на витрине.")).toBeVisible();
   await expect(page.getByRole("button", { name: `Поднять категорию ${name} выше` })).toBeVisible();
@@ -38,7 +38,7 @@ test("пустая категория видна в админке меню и �
   const renameDialog = page.locator("dialog").filter({ visible: true });
   await renameDialog.getByLabel("Название").fill(renamed);
   await renameDialog.getByRole("button", { name: "Сохранить" }).click();
-  await expect(list.getByText(renamed, { exact: true })).toBeVisible();
+  await expect(list.locator("p").filter({ hasText: new RegExp(`^${renamed}$`) })).toBeVisible();
 
   // На витрине пустая категория не появляется
   await gotoAdmin(page, "/menu");

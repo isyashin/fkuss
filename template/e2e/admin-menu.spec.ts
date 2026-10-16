@@ -46,7 +46,7 @@ test("пустая категория видна в админке меню и �
 
   // Удаление через UI
   await gotoAdmin(page, "/admin/menu");
-  await page.getByRole("button", { name: `Удалить категорию ${renamed}` })).click();
+  await page.getByRole("button", { name: `Удалить категорию ${renamed}` }).click();
   await expect(page.getByText("Удалить категорию?")).toBeVisible();
   await page.getByRole("button", { name: "Удалить", exact: true }).click();
   await expect(page.getByText(renamed, { exact: true })).toHaveCount(0);

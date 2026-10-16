@@ -221,9 +221,20 @@ def backup(config):
         root.mkdir(parents=True, exist_ok=True)
         staging = Path(tempfile.mkdtemp(prefix=".partial-", dir=root))
         try:
+            (staging / "topology.json").write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n")
+            (staging / "topology.json").chmod(0o600)
+            caddy = Path(config.get("caddyFile", "/etc/caddy/Caddyfile"))
+            if caddy.is_file():
+                shutil.copy2(caddy, staging / "Caddyfile")
             manifest = {"version": 1, "createdAt": dt.datetime.now(dt.timezone.utc).isoformat(), "sites": []}
             for item in [config["platform"], *config["sites"]]:
                 slug = item.get("slug", "platform")
+                deployment = staging / "deployment" / slug
+                deployment.mkdir(parents=True, mode=0o700)
+                for name in [*item["composeFiles"], "fkuss-services.json", "release-preprod.json"]:
+                    source = Path(item["composeDir"], name)
+                    if source.is_file():
+                        shutil.copy2(source, deployment / name)
                 dump_database(item, staging / (slug + ".dump"))
                 shutil.copy2(item["envFile"], staging / (slug + ".env"))
                 (staging / (slug + ".env")).chmod(0o600)

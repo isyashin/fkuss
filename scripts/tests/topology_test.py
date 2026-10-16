@@ -2,6 +2,9 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import contextlib
+import json
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location("topology", Path(__file__).resolve().parents[1] / "topology.py")
 ops = importlib.util.module_from_spec(spec)
@@ -69,6 +72,48 @@ class EnvTest(unittest.TestCase):
 
     def test_sql_values_cannot_break_out_of_a_string(self):
         self.assertEqual(ops.sql_value("a'; DROP TABLE x;--"), "'a''; DROP TABLE x;--'")
+
+
+class BackupTest(unittest.TestCase):
+    def fixture(self, root):
+        items = []
+        for slug in ['platform', 'example']:
+            directory = root / slug
+            directory.mkdir()
+            (directory / '.env').write_text('QA_ONLY=test\n')
+            (directory / 'docker-compose.yml').write_text('services: {}\n')
+            item = {'composeDir': str(directory), 'composeFiles': ['docker-compose.yml'], 'envFile': str(directory / '.env')}
+            if slug != 'platform':
+                (directory / 'content').mkdir()
+                (directory / 'content/menu.json').write_text('{}')
+                item.update(slug=slug, contentDir=str(directory / 'content'))
+            items.append(item)
+        caddy = root / 'Caddyfile'
+        caddy.write_text('example.test {\n respond "QA" 200\n}\n')
+        return {'version': 1, 'baseDir': str(root / 'operations'), 'sourceDir': str(root / 'source'), 'caddyFile': str(caddy), 'platform': items[0], 'sites': [items[1]]}
+
+    def test_snapshot_contains_the_configuration_needed_for_restore(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = self.fixture(Path(directory))
+            def archive(args, data=None):
+                Path(args[2]).write_bytes(b'archive')
+            with mock.patch.object(ops, 'lock', lambda *args: contextlib.nullcontext()), mock.patch.object(ops, 'dump_database', lambda item, path: Path(path).write_bytes(b'dump')), mock.patch.object(ops, 'run', archive):
+                snapshot = ops.backup(config)
+            self.assertEqual(json.loads((snapshot / 'topology.json').read_text()), config)
+            self.assertEqual((snapshot / 'deployment/example/docker-compose.yml').read_text(), 'services: {}\n')
+            self.assertEqual((snapshot / 'Caddyfile').read_text(), Path(config['caddyFile']).read_text())
+            self.assertTrue((snapshot / 'example.dump').is_file())
+            self.assertTrue((snapshot / 'example-content.tar.gz').is_file())
+
+    def test_failure_does_not_publish_a_partial_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = self.fixture(Path(directory))
+            with mock.patch.object(ops, 'lock', lambda *args: contextlib.nullcontext()), mock.patch.object(ops, 'dump_database', side_effect=RuntimeError('QA dump failed')):
+                with self.assertRaises(RuntimeError):
+                    ops.backup(config)
+            root = Path(config['baseDir'], 'backups')
+            self.assertEqual(list(root.glob('release-*')), [])
+            self.assertEqual(list(root.glob('.partial-*')), [])
 
 
 if __name__ == '__main__':

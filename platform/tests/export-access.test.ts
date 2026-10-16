@@ -19,6 +19,10 @@ describe("export archive access", () => {
     expect(resolveExportArchive(exportDir, "other-20260921-120000.tar.gz", "bistro")).toBeNull();
   });
 
+  it("rejects another site whose slug starts with the owner's slug", () => {
+    expect(resolveExportArchive(exportDir, "bistro-extra-20260921-120000.tar.gz", "bistro")).toBeNull();
+  });
+
   it.each([
     "../other.tar.gz",
     "/srv/resto/backups/export/other.tar.gz",

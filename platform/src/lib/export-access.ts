@@ -1,6 +1,6 @@
 /** Доступ к архивам экспорта сайта: имена, владение, состояние запроса. */
 
-const ARCHIVE_NAME_RE = /^[a-z0-9][a-z0-9-]*-\d{8}-\d{6}\.tar\.gz$/;
+const ARCHIVE_NAME_RE = /^([a-z0-9][a-z0-9-]*)-\d{8}-\d{6}\.tar\.gz$/;
 
 /**
  * Возвращает путь к архиву внутри exportDir, если storedName — безопасное
@@ -12,8 +12,9 @@ export function resolveExportArchive(
   storedName: string,
   expectedSlug?: string,
 ): string | null {
-  if (!ARCHIVE_NAME_RE.test(storedName)) return null;
-  if (expectedSlug && !storedName.startsWith(`${expectedSlug}-`)) return null;
+  const match = ARCHIVE_NAME_RE.exec(storedName);
+  if (!match) return null;
+  if (expectedSlug && match[1] !== expectedSlug) return null;
   if (storedName.includes("/") || storedName.includes("\\") || storedName.includes("\0")) {
     return null;
   }

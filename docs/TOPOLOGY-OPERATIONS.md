@@ -51,7 +51,8 @@
 2. `python3 scripts/topology.py <config> check` — проверка конфига без записи.
    `sudo python3 scripts/topology.py <config> backup --apply` — атомарно публикует
    snapshot только после успешного дампа всех DB и копирования всего content.
-   Внутри: custom-format `.dump`, `*-content.tar.gz`, приватные `*.env`, manifest.
+   Внутри: custom-format `.dump`, `*-content.tar.gz`, приватные `*.env`, manifest,
+   `topology.json`, Caddyfile и исходные compose/служебные/image overrides.
    Snapshot 700, env/dump 600. Ротация только собственных `release-*`, 14 штук.
 3. Собрать template/platform runner и migrator из зафиксированного main с
    immutable тегом `release-<SHA>` и OCI `org.opencontainers.image.revision`.

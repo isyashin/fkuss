@@ -13,12 +13,15 @@ export async function loginAdminUi(page: Page): Promise<void> {
 /**
  * Переход в раздел админки с защитой от гонки с router.refresh() поллинга
  * событий (на webkit RSC-стриминг прерывал goto ошибкой
- * «interrupted by another navigation»). Готовность ждём опросом readyState.
+ * «interrupted by another navigation»). Ждём HTML и гидратацию оболочки,
+ * а не загрузку всех картинок: readyState=complete задерживается внешними ресурсами.
  */
 export async function gotoAdmin(page: Page, path: string): Promise<void> {
   await page.goto(path, { waitUntil: "commit" }).catch(async () => {
     await page.waitForLoadState("load").catch(() => {});
     await page.goto(path, { waitUntil: "commit" });
   });
-  await expect.poll(() => page.evaluate(() => document.readyState)).toBe("complete");
+  await page.waitForLoadState("domcontentloaded");
+  const shell = page.locator("[data-theme][aria-busy]");
+  if (await shell.count()) await expect(shell).toHaveAttribute("aria-busy", "false");
 }

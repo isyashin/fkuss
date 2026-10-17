@@ -14,13 +14,14 @@ function arg(flag: string): string {
 }
 
 async function main() {
-  const dir = path.resolve(process.argv[2] ?? "");
+  const directory = process.argv[2];
   const slug = arg("--slug");
   const name = arg("--name");
-  if (!dir || !slug || !name) {
+  if (!directory || directory.startsWith("--") || !slug || !name) {
     console.error('Использование: npx tsx scripts/new-content.ts <dir> --slug <slug> --name "<Название>"');
     process.exit(1);
   }
+  const dir = path.resolve(directory);
   if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
     console.error("slug: строчные латинские буквы, цифры, дефисы");
     process.exit(1);

@@ -88,7 +88,7 @@ npx tsx scripts/seed-test.ts       # тестовые тариф/сайт/вла
 
 ```bash
 scripts/deploy.sh <subdomain> [--domain=<домен>]   # базовый деплой (реестр портов, БД, compose)
-scripts/provision-site.sh <slug> <content.tar.gz>  # ПОЛНЫЙ цикл: deploy → seed → владелец → платформа → Caddy → проверки (гейт approvedBy; --rollback, --dry-run)
+scripts/provision-site.sh <slug> <content.tar.gz>  # НОВЫЙ сайт, legacy shared-PG: deploy → seed → владелец → платформа → Caddy (approvedBy, journal; --dry-run/--rollback). Явная топология: docs/TOPOLOGY-OPERATIONS.md
 scripts/backup.sh                                   # бэкап всех тенантов (14 последних)
 scripts/export-site.sh <slug>                       # экспорт сайта для клиента
 scripts/update.sh [--no-restart]                    # git pull → сборка → рестарт всех сервисов

@@ -11,7 +11,7 @@
  * Опции окружения:
  *   INGEST_FIXTURE_DIR=<dir> — инжест Еды из записанных ответов (тесты)
  */
-import { cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { siteInputSchema, validateSiteInput, platformEmail, type SiteInput } from "./schemas/site-input";
@@ -46,7 +46,7 @@ async function buildFromEda(input: SiteInput, outDir: string): Promise<void> {
   const script = path.join(__dirname, "ingest-yandex-eda.ts");
   const fixtureDir = process.env.INGEST_FIXTURE_DIR;
   try {
-    execFileSync(process.execPath, ["--import", "tsx", script, input.source.url, "--out", outDir, ...(fixtureDir ? ["--fixture-dir", path.resolve(fixtureDir)] : [])], { stdio: "inherit" });
+    execFileSync(process.execPath, ["--import", "tsx", script, input.source.url, "--out", outDir, ...(fixtureDir ? ["--fixture-dir", path.resolve(fixtureDir)] : []), ...(process.argv.includes("--browser") ? ["--browser"] : [])], { stdio: "inherit" });
   } catch {
     // Инжест уже напечатал диагностику — это шаг «полный фейл → отчёт и стоп»
     throw new Error("Инжест Яндекс.Еды не справился (см. диагностику выше). К другому источнику без явной команды не переключаемся.");
@@ -57,6 +57,13 @@ async function buildFromEda(input: SiteInput, outDir: string): Promise<void> {
 async function buildFromFolder(input: SiteInput, outDir: string): Promise<void> {
   if (input.source.kind !== "folder") throw new Error("buildFromFolder: неверный источник");
   const src = path.resolve(input.source.path);
+  const sourceRoot = await realpath(src);
+  const outputRoot = await realpath(outDir);
+  const relative = path.relative(sourceRoot, outputRoot);
+  const reverse = path.relative(outputRoot, sourceRoot);
+  if (!relative || (!relative.startsWith("..") && !path.isAbsolute(relative)) || (!reverse.startsWith("..") && !path.isAbsolute(reverse))) {
+    throw new Error("Каталоги результата и источника не должны пересекаться");
+  }
   for (const file of ["restaurant.json", "menu.json", "settings.json", "theme.json"]) {
     try {
       await readFile(path.join(src, file));
@@ -67,11 +74,22 @@ async function buildFromFolder(input: SiteInput, outDir: string): Promise<void> 
     }
   }
   await mkdir(outDir, { recursive: true });
-  await cp(src, outDir, { recursive: true });
+  // Only content assets belong in the output. Never copy adjacent .env/secrets.
+  for (const file of ["restaurant.json", "menu.json", "settings.json", "theme.json", "pages.json", "promos.json", "images"]) {
+    await cp(path.join(src, file), path.join(outDir, file), { recursive: true, filter: async (candidate) => {
+      const stat = await lstat(candidate);
+      if (stat.isSymbolicLink()) throw new Error("Symlink в источнике content запрещён");
+      return !path.basename(candidate).startsWith(".") &&
+        (file !== "images" || stat.isDirectory() || /\.(png|jpe?g|webp|gif|avif)$/i.test(candidate));
+    } });
+  }
 
   // Нормализация: <id>.<любой формат> → <id>.webp + <id>-sm.webp; logo.* → logo.png
   const imagesDir = path.join(outDir, "images");
-  const entries = await readdir(imagesDir).catch(() => [] as string[]);
+  const entries = [
+    ...(await readdir(imagesDir).catch(() => [] as string[])),
+    ...(await readdir(path.join(imagesDir, "dishes")).catch(() => [] as string[])).map((entry) => path.join("dishes", entry)),
+  ];
   let normalized = 0;
   for (const entry of entries) {
     const full = path.join(imagesDir, entry);
@@ -85,8 +103,7 @@ async function buildFromFolder(input: SiteInput, outDir: string): Promise<void> 
     const hasPair = await exists(path.join(imagesDir, "dishes", `${id}.webp`)) && await exists(path.join(imagesDir, "dishes", `${id}-sm.webp`));
     if (hasPair) continue;
     // Источник: готовый webp или исходник из корня images/
-    const source = entry.endsWith(".webp") ? full : full;
-    await writeDishImages(await readFile(source), path.join(imagesDir, "dishes"), id);
+    await writeDishImages(await readFile(full), path.join(imagesDir, "dishes"), id);
     normalized++;
   }
   if (normalized) console.log(`  Изображения нормализованы: ${normalized}`);
@@ -98,6 +115,30 @@ async function exists(p: string): Promise<boolean> {
 
 function hoursText(hours: SiteInput["contacts"]["hours"]): string {
   return hours.map((h) => `${h.days} ${h.from}–${h.to}`).join(", ");
+}
+
+function weeklyHours(hours: SiteInput["contacts"]["hours"]) {
+  const labels = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
+  const keys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+  const days = Object.fromEntries(keys.map((key) => [key, { open: false, from: "00:00", to: "00:00" }]));
+  const assigned = new Set<number>();
+  for (const row of hours) {
+    const text = row.days.toLocaleLowerCase("ru-RU").replace(/\s/g, "").replace(/[–—]/g, "-");
+    const tokens = ["ежедневно", "каждыйдень"].includes(text) ? ["пн-вс"] : text.split(",");
+    for (const token of tokens) {
+      const range = token.split("-");
+      const from = labels.indexOf(range[0]);
+      const to = labels.indexOf(range[1] ?? range[0]);
+      if (range.length > 2 || from < 0 || to < 0) throw new Error(`Непонятные дни «${row.days}»: используйте пн–пт, сб–вс или пн,ср,пт`);
+      for (let offset = 0; offset <= (to - from + 7) % 7; offset++) {
+        const index = (from + offset) % 7;
+        if (assigned.has(index)) throw new Error(`Дни в contacts.hours пересекаются: ${labels[index]}`);
+        assigned.add(index);
+        days[keys[index]] = { open: true, from: row.from, to: row.to };
+      }
+    }
+  }
+  return { days, exceptions: [] };
 }
 
 /** Патч content/ данными манифеста: контент от источника — это черновик,
@@ -115,6 +156,7 @@ async function applyManifest(input: SiteInput, outDir: string): Promise<void> {
   if (input.contacts.address) restaurant.address = input.contacts.address;
   if (input.contacts.hours.length > 0) {
     restaurant.workHours = input.contacts.hours.map((h) => ({ days: h.days, from: h.from, to: h.to }));
+    restaurant.schedule = weeklyHours(input.contacts.hours);
   }
   restaurant.socials = input.contacts.socials;
   const hours = hoursText(input.contacts.hours);
@@ -234,11 +276,12 @@ async function writeSourceReport(input: SiteInput, outDir: string): Promise<stri
 
 async function main() {
   const manifestPath = arg("--input");
-  const outDir = path.resolve(arg("--out") ?? "");
-  if (!manifestPath || !outDir) {
+  const outArgument = arg("--out");
+  if (!manifestPath || !outArgument) {
     console.error("Использование: npx tsx scripts/assemble-content.ts --input <manifest.json> --out <contentDir>");
     process.exit(1);
   }
+  const outDir = path.resolve(outArgument);
   const input = await readManifest(path.resolve(manifestPath));
   console.log(`Манифест ok: ${input.identity.name} (${input.identity.slug}), источник: ${input.source.kind}`);
 
@@ -248,6 +291,9 @@ async function main() {
 
   await applyManifest(input, outDir);
   const unresolved = await writeSourceReport(input, outDir);
+  if (!input.decisions.publishWithGaps && unresolved.length) {
+    throw new Error(`publishWithGaps=false: устраните пробелы: ${unresolved.join("; ")}`);
+  }
 
   // Манифест кладём рядом — provision-site.sh читает approvedBy отсюда
   await writeFile(path.join(outDir, "site-input.json"), JSON.stringify(input, null, 2));

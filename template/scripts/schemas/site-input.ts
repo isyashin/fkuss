@@ -5,20 +5,30 @@
  * Деплой разрешён только при непустом approvedBy (шаг REVIEW пайплайна).
  */
 import { z } from "zod";
+import { guestPhoneSchema } from "../../src/lib/guest-contact";
+import { isValidLocalTime } from "../../src/lib/local-date";
 
 const slugSchema = z
   .string()
-  .regex(/^[a-z0-9][a-z0-9-]*$/, "slug: строчные латинские буквы, цифры, дефисы")
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug: строчные латинские буквы, цифры, одиночные дефисы")
   .max(58, "slug: не длиннее 58 символов");
 
-const timeSchema = z.string().regex(/^\d{2}:\d{2}$/, "время в формате ЧЧ:ММ");
+const timeSchema = z.string().refine(isValidLocalTime, "время в формате ЧЧ:ММ (00:00–23:59)");
+const originSchema = z.url().refine((value) => {
+  try {
+  const url = new URL(value);
+  return url.protocol === "https:" && !url.username && !url.password && !url.port &&
+    ["", "/"].includes(url.pathname) && !url.search && !url.hash &&
+    url.hostname.split(".").every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label));
+  } catch { return false; }
+}, "domain: HTTPS origin без учётных данных, порта, пути и параметров");
 
 export const siteInputSchema = z.object({
   identity: z.object({
     name: z.string().min(1, "identity.name обязателен"),
     slug: slugSchema,
     /** Полный canonical, например https://pizza24.fkuss.ru */
-    domain: z.string().min(1, "identity.domain обязателен"),
+    domain: originSchema,
     cuisine: z.string().default(""),
   }),
 
@@ -27,7 +37,12 @@ export const siteInputSchema = z.object({
   source: z.discriminatedUnion("kind", [
     z.object({
       kind: z.literal("yandex-eda"),
-      url: z.string().url().includes("eda.yandex.ru", { message: "url: ожидается ссылка Яндекс.Еды" }),
+      url: z.url().refine((value) => {
+        try {
+        const url = new URL(value);
+        return url.protocol === "https:" && url.hostname === "eda.yandex.ru" && !url.username && !url.password && !url.port;
+        } catch { return false; }
+      }, "url: ожидается HTTPS-ссылка eda.yandex.ru"),
     }),
     z.object({
       kind: z.literal("folder"),
@@ -37,10 +52,10 @@ export const siteInputSchema = z.object({
   ]),
 
   contacts: z.object({
-    phone: z.string().min(5, "contacts.phone обязателен (реальный номер, не выдумывать)"),
+    phone: guestPhoneSchema,
     phoneConfirmedBy: z.enum(["owner", "maps+site", "unconfirmed"]).default("unconfirmed"),
     /** Пусто → служебный ящик платформы <slug>@fkuss.ru (email-канал выключен) */
-    email: z.string().default(""),
+    email: z.union([z.literal(""), z.email()]).default(""),
     address: z.string().default(""),
     hours: z
       .array(
@@ -61,6 +76,13 @@ export const siteInputSchema = z.object({
       })
       .default({ telegram: "", max: "", whatsapp: "", vk: "" }),
   }),
+
+  /** Для публикации обязательны явные решения о владельце и стартовом балансе. */
+  platform: z.object({
+    ownerEmail: z.email(),
+    tariffId: z.string().trim().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/),
+    initialKopecks: z.number().int().min(0).max(2_147_483_647),
+  }).optional(),
 
   business: z
     .object({

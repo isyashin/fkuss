@@ -51,6 +51,16 @@ jobs:
         working-directory: template
       - run: node scripts/check-proxy-registered.mjs
         working-directory: template
+      - name: Build and verify publication migrator
+        working-directory: template
+        run: |
+          docker build --target migrator -t fkuss-template-migrator:ci .
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            -v "$PWD/content:/content:ro" fkuss-template-migrator:ci \
+            node_modules/.bin/tsx scripts/validate-content.ts /content
+          docker run --rm --network host --user "$(id -u):$(id -g)" \
+            -e DATABASE_URL -e CONTENT_DIR=/content -v "$PWD/content:/content" \
+            fkuss-template-migrator:ci node_modules/.bin/tsx scripts/seed.ts
       - run: npm run seed
         working-directory: template
         env:

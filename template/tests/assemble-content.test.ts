@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -25,7 +25,7 @@ async function tinyJpg(): Promise<Buffer> {
     .toBuffer();
 }
 
-function runAssemble(manifestPath: string, outDir: string, extraEnv: NodeJS.ProcessEnv = {}): void {
+function runAssemble(manifestPath: string, outDir: string, extraEnv: Partial<NodeJS.ProcessEnv> = {}): void {
   execFileSync(process.execPath, ["--import", "tsx", CLI, "--input", manifestPath, "--out", outDir], {
     stdio: "pipe",
     env: { ...process.env, ...extraEnv },
@@ -284,5 +284,79 @@ describe("assemble-content: отказоустойчивость", () => {
       }),
     );
     expect(() => runAssemble(manifestPath, path.join(work, "content"))).toThrow();
+  });
+});
+
+describe("assemble-content: isolated output", () => {
+  async function fixture() {
+    const work = await mkdtemp(path.join(tmpdir(), "assemble-isolated-"));
+    const source = path.join(work, "source");
+    await cp(path.resolve("content"), source, { recursive: true });
+    const manifest = structuredClone({ ...EDA_MANIFEST, source: { kind: "folder", path: source } });
+    const manifestPath = path.join(work, "input.json");
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    return { work, source, manifest, manifestPath, out: path.join(work, "result") };
+  }
+
+  it("does not copy private root files from the owner's folder", async () => {
+    const f = await fixture();
+    try {
+      await writeFile(path.join(f.source, ".env"), "QA_PRIVATE_MARKER=not-a-real-secret");
+      await writeFile(path.join(f.source, "images", "private.json"), '{"qa":"not-a-real-secret"}');
+      runAssemble(f.manifestPath, f.out);
+      await expect(readFile(path.join(f.out, ".env"))).rejects.toThrow();
+      await expect(readFile(path.join(f.out, "images", "private.json"))).rejects.toThrow();
+    } finally { await rm(f.work, { recursive: true, force: true }); }
+  });
+
+  it("builds the small variant of existing images/dishes WebP files", async () => {
+    const f = await fixture();
+    try {
+      const menu = JSON.parse(await readFile(path.join(f.source, "menu.json"), "utf8"));
+      const image = menu.categories[0].dishes[0].image as string;
+      const small = image.replace(/\.webp$/, "-sm.webp");
+      await rm(path.join(f.source, small), { force: true });
+      runAssemble(f.manifestPath, f.out);
+      await expect(readFile(path.join(f.out, small))).resolves.toBeInstanceOf(Buffer);
+    } finally { await rm(f.work, { recursive: true, force: true }); }
+  });
+
+  it("requires --out before writing into the working directory", async () => {
+    const f = await fixture();
+    try {
+      const loader = path.resolve("node_modules/tsx/dist/loader.mjs");
+      expect(() => execFileSync(process.execPath, ["--import", loader, CLI, "--input", f.manifestPath], {
+        cwd: f.work, env: process.env, stdio: "pipe",
+      })).toThrow();
+      await expect(readFile(path.join(f.work, "restaurant.json"))).rejects.toThrow();
+    } finally { await rm(f.work, { recursive: true, force: true }); }
+  });
+
+  it("refuses gaps when publishWithGaps is false", async () => {
+    const f = await fixture();
+    try {
+      f.manifest.decisions.publishWithGaps = false;
+      await writeFile(f.manifestPath, JSON.stringify(f.manifest));
+      expect(() => runAssemble(f.manifestPath, f.out)).toThrow();
+    } finally { await rm(f.work, { recursive: true, force: true }); }
+  });
+
+  it("uses the owner's weekday hours instead of a stale source schedule", async () => {
+    const f = await fixture();
+    try {
+      const restaurantPath = path.join(f.source, "restaurant.json");
+      const restaurant = JSON.parse(await readFile(restaurantPath, "utf8"));
+      restaurant.schedule = { days: { sun: { open: false, from: "00:00", to: "00:00" } }, exceptions: [] };
+      await writeFile(restaurantPath, JSON.stringify(restaurant));
+      f.manifest.contacts.hours = [
+        { days: "пн–пт", from: "09:00", to: "18:00", source: "owner" },
+        { days: "сб–вс", from: "10:00", to: "12:00", source: "owner" },
+      ];
+      await writeFile(f.manifestPath, JSON.stringify(f.manifest));
+      runAssemble(f.manifestPath, f.out);
+      const result = JSON.parse(await readFile(path.join(f.out, "restaurant.json"), "utf8"));
+      expect(result.schedule.days.mon).toEqual({ open: true, from: "09:00", to: "18:00" });
+      expect(result.schedule.days.sun).toEqual({ open: true, from: "10:00", to: "12:00" });
+    } finally { await rm(f.work, { recursive: true, force: true }); }
   });
 });

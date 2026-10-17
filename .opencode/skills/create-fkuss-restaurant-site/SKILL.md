@@ -47,6 +47,11 @@ license: MIT
    confirmedBy, решения, пробелы. После подтверждения запиши `approvedBy`
    в манифест и пересобери архив — без него `provision-site.sh` не стартует.
 7. Разворачивай сайт лишь по явному запросу:
+   сначала определи топологию. `provision-site.sh` поддерживает новые сайты
+   старой раскладки с общей PostgreSQL; новый dev с отдельными DB-контейнерами
+   обслуживается по `docs/TOPOLOGY-OPERATIONS.md`. Перед публикацией нужны
+   явные `platform.ownerEmail`, `tariffId`, `initialKopecks`; не используй
+   этот скрипт для обновления наполненного сайта или переезда между топологиями.
    `provision-site.sh <slug> <content.tar.gz>` на сервере — он сам делает
    deploy/seed/владельца/платформу/Caddy/проверки; пошаговая последовательность
    (fallback для отладки) — в [deploy-runbook.md](references/deploy-runbook.md).

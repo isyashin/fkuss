@@ -29,8 +29,8 @@ export async function writeLogoPng(sourceBuffer: Buffer, imagesDir: string): Pro
 /** Имя файла «<id>.<ext>» → id (без -sm: он служебный) */
 export function dishIdFromFilename(filename: string): string | null {
   const base = path.basename(filename);
-  if (base.startsWith("logo.")) return null;
-  const match = base.match(/^([a-z0-9-]+?)(?:-sm)?\.[a-z0-9]+$/i);
+  if (/^logo\.|-sm\.[a-z0-9]+$/i.test(base)) return null;
+  const match = base.match(/^([a-z0-9-]+)\.(?:jpe?g|png|webp|gif|avif)$/i);
   if (!match) return null;
   const id = match[1];
   return id.endsWith("-sm") ? null : id;

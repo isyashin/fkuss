@@ -16,6 +16,13 @@
   },
   "_sourceFolderExample": { "kind": "folder", "path": "../sites/pizza24/content" },
 
+  "platform": {
+    "_note": "Обязательно перед публикацией: реальный email владельца кабинета (отдельно от контактов ресторана), ID существующего тарифа и явно согласованный стартовый баланс в копейках. Пример email заменить; approvedBy подтверждает и эти решения.",
+    "ownerEmail": "owner@restaurant.invalid",
+    "tariffId": "standard",
+    "initialKopecks": 0
+  },
+
   "contacts": {
     "_note": "phone обязателен всегда (не выдумывать!). email пусто → служебный ящик <slug>@fkuss.ru. address для folder обязателен; для eda можно оставить пустым — уточняется исследованием. confirmedBy: owner | maps+site | unconfirmed",
     "phone": "+79166594301",

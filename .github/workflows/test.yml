@@ -59,6 +59,7 @@ jobs:
             -v "$PWD/content:/content:ro" fkuss-template-migrator:ci \
             node_modules/.bin/tsx scripts/validate-content.ts /content
           docker run --rm --network host --user "$(id -u):$(id -g)" \
+            -e SEED_OPEN_ALL_DAY=1 -e SEED_TWO_MENUS=1 -e SEED_GUEST_CABINET=1 \
             -e DATABASE_URL -e CONTENT_DIR=/content -v "$PWD/content:/content" \
             fkuss-template-migrator:ci node_modules/.bin/tsx scripts/seed.ts
       - run: npm run seed

@@ -122,6 +122,8 @@ test("повторы сигнала настраиваются и отдаютс
   }).toBe(3);
 
   await page.reload();
+  // fill() can write into an inert SSR input before React attaches onChange.
+  await expect(page.locator("[data-theme][aria-busy]")).toHaveAttribute("aria-busy", "false");
   await expect(page.getByLabel("Повторы сигнала")).toHaveValue("3", { timeout: 15000 });
 
   // возвращаем дефолт

@@ -390,6 +390,12 @@
     max-height: 55vh; overflow: auto;
   }
   .topbar .footBadge { margin-left: 0; }
+  /* Счётчик первого опроса может прийти между pointerdown и pointerup.
+     Бейдж и индикатор звука не должны сдвигать соседнюю кнопку профиля. */
+  .topbar .notifWrap { flex: 0 0 44px; }
+  .topbar .notifWrap .footButton { width: 44px; padding: 0; justify-content: center; }
+  .topbar .notifWrap .footBadge { position: absolute; top: 0; right: -4px; }
+  .topbar .notifWrap .footOn { position: absolute; bottom: 4px; left: 6px; margin-left: 0; }
   /* Полноэкранная деталь заказа: мобильная навигация скрыта, прокрутка только внутри детали */
   .shell:has([data-order-detail-open]) { height: 100dvh; overflow: hidden; }
   .shell:has([data-order-detail-open]) .topbar,

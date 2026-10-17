@@ -13,6 +13,7 @@ fi
 # BASE от пути скрипта: при запуске через sudo HOME=/root, а скрипт лежит в <base>/src/scripts/.
 BASE="${RESTO_BASE:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)}"
 DB_CONTAINER="${DB_CONTAINER:-template-db-1}"
+PLATFORM_DB="${PLATFORM_DB:-platform}"
 CADDYFILE="${CADDYFILE:-/etc/caddy/Caddyfile}"
 PLATFORM_PORT="${PLATFORM_PORT:-3100}"
 
@@ -24,7 +25,7 @@ as_root() {
   fi
 }
 
-SITES_JSON=$(docker exec -i "$DB_CONTAINER" psql -U resto platform -Atc \
+SITES_JSON=$(docker exec -i "$DB_CONTAINER" psql -U resto "$PLATFORM_DB" -Atc \
   "SELECT slug, state, port, coalesce(domains[1], '') FROM \"Site\" ORDER BY slug")
 
 LAN_SITES=$(python3 - "$BASE/registry.json" <<'PY'

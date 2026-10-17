@@ -96,6 +96,7 @@ async function main() {
     await tx.modifierGroup.deleteMany();
     await tx.dish.deleteMany();
     await tx.category.deleteMany();
+    await tx.menuGroup.deleteMany();
     await tx.promo.deleteMany();
     await tx.page.deleteMany();
     await tx.settings.deleteMany();

@@ -1,0 +1,68 @@
+{
+  "_note": "Пример входного манифеста пайплайна «ресторан → сайт». Агент заполняет его опросом владельца (чек-лист — в навыке create-fkuss-restaurant-site, references/interview.md). Ключи вида _note игнорируются. Деплой разрешён только с непустым approvedBy.",
+
+  "identity": {
+    "_note": "name — публичное название на сайте; slug — латиница/цифры/дефисы ≤58; domain — полный canonical",
+    "name": "Pizza24",
+    "slug": "pizza24",
+    "domain": "https://pizza24.fkuss.ru",
+    "cuisine": "пицца, суши"
+  },
+
+  "source": {
+    "_note": "kind — контракт на весь прогон. yandex-eda: данные добираются по лестнице устойчивости, к другому источнику не переключаемся без явной команды. folder: готовая папка с content/*.json и images/",
+    "kind": "yandex-eda",
+    "url": "https://eda.yandex.ru/r/pizza_halal_restaurant?placeSlug=pizza_xalyal"
+  },
+  "_sourceFolderExample": { "kind": "folder", "path": "../sites/pizza24/content" },
+
+  "contacts": {
+    "_note": "phone обязателен всегда (не выдумывать!). email пусто → служебный ящик <slug>@fkuss.ru. address для folder обязателен; для eda можно оставить пустым — уточняется исследованием. confirmedBy: owner | maps+site | unconfirmed",
+    "phone": "+79166594301",
+    "phoneConfirmedBy": "maps+site",
+    "email": "",
+    "address": "Москва, район Коммунарка, бульвар Веласкеса, 7к3",
+    "hours": [
+      { "days": "пн–вс", "from": "10:30", "to": "23:30", "source": "eda" }
+    ],
+    "socials": {
+      "telegram": "https://t.me/Pizzaexpres7",
+      "max": "",
+      "whatsapp": "",
+      "vk": ""
+    }
+  },
+
+  "business": {
+    "_note": "Решения владельца. deliveryPrice — стоимость зоны deliveryZoneName; при сомнениях оставить дефолт и добавить в decisions.gaps",
+    "deliveryEnabled": true,
+    "pickupEnabled": true,
+    "minOrder": 0,
+    "deliveryZoneName": "Коммунарка",
+    "deliveryPrice": 300,
+    "bookingEnabled": true,
+    "cashbackPercent": 5,
+    "maxSpendPercent": 20
+  },
+
+  "theme": {
+    "_note": "preset: warm | minimal | elegant; accent — #RRGGBB с контрастом для белого текста",
+    "preset": "warm",
+    "accent": "#b91c1c"
+  },
+
+  "content": {
+    "_note": "Авторские тексты; пусто — соберутся шаблоны из подтверждённых полей",
+    "about": "",
+    "deliveryText": ""
+  },
+
+  "decisions": {
+    "_note": "publishWithGaps=true — публикуем с пробелами; gaps — что именно не подтверждено (уйдёт в source-report.json.unresolved и в отчёт владельцу)",
+    "publishWithGaps": true,
+    "gaps": ["email", "deliveryTerms"],
+    "notes": "Часы из карточки Еды 10:30–23:30; на Яндекс Картах 11:00–23:00 — выбраны часы Еды, владельцу привести к одному виду."
+  },
+
+  "approvedBy": ""
+}

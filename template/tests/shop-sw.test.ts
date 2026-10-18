@@ -13,6 +13,7 @@ interface ShopSwStrategyApi {
   OFFLINE_URL: string;
   PRECACHE: string[];
   MAX_PAGE_ENTRIES: number;
+  canCacheResponse(response: { ok: boolean; type: string; headers: Headers }, publicStatic?: boolean): boolean;
   decideStrategy(input: { url: string; method: string; mode: string }, origin: string): StrategyKind;
 }
 
@@ -72,7 +73,6 @@ describe("shop sw — GET API витрины: network-first (офлайн — п
   it("слоты брони попадают в network-first, а не под префикс /api/booking", () => {
     expect(decide(`${ORIGIN}/api/booking/slots?date=2026-10-13`)).toBe("network-first");
     expect(decide(`${ORIGIN}/api/delivery/slots`)).toBe("network-first");
-    expect(decide(`${ORIGIN}/api/delivery/zone?address=Ленина`)).toBe("network-first");
   });
 });
 
@@ -94,5 +94,27 @@ describe("shop sw — документы: network-first, статика: stale-w
 
   it("прочие GET (не статика, не документ) не трогаем", () => {
     expect(decide(`${ORIGIN}/manifest.webmanifest`)).toBe("pass-through");
+  });
+});
+
+describe("shop sw — private documents and address previews", () => {
+  it.each(["/account", "/account/orders/own-order", "/order/success?n=42", "/payment/mock?orderId=42", "/api/delivery/zone?address=private-address"])("never caches %s", (path) => {
+    expect(decide(`${ORIGIN}${path}`, { mode: "navigate" })).toBe("network-only");
+    expect(decide(`${ORIGIN}${path}`)).toBe("network-only");
+  });
+  it("unknown future documents require an explicit public cache rule", () => {
+    expect(decide(`${ORIGIN}/future-private-page`, { mode: "navigate" })).toBe("network-only");
+    expect(decide(`${ORIGIN}/p/about`, { mode: "navigate" })).toBe("network-first");
+  });
+  it("does not retain the v2 cache that could contain private documents", () => {
+    expect(S.ALL_CACHES).not.toContain("fkuss-shop-pages-v2");
+  });
+  it("never stores a personalized public page response", () => {
+    expect(S.canCacheResponse({ ok: true, type: "basic", headers: new Headers({ "x-fkuss-cache": "public" }) })).toBe(true);
+    expect(S.canCacheResponse({ ok: true, type: "basic", headers: new Headers() })).toBe(false);
+    expect(S.canCacheResponse({ ok: true, type: "basic", headers: new Headers() }, true)).toBe(true);
+    expect(S.canCacheResponse({ ok: true, type: "basic", headers: new Headers({ "x-fkuss-cache": "private" }) }, true)).toBe(false);
+    expect(S.canCacheResponse({ ok: true, type: "basic", headers: new Headers({ "x-fkuss-cache": "private" }) })).toBe(false);
+    expect(S.canCacheResponse({ ok: false, type: "basic", headers: new Headers() })).toBe(false);
   });
 });

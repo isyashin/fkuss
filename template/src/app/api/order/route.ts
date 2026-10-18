@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { attachOrderConfirmation } from "@/lib/order-confirmation";
 import { z } from "zod";
 import { getPrisma } from "@/lib/db";
 import { recordAdminEvent } from "@/lib/admin-events";
@@ -590,7 +591,7 @@ export async function POST(request: Request) {
     // метрики не должны ронять заказ
   }
 
-  return NextResponse.json({
+  return attachOrderConfirmation(NextResponse.json({
     ok: true,
     orderNumber: order.number,
     total: totalFinal,
@@ -598,5 +599,5 @@ export async function POST(request: Request) {
     deliveryPrice: deliveryPriceFinal,
     bonusSpent: calc.bonusSpent,
     confirmationUrl,
-  });
+  }), order.id);
 }

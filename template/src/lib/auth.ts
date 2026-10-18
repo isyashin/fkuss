@@ -7,10 +7,11 @@ import { randomInt } from "node:crypto";
 import { getPrisma } from "./db";
 import type { Customer, PrismaClient } from "@/generated/prisma/client";
 
+import { GUEST_SESSION_COOKIE as SESSION_COOKIE, ORDER_CONFIRMATION_COOKIE, ORDER_CONFIRMATION_COOKIE_PATH } from "./auth-cookie-names";
+
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 минут
 const CODE_MAX_ATTEMPTS = 3;
 export const SESSION_TTL_DAYS = 30;
-const SESSION_COOKIE = "resto_session";
 
 /** DEV-вход без почтового кода. Одного DEV_GUEST_LOGIN=1 недостаточно:
  *  на прод-сборке (NODE_ENV=production) требуется ещё SITE_ENV=dev. */
@@ -125,4 +126,8 @@ export async function logout(): Promise<void> {
     await prisma.session.deleteMany({ where: { id: sessionId } });
   }
   jar.delete(SESSION_COOKIE);
+  jar.set(ORDER_CONFIRMATION_COOKIE, "", {
+    path: ORDER_CONFIRMATION_COOKIE_PATH, maxAge: 0, httpOnly: true, sameSite: "lax",
+    secure: process.env.NODE_ENV === "production" && process.env.INSECURE_HTTP !== "1",
+  });
 }

@@ -8,6 +8,7 @@ export async function loginAdminUi(page: Page): Promise<void> {
   await page.getByLabel("Логин").fill(login);
   await page.getByLabel("Пароль").fill(password);
   await page.getByRole("button", { name: "Войти" }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/admin/login"), { timeout: 20_000 });
 }
 
 /**

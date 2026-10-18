@@ -23,6 +23,8 @@ test("SW-02: повторный визит офлайн — последние �
   await page.waitForFunction(() =>
     navigator.serviceWorker.getRegistration().then((registration) => Boolean(registration?.active)),
   );
+  // active can still be activating; wait for actual control before warming.
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
   // под контролем SW: документ и статика текущего визита попадают в кэш
   await page.reload();
   await context.setOffline(true);

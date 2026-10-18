@@ -4,7 +4,7 @@ import { getPrisma } from "./db";
 import { authenticateAdmin, hasAdminPermission, resolveAdminSession, revokeAdminSession, type AdminActor, type AdminPermission } from "./admin-users";
 import { isPinUnlocked } from "./admin-pin";
 
-const ADMIN_COOKIE = "resto_admin_v2";
+import { ADMIN_SESSION_COOKIE as ADMIN_COOKIE } from "./auth-cookie-names";
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export async function loginAdmin(login: string, password: string): Promise<boolean> {

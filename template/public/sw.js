@@ -4,7 +4,7 @@
    stale-while-revalidate; документ без сети и без кэша — заглушка
    /offline.html. POST/заказы/оплата/админка — только сеть, кэш запрещён.
    Правила выбора стратегии — в sw-strategy.js (юнит-тесты: tests/shop-sw.test.ts). */
-importScripts("/sw-strategy.js");
+importScripts("/sw-strategy.js?v=3");
 
 var STRATEGY = self.ShopSwStrategy;
 var SELF_ORIGIN = self.location.origin;
@@ -35,7 +35,7 @@ self.addEventListener("activate", function (event) {
 /* Успешный same-origin ответ кладём в кэш; кэш страниц/данных ограничен. */
 async function fetchAndCache(request, cacheName) {
   var response = await fetch(request);
-  if (response.ok && response.type === "basic") {
+  if (STRATEGY.canCacheResponse(response, cacheName === STRATEGY.STATIC_CACHE)) {
     var cache = await caches.open(cacheName);
     await cache.put(request, response.clone());
     if (cacheName === STRATEGY.PAGE_CACHE) await trimCache(cache);

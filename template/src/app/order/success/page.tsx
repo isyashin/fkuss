@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { getSessionCustomer } from "@/lib/auth";
+import { ORDER_CONFIRMATION_COOKIE } from "@/lib/auth-cookie-names";
+import { isOrderConfirmationTokenValid, orderConfirmationSecret } from "@/lib/order-confirmation";
 import { getPrisma } from "@/lib/db";
 import { getSiteSettings } from "@/lib/site";
 
@@ -21,7 +25,15 @@ export default async function OrderSuccessPage({
 
   // Дублирование заказа в WhatsApp — как раньше в шторке корзины.
   let whatsappHref = "";
+  let mayReadPrivateReceipt = false;
   if (order && cash) {
+    const proof = (await cookies()).get(ORDER_CONFIRMATION_COOKIE)?.value;
+    mayReadPrivateReceipt = isOrderConfirmationTokenValid(proof, order.id, orderConfirmationSecret());
+    if (!mayReadPrivateReceipt && order.customerId) {
+      mayReadPrivateReceipt = (await getSessionCustomer())?.id === order.customerId;
+    }
+  }
+  if (order && cash && mayReadPrivateReceipt) {
     try {
       const settings = await getSiteSettings();
       const whatsapp = settings.channels.whatsapp;

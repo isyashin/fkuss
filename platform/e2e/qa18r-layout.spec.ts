@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("QA18R-03: platform back link has a 44px target and works at its lower edge and by keyboard", async ({ page }) => {
+  await page.context().setExtraHTTPHeaders({ "x-forwarded-for": "10.99.18.3" });
   await page.goto("/admin/login");
   await page.locator('input[type="password"]').fill(process.env.PLATFORM_ADMIN_PASSWORD ?? "platform-e2e-admin");
   await page.getByRole("button", { name: "Войти", exact: true }).click();

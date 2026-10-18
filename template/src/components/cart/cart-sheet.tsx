@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart/store";
 import { dishImageUrl } from "@/lib/assets";
+import { DishImage } from "@/components/menu/dish-image";
 import { tariffPrice, tariffLines, zoneTariffs, type ZoneTariff } from "@/lib/order/pricing";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { GuestChannels, PreferredChannel } from "@/lib/guest-contact";
@@ -408,7 +409,7 @@ export function CartSheet({
                 return (
                   <div key={`${item.dishId}:${item.modifiers.map((m) => m.id).join(",")}`} className="flex gap-3 items-center">
                     <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-foreground/5 shrink-0">
-                      <img src={dishImageUrl(item.image, "sm")} alt={item.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                      <DishImage src={dishImageUrl(item.image, "sm")} alt={item.name} className="absolute inset-0 w-full h-full" imageClassName="object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium leading-snug">{item.name}</p>

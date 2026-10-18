@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { dishImageUrl } from "@/lib/assets";
+import { DishImage } from "@/components/menu/dish-image";
 import type { Menu, Dish } from "@/lib/content";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { GuestChannels } from "@/lib/guest-contact";
@@ -219,12 +220,11 @@ export function MenuClient({
                           лёгкий зум от центра визуально унифицирует кадры. Значение
                           входит в хэш CSS-чанка: при «протухшем» кэше у гостей
                           меняем его, чтобы браузер запросил свежий файл. */}
-                      <img
+                      <DishImage
                         src={dishImageUrl(dish.image, "sm")}
                         alt={dish.name}
-                        loading="lazy"
-                        decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover scale-[1.2]"
+                        className="absolute inset-0 w-full h-full"
+                        imageClassName="object-cover scale-[1.2]"
                       />
                       {dish.tags.includes("hit") && (
                         <span className="absolute top-2 left-2 bg-accent text-white text-xs px-2 py-1 rounded-full">
@@ -345,7 +345,7 @@ function DishModal({
       <div className="relative bg-background w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl">
         <div className="relative aspect-[4/3] bg-foreground/5">
           {/* Модалка: полный 800px WebP напрямую */}
-          <img src={dishImageUrl(dish.image, "full")} alt={dish.name} className="absolute inset-0 w-full h-full object-cover" />
+          <DishImage src={dishImageUrl(dish.image, "full")} alt={dish.name} loading="eager" className="absolute inset-0 w-full h-full" imageClassName="object-cover" />
           <button
             onClick={onClose}
             className="absolute top-3 right-3 min-w-11 min-h-11 rounded-full bg-black/50 text-white text-xl"

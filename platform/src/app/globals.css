@@ -134,6 +134,8 @@
 
 /* ---------- типографика ---------- */
 .pf-intro { margin-bottom: 18px; }
+.pf-backLink { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; color: inherit; border-radius: 4px; }
+.pf-backLink:focus-visible { outline: 2px solid var(--pf-accent); outline-offset: 3px; }
 .pf-intro span { color: var(--pf-accent); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .pf-intro h1 { margin: 5px 0 7px; font: 30px Georgia, serif; letter-spacing: -.02em; }
 .pf-intro p { margin: 0; color: var(--pf-muted); font-size: 13px; line-height: 1.5; }

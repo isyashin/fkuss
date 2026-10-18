@@ -43,7 +43,7 @@ export default async function SiteCardPage({ params }: { params: Promise<{ slug:
   return (
     <>
       <div className="pf-intro">
-        <span><Link href="/admin" style={{ color: "inherit" }}>← все сайты</Link></span>
+        <span><Link href="/admin" className="pf-backLink">← все сайты</Link></span>
         <h1>{site.name}</h1>
         <p>{site.domains.join(", ") || `порт ${site.port}`} · состояние: {site.manualSuspended ? "ручная пауза" : site.state}{site.imageVersion ? ` · образ ${site.imageVersion}` : ""}</p>
       </div>

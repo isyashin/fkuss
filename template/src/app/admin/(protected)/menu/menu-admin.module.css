@@ -40,7 +40,8 @@
 .menuFields :global(.field) { font-size: 13px; }
 .menuFields :global(.input), .menuFields :global(.select), .menuFields :global(.textarea) { font-size: 14px; }
 .menuFields :global(.input[readonly]) { background: var(--admin-surface-2); color: var(--admin-muted); }
-.menuPriceRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.menuPriceRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; }
+.menuPriceRow input, .menuPriceRow select { height: 44px; }
 .menuStatusAction { margin-top: 20px; }
 .menuSavebar {
   position: sticky; bottom: 0; z-index: 2;

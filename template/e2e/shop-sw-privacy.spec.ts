@@ -10,7 +10,11 @@ test("private storefront, account and address preview never enter the service-wo
   const email = `sw-private-${suffix}@example.test`;
   const street = `QA-private-street-${suffix}`;
   try {
-    const login = await page.request.post("/api/auth/dev-login", { data: { email } });
+    const requested = await page.request.post("/api/auth/request-code", { data: { email } });
+    expect(requested.status()).toBe(200);
+    const { devCode } = await requested.json();
+    expect(devCode).toMatch(/^\d{6}$/);
+    const login = await page.request.post("/api/auth/verify", { data: { email, code: devCode } });
     expect(login.status()).toBe(200);
     const customer = await pool.query<{ id: string }>('SELECT id FROM "Customer" WHERE email=$1', [email]);
     await pool.query('INSERT INTO "Address" (id,"customerId",street) VALUES ($1,$2,$3)', [`sw-address-${suffix}`, customer.rows[0].id, street]);
@@ -40,6 +44,7 @@ test("private storefront, account and address preview never enter the service-wo
     await context.setOffline(false);
     await pool.query('DELETE FROM "Address" WHERE id=$1', [`sw-address-${suffix}`]);
     await pool.query('DELETE FROM "Session" WHERE "customerId" IN (SELECT id FROM "Customer" WHERE email=$1)', [email]);
+    await pool.query('DELETE FROM "AuthCode" WHERE email=$1', [email]);
     await pool.query('DELETE FROM "Customer" WHERE email=$1', [email]);
     await pool.end();
   }

@@ -22,4 +22,3 @@ test("QA18R-02: dish weight and price controls keep their height and desktop ali
     expect(select!.x + select!.width).toBeLessThanOrEqual(width + 1);
   }
 });
-

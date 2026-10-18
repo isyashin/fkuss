@@ -8,9 +8,9 @@ export const ORDER_TYPES = ["all", "delivery", "pickup"] as const;
 // Режимы очереди заказов (редизайн staff-экрана): группы статусов.
 export const ORDER_MODES = ["all", "current", "new", "history"] as const;
 export const ORDER_MODE_STATUSES: Record<Exclude<OrderModeFilter, "all">, string[]> = {
-  current: ["new", "accepted", "cooking", "ready", "handed_to_courier"],
+  current: ["new", "accepted", "cooking", "handed_to_courier"],
   new: ["new"],
-  history: ["delivered", "issued", "cancelled"],
+  history: ["ready", "delivered", "issued", "cancelled"],
 };
 
 export type RawAdminQuery = Record<string, string | string[] | undefined>;

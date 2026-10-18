@@ -26,21 +26,10 @@ test("geo-режим: default выключен; без ключа геокоде
   const disabled = await (await request.get("/api/delivery/zone?address=Тверская 1", { headers: ip(p, 1) })).json();
   expect(disabled.kind).toBe("disabled");
 
-  // 2. Админ: удаляем ВСЕ варианты доставки (иначе они вытесняют зоны;
-  //    соседние спеки оставляют свои варианты в общей БД)
+  // 2. Включаем зоны на карте («варианты доставки» из продукта убраны — зоны всегда активны)
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);
-  await gotoAdmin(page, "/admin/settings?section=delivery");
-  await page.getByRole("tab", { name: "Варианты доставки" }).click();
-  const optionCards = page.locator("[data-option-name]");
-  for (let remaining = await optionCards.count(); remaining > 0; remaining--) {
-    page.once("dialog", (dialog) => void dialog.accept());
-    await optionCards.first().getByRole("button", { name: "Удалить" }).click();
-    await expect(optionCards).toHaveCount(remaining - 1, { timeout: 15000 });
-  }
-
-  // 3. Включаем зоны на карте (вкладка «Зоны на карте» открыта по умолчанию)
   await setGeoZones(page, true);
 
   try {
@@ -76,19 +65,8 @@ test("geo-режим: default выключен; без ключа геокоде
     });
     expect(order.status()).toBe(503);
   } finally {
-    // 7. Возвращаем настройки и вариант «Курьер»
+    // 7. Возвращаем настройки
     await setGeoZones(page, false);
-    await gotoAdmin(page, "/admin/settings?section=delivery");
-    await page.getByRole("tab", { name: "Варианты доставки" }).click();
-    await page.getByRole("button", { name: "+ Вариант доставки" }).click();
-    await page.getByLabel("Название").fill("Курьер");
-    await page.getByLabel("Режим").selectOption("asap");
-    await page.getByLabel("Часы с").fill("00:00");
-    await page.getByLabel("Часы до").fill("23:59");
-    await page.getByLabel("Цена, ₽").fill("200");
-    // «Сохранить» общих условий теперь всегда видна — скоупимся на форму варианта.
-    await page.getByRole("group", { name: /вариант доставки/ }).getByRole("button", { name: "Сохранить" }).click();
-    await expect(page.locator('[data-option-name="Курьер"]')).toBeVisible({ timeout: 15000 });
   }
 
   const restored = await (await request.get("/api/delivery/zone?address=Тверская 1", { headers: ip(p, 5) })).json();

@@ -5,7 +5,7 @@
  * Админка получает отличимый тёмный вариант (admin-*): гостевое и админское
  * приложения на одном телефоне различимы на первый взгляд.
  */
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
@@ -79,19 +79,38 @@ export async function generateIcons(
   const guestSource = hasLogo ? await readFile(logoPath) : letterPlate(restaurant.name, accent, "#ffffff");
   const adminSource = hasLogo ? guestSource : letterPlate(restaurant.name, ADMIN_BACKGROUND, accent);
 
-  const version = Date.now().toString(36);
+  // Render the complete set first. Readers never see a truncated PNG; publish
+  // the cache-busting version only after all six atomic file replacements.
+  const staging = await mkdtemp(path.join(iconsDir, ".generate-"));
+  const version = path.basename(staging).slice(".generate-".length) + Date.now().toString(36);
   const icons: IconsResult["icons"] = [];
-  for (const { name, size } of GUEST_SIZES) {
-    await writeFile(path.join(iconsDir, name), await renderIcon(guestSource, size, "#ffffff"));
-    icons.push({ name, path: `icons/${name}` });
+  try {
+    for (const { name, size } of [...GUEST_SIZES, ...ADMIN_SIZES]) {
+      const admin = name.startsWith("admin-");
+      await writeFile(path.join(staging, name), await renderIcon(admin ? adminSource : guestSource, size, admin ? ADMIN_BACKGROUND : "#ffffff"));
+      icons.push({ name, path: `icons/${name}` });
+    }
+    await writeFile(path.join(staging, "icons.json"), JSON.stringify({ version, generatedAt: new Date().toISOString() }));
+    for (const { name } of icons) await rename(path.join(staging, name), path.join(iconsDir, name));
+    await rename(path.join(staging, "icons.json"), path.join(iconsDir, "icons.json"));
+  } finally {
+    await rm(staging, { recursive: true, force: true });
   }
-  for (const { name, size } of ADMIN_SIZES) {
-    await writeFile(path.join(iconsDir, name), await renderIcon(adminSource, size, ADMIN_BACKGROUND));
-    icons.push({ name, path: `icons/${name}` });
-  }
-
-  await writeFile(path.join(iconsDir, "icons.json"), JSON.stringify({ version, generatedAt: new Date().toISOString() }));
   return { version, icons };
+}
+
+/** Asset-only upgrade for existing sites: never seeds or writes business data. */
+export async function ensureIcons(contentDir: string, restaurant: { name: string; logo: string }, accent: string): Promise<boolean> {
+  let complete = !!(await getIconsVersion(contentDir));
+  for (const { name, size } of [...GUEST_SIZES, ...ADMIN_SIZES]) {
+    try {
+      const metadata = await sharp(path.join(contentDir, "icons", name)).metadata();
+      if (metadata.format !== "png" || metadata.width !== size || metadata.height !== size) complete = false;
+    } catch { complete = false; }
+  }
+  if (complete) return false;
+  await generateIcons(contentDir, restaurant, accent);
+  return true;
 }
 
 export async function getIconsVersion(contentDir: string): Promise<string | null> {

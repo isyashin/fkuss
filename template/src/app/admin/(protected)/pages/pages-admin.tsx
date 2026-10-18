@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { confirmDiscard, useDirtyGuard } from "../admin-dirty";
 import { savePage } from "../content-actions";
 import type { Page } from "@/generated/prisma/client";
 import styles from "./pages-admin.module.css";
@@ -9,6 +10,8 @@ export function PagesAdmin({ pages }: { pages: Page[] }) {
   const [selected, setSelected] = useState<Page | null>(pages[0] ?? null);
   const [title, setTitle] = useState(pages[0]?.title ?? "");
   const [body, setBody] = useState(pages[0]?.body ?? "");
+  const [snapshot, setSnapshot] = useState(() => JSON.stringify([pages[0]?.title ?? "", pages[0]?.body ?? ""]));
+  useDirtyGuard(JSON.stringify([title, body]) !== snapshot);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [preview, setPreview] = useState(false);
@@ -17,6 +20,7 @@ export function PagesAdmin({ pages }: { pages: Page[] }) {
     setSelected(page);
     setTitle(page.title);
     setBody(page.body);
+    setSnapshot(JSON.stringify([page.title, page.body]));
     setSaved(false);
     setPreview(false);
   }
@@ -30,7 +34,7 @@ export function PagesAdmin({ pages }: { pages: Page[] }) {
             type="button"
             role="tab"
             aria-selected={selected?.slug === page.slug}
-            onClick={() => select(page)}
+            onClick={() => { if (selected?.slug !== page.slug) void confirmDiscard().then((proceed) => { if (proceed) select(page); }); }}
             className={selected?.slug === page.slug ? styles.activeTab : styles.tab}
           >
             {page.title}
@@ -57,6 +61,7 @@ export function PagesAdmin({ pages }: { pages: Page[] }) {
               onClick={() =>
                 startTransition(async () => {
                   await savePage(selected.slug, title, body);
+                  setSnapshot(JSON.stringify([title, body]));
                   setSaved(true);
                 })
               }

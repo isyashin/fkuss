@@ -1,5 +1,7 @@
 "use client";
 
+import { useDirtyGuard } from "../../admin-dirty";
+
 import { useState, useTransition } from "react";
 import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../use-settings-save";
 import { saveSettings } from "../actions";
@@ -23,6 +25,7 @@ export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
     setStatus(null);
   });
   const dirty = JSON.stringify(delivery) !== JSON.stringify(saved);
+  useDirtyGuard(dirty);
 
   function save() {
     startTransition(async () => {
@@ -40,13 +43,12 @@ export function DeliveryEditor({ settings }: { settings: ContentSettings }) {
 
   return <section className={styles.editorCard} aria-label="Доставка и самовывоз">
     <h2 className={styles.editorTitle}>Доставка и самовывоз</h2>
-    <p className={styles.editorHint}>Общие условия. Зоны доставки, geo-режим и условия курьеров редактируются ниже в этой же секции.</p>
     <div className={styles.toggleList}>
       <label className={styles.toggleRow}><input type="checkbox" checked={delivery.enabled} onChange={(e) => setDelivery({ ...delivery, enabled: e.target.checked })} />Доставка включена</label>
       <label className={styles.toggleRow}><input type="checkbox" checked={delivery.pickupEnabled} onChange={(e) => setDelivery({ ...delivery, pickupEnabled: e.target.checked })} />Самовывоз включён</label>
     </div>
     <div className={styles.formGrid}>
-      <label className={rd.field}><span>Минимальная сумма заказа, ₽</span>
+      <label className={rd.field}><span>Минимальная сумма для доставки, ₽</span>
         <input className={rd.input} type="number" min={0} step={1} value={delivery.minOrder} onChange={(e) => setDelivery({ ...delivery, minOrder: Number(e.target.value) })} />
       </label>
     </div>

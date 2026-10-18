@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { deleteHall, saveBanquetsSettings, saveHall, addHallImage, removeHallImage, type BanquetsSettings } from "./actions";
 import { acceptSettingsRev } from "../settings/use-settings-save";
+import { useDirtyGuard } from "../admin-dirty";
 import { contentAssetUrl } from "@/lib/assets";
 import type { BanquetHall } from "@/generated/prisma/client";
 
@@ -26,6 +27,8 @@ export function BanquetsAdmin({
   halls: BanquetHall[];
 }) {
   const [s, setS] = useState<BanquetsSettings>({ ...DEFAULTS, ...(settings as Partial<BanquetsSettings>) });
+  const [snapshot, setSnapshot] = useState(() => JSON.stringify({ ...DEFAULTS, ...(settings as Partial<BanquetsSettings>) }));
+  useDirtyGuard(JSON.stringify(s) !== snapshot);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
@@ -84,6 +87,7 @@ export function BanquetsAdmin({
               // Своя запись бампнула _rev — принимаем ревизию, иначе
               // сохранение другого раздела этой вкладки ложно конфликтует (аудит 12.10).
               acceptSettingsRev(rev);
+              setSnapshot(JSON.stringify(s));
               setSaved(true);
               setTimeout(() => setSaved(false), 3000);
             })
@@ -113,6 +117,8 @@ function HallRow({ hall }: { hall: BanquetHall }) {
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: hall.name, capacity: hall.capacity, description: hall.description });
+  const [snapshot, setSnapshot] = useState(() => JSON.stringify({ name: hall.name, capacity: hall.capacity, description: hall.description }));
+  useDirtyGuard(editing && JSON.stringify(form) !== snapshot);
   const fileRef = useRef<HTMLInputElement>(null);
   const images = hall.images.length > 0 ? hall.images : hall.image ? [hall.image] : [];
 
@@ -181,7 +187,7 @@ function HallRow({ hall }: { hall: BanquetHall }) {
           <div className="flex gap-2">
             <button
               disabled={pending}
-              onClick={() => startTransition(async () => { await saveHall({ id: hall.id, ...form }); setEditing(false); })}
+              onClick={() => startTransition(async () => { await saveHall({ id: hall.id, ...form }); setSnapshot(JSON.stringify(form)); setEditing(false); })}
               className="min-h-11 px-5 rounded-full bg-accent text-white text-sm font-medium disabled:opacity-50"
             >
               Сохранить
@@ -208,6 +214,7 @@ function HallRow({ hall }: { hall: BanquetHall }) {
 function AddHallForm() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", capacity: "", description: "" });
+  useDirtyGuard(open && Object.values(form).some((value) => value !== ""));
   const [pending, startTransition] = useTransition();
 
   if (!open) {

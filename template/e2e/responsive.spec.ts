@@ -164,7 +164,7 @@ test("admin menu and settings fit the viewport", async ({ page }, testInfo) => {
   }));
   expect(settingsWidth.content, `admin settings overflow on mobile: ${settingsWidth.offenders.join(", ")}`).toBeLessThanOrEqual(settingsWidth.viewport + 1);
   if (isMobile) {
-    await page.getByRole("button", { name: /Зона «Центр/ }).click();
+    await page.getByRole("button", { name: /Редактировать зону «Центр/ }).click();
     const threshold = await page.getByRole("spinbutton", { name: "Уровень 2: заказ от, ₽" }).boundingBox();
     const price = await page.getByRole("spinbutton", { name: "Уровень 2: доставка, ₽" }).boundingBox();
     const remove = await page.getByRole("button", { name: "Удалить уровень 2" }).boundingBox();

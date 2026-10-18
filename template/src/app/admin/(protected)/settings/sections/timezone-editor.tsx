@@ -1,5 +1,7 @@
 "use client";
 
+import { useDirtyGuard } from "../../admin-dirty";
+
 import { useState, useTransition } from "react";
 import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../use-settings-save";
 import type { ContentSettings } from "@/lib/content-schema";
@@ -28,6 +30,7 @@ export function TimezoneEditor({ settings }: { settings: ContentSettings }) {
     setStatus(null);
   });
   const dirty = timezone !== saved;
+  useDirtyGuard(dirty);
 
   function save() {
     startTransition(async () => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useDirtyGuard } from "../../admin-dirty";
+
 import { useState, useTransition } from "react";
 import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch, acceptSettingsRev } from "../use-settings-save";
 import { saveGuestContactChannels, saveSettings } from "../actions";
@@ -59,6 +61,7 @@ export function NotifyChannelsEditor({ settings }: { settings: ContentSettings }
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
   const { save: saveWithRev, control: revControl, errorMessage } = useSettingsSave();
   const dirty = JSON.stringify(channels) !== JSON.stringify(saved);
+  useDirtyGuard(dirty);
   // P1-2: после «Обновить» берём свежие данные.
   const settingsEpoch = useSettingsEpoch();
   useResetSettingsOnEpoch(settingsEpoch, () => {

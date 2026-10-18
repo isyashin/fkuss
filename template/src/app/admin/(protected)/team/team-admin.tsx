@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useDirtyGuard } from "../admin-dirty";
 import { useRouter } from "next/navigation";
 import { changeTeamUser, createTeamUser, revokePushDevice } from "./actions";
 import type { AdminRole } from "@/lib/admin-users";
@@ -24,6 +25,8 @@ function TeamRow({ user }: { user: TeamUser }) {
   const [role, setRole] = useState<AdminRole>(user.role === "owner" ? "owner" : "staff");
   const [active, setActive] = useState(user.active);
   const [password, setPassword] = useState("");
+  const [snapshot, setSnapshot] = useState(() => JSON.stringify([user.name, user.role === "owner" ? "owner" : "staff", user.active]));
+  useDirtyGuard(password !== "" || JSON.stringify([name, role, active]) !== snapshot);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const revoke = (subscriptionId: string) => {
@@ -45,7 +48,7 @@ function TeamRow({ user }: { user: TeamUser }) {
       try {
         const result = await changeTeamUser(user.id, { name, role, active, ...(password ? { password } : {}) });
         if (!result.ok) { setError(result.error); return; }
-        setPassword(""); setSaved(true); router.refresh();
+        setPassword(""); setSnapshot(JSON.stringify([name, role, active])); setSaved(true); router.refresh();
       } catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось сохранить сотрудника"); }
     });
   };
@@ -83,6 +86,7 @@ export function TeamAdmin({ users }: { users: TeamUser[] }) {
   const [name, setName] = useState("");
   const [role, setRole] = useState<AdminRole>("staff");
   const [password, setPassword] = useState("");
+  useDirtyGuard(login !== "" || name !== "" || password !== "" || role !== "staff");
   const [error, setError] = useState("");
   const create = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setError("");

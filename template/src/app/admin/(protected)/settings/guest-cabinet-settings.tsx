@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDirtyGuard } from "../admin-dirty";
 import type { GuestCabinetSettings } from "@/lib/guest-cabinet";
 import { acceptSettingsRev } from "./use-settings-save";
 import styles from "./settings-admin.module.css";
@@ -12,6 +13,8 @@ import { AdminIcon } from "../admin-icon";
  */
 export function GuestCabinetSettings({ initial }: { initial: GuestCabinetSettings }) {
   const [cabinet, setCabinet] = useState(initial);
+  const [savedSmtp, setSavedSmtp] = useState({ smtpUrl: initial.smtpUrl, smtpFrom: initial.smtpFrom });
+  useDirtyGuard(cabinet.smtpUrl !== savedSmtp.smtpUrl || cabinet.smtpFrom !== savedSmtp.smtpFrom);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -23,7 +26,10 @@ export function GuestCabinetSettings({ initial }: { initial: GuestCabinetSetting
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Не удалось сохранить");
-      setCabinet(data.cabinet as GuestCabinetSettings);
+      const next = data.cabinet as GuestCabinetSettings;
+      // Auto-saving a switch must not erase an unsaved SMTP draft.
+      setCabinet((current) => ({ ...next, smtpUrl: body.smtpUrl ?? current.smtpUrl, smtpFrom: body.smtpFrom ?? current.smtpFrom }));
+      if (body.smtpUrl !== undefined || body.smtpFrom !== undefined) setSavedSmtp({ smtpUrl: next.smtpUrl, smtpFrom: next.smtpFrom });
       // Своя запись бампнула _rev — принимаем ревизию (аудит 12.10).
       if (typeof data.rev === "number") acceptSettingsRev(data.rev);
       setMessage("Сохранено");

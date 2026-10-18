@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 /* Единый реестр «грязных» форм админки (F06): уход с не сохранёнными правками
    спрашивает подтверждение — при внутренних переходах и закрытии вкладки. */
@@ -9,6 +9,7 @@ type DirtyGuard = { isDirty: () => boolean };
 const guards = new Set<DirtyGuard>();
 
 let askRef: ((message: string) => Promise<boolean>) | null = null;
+let pendingAsk: Promise<boolean> | null = null;
 
 export function setDirtyAsk(fn: ((message: string) => Promise<boolean>) | null) {
   askRef = fn;
@@ -30,18 +31,79 @@ export function anyDirty(): boolean {
 export async function confirmDiscard(message = "Изменения не сохранены и будут потеряны."): Promise<boolean> {
   if (!anyDirty()) return true;
   if (!askRef) return false;
-  return askRef(message);
+  if (!pendingAsk) pendingAsk = askRef(message).finally(() => { pendingAsk = null; });
+  return pendingAsk;
+}
+
+/** Same-document Back/Forward must be reversible before the router unmounts forms.
+ * Preserve all Next history fields; only annotate entries created in this shell.
+ * Unknown/external entries still use the browser's beforeunload protection. */
+export function useDirtyHistoryGuard() {
+  useEffect(() => {
+    const key = "__fkussAdminIndex";
+    const push = history.pushState.bind(history);
+    const replace = history.replaceState.bind(history);
+    let index = typeof history.state?.[key] === "number" ? history.state[key] as number : 0;
+    replace({ ...history.state, [key]: index }, "");
+    let restoring: (() => void) | null = null;
+    let permitted: number | null = null;
+    let asking = false;
+    history.pushState = (state, title, url) => { push({ ...state, [key]: ++index }, title, url); };
+    history.replaceState = (state, title, url) => {
+      // Next may refresh the entry we just left while history.go() is restoring
+      // the dirty editor. Keep that entry's own index, not the editor's index;
+      // otherwise the next Back has delta=0 and silently bypasses the guard.
+      const entryIndex = typeof history.state?.[key] === "number" ? history.state[key] as number : index;
+      replace({ ...state, [key]: entryIndex }, title, url);
+    };
+    const onPop = (event: PopStateEvent) => {
+      // An unannotated App Router entry predates this shell (e.g. the guest
+      // page before login). A normal Back to it still needs confirmation.
+      const target = typeof event.state?.[key] === "number" ? event.state[key] as number
+        : event.state?.__NA ? index - 1 : undefined;
+      if (restoring) {
+        event.stopImmediatePropagation();
+        const done = restoring; restoring = null; done(); return;
+      }
+      if (target === undefined) return;
+      if (permitted === target) { permitted = null; index = target; return; }
+      const delta = target - index;
+      if (!delta || !anyDirty()) { index = target; return; }
+      event.stopImmediatePropagation();
+      // Return to the unchanged editor before opening the common dialog.
+      restoring = () => {
+        if (asking) return;
+        asking = true;
+        void confirmDiscard().then((proceed) => {
+          asking = false;
+          if (proceed) { permitted = target; history.go(delta); }
+        });
+      };
+      history.go(-delta);
+    };
+    // The root beforeInteractive bridge runs BEFORE Next's Window listener.
+    // Attaching here directly is too late: Next can unmount the editor first.
+    const beforePop = (event: Event) => {
+      const original = (event as CustomEvent<PopStateEvent>).detail;
+      if (original instanceof PopStateEvent) onPop(original);
+    };
+    window.addEventListener("fkuss-admin-before-popstate", beforePop);
+    return () => {
+      history.pushState = push; history.replaceState = replace;
+      window.removeEventListener("fkuss-admin-before-popstate", beforePop);
+    };
+  }, []);
 }
 
 /** Регистрирует форму как «грязную» и вешает beforeunload. */
 export function useDirtyGuard(isDirty: boolean) {
   const ref = useRef(isDirty);
-  useEffect(() => { ref.current = isDirty; }, [isDirty]);
-  useEffect(() => {
+  useLayoutEffect(() => { ref.current = isDirty; }, [isDirty]);
+  useLayoutEffect(() => {
     const unregister = registerDirtyGuard({ isDirty: () => ref.current });
     return unregister;
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isDirty) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();

@@ -7,6 +7,7 @@
  * за тело/вершины. Тумблер geo-режима и настройка «вне зон» — в шапке.
  */
 import { useRef, useState, useTransition } from "react";
+import { useDirtyGuard } from "../admin-dirty";
 import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../settings/use-settings-save";
 import { tariffLines, zoneTariffs } from "@/lib/order/pricing";
 import { defaultZonePolygon } from "@/lib/delivery/geo";
@@ -112,14 +113,12 @@ export function ZonesTab({
   }
 
   const dirty = JSON.stringify([zones, geo]) !== savedSnapshot;
+  useDirtyGuard(dirty);
 
   return (
     <div className="space-y-4">
-      {/* #54: честно разводим семантику — зоны ≠ варианты доставки. */}
       <p className="text-sm text-muted">
-        Зоны — географические районы с ценами и временем доставки. Они применяются, только когда включён
-        geo-режим (тумблер ниже): сервер сам определяет зону по адресу гостя. Если настроены «Варианты
-        доставки» (вкладка справа), гость выбирает их — зоны не используются.
+        При включённых зонах адрес проверяется по карте. Если выбран вариант доставки, стоимость берётся из него.
       </p>
       {/* Geo-режим: общий переключатель и поведение «вне зон» */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -176,11 +175,6 @@ export function ZonesTab({
           )}
         </div>
       </div>
-      {geo.enabled && (
-        <p className="text-sm text-muted">
-          Гость вводит адрес — сервер сам определит зону. Для геокодинга нужен ключ Яндекс.Карт (задаётся при развёртывании сайта).
-        </p>
-      )}
 
       <div className="relative">
         <ZoneMap
@@ -227,6 +221,7 @@ export function ZonesTab({
           const zoneDisabled = zone.enabled === false;
 
           const toggle = (
+            <label className="inline-flex items-center justify-center min-w-11 min-h-11 shrink-0 cursor-pointer">
             <input
               type="checkbox"
               checked={!zoneDisabled}
@@ -234,6 +229,7 @@ export function ZonesTab({
               className="w-5 h-5 accent-[var(--accent)] shrink-0"
               aria-label={`Зона «${zone.name}» включена`}
             />
+            </label>
           );
           const dot = (
             <span
@@ -246,14 +242,16 @@ export function ZonesTab({
           return (
             <div key={i} className={zoneDisabled ? "opacity-60" : ""}>
               {!expanded ? (
+                <div className="flex items-center gap-2 px-4">
+                  {dot}
+                  {toggle}
                 <button
                   type="button"
                   onClick={() => setSelected(i)}
-                  className="w-full flex items-center gap-3 min-h-14 px-4 text-left"
+                  className="flex-1 min-w-0 flex items-center gap-3 min-h-14 py-3 text-left"
                   aria-expanded={false}
+                  aria-label={`Редактировать зону «${zone.name}»`}
                 >
-                  {dot}
-                  {toggle}
                   <span className="flex-1 min-w-0">
                     <span className="font-medium">{zone.name}</span>
                     {!hasPolygon && <span className="text-amber-600 text-sm ml-2">без полигона</span>}
@@ -270,6 +268,7 @@ export function ZonesTab({
                     ▸
                   </span>
                 </button>
+                </div>
               ) : (
                 <>
                   <div className="flex items-center gap-3 px-4 pt-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useDirtyGuard } from "../admin-dirty";
 import { deleteDeliveryOption, saveDeliveryOption, type DeliveryOptionInput } from "./actions";
 import type { DeliveryOption } from "@/generated/prisma/client";
 
@@ -27,11 +28,8 @@ export function DeliveryAdmin({ options }: { options: DeliveryOption[] }) {
 
   return (
     <div className="space-y-4 max-w-2xl">
-      {/* #54: варианты — это способы доставки, а не географические зоны. */}
       <p className="text-sm text-muted">
-        Варианты — способы доставки с ценой и окнами («Курьер», «К выбранному времени» и т.п.). Гость
-        выбирает один из списка. Пока настроен хотя бы один вариант, зоны на карте (вкладка слева) в
-        чекауте не используются.
+        Гость выбирает способ и время доставки. При включённых зонах адрес дополнительно проверяется по карте.
       </p>
       {options.map((option) => (
         <div key={option.id} data-option-name={option.name} className="bg-card rounded-[var(--radius)] p-4 flex justify-between gap-3 items-start">
@@ -113,6 +111,7 @@ function EditForm({
   onSave: (input: DeliveryOptionInput) => void;
 }) {
   const [form, setForm] = useState(initial);
+  useDirtyGuard(JSON.stringify(form) !== JSON.stringify(initial));
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";
 
   return (

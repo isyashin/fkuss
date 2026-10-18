@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useDirtyGuard } from "../admin-dirty";
 import QRCode from "qrcode";
 import {
   PRINT_MATERIAL_SPECS,
@@ -45,6 +46,8 @@ export function PrintMaterialsAdmin({
   restaurantSlug: string;
 }) {
   const [settings, setSettings] = useState(initialSettings);
+  const [savedSettings, setSavedSettings] = useState(initialSettings);
+  useDirtyGuard(JSON.stringify(settings) !== JSON.stringify(savedSettings));
   const [kind, setKind] = useState<PrintMaterialKind>("card");
   const [qrPreview, setQrPreview] = useState({ url: "", data: "" });
   const [message, setMessage] = useState("");
@@ -100,6 +103,7 @@ export function PrintMaterialsAdmin({
     startTransition(async () => {
       try {
         await savePrintMaterial(validation.data);
+        setSavedSettings((current) => ({ ...current, [kind]: validation.data }));
         setMessage("Настройки сохранены");
       } catch {
         setMessage("Не удалось сохранить настройки");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useDirtyGuard } from "../admin-dirty";
 import { deletePromo, savePromo } from "../content-actions";
 import type { Promo } from "@/generated/prisma/client";
 
@@ -39,6 +40,7 @@ export function PromosAdmin({ promos }: { promos: Promo[] }) {
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", text: "", enabled: true, activeFrom: "", activeTo: "" });
+  useDirtyGuard(form.title !== "" || form.text !== "" || !form.enabled || form.activeFrom !== "" || form.activeTo !== "");
 
   return (
     <div className="space-y-4 max-w-2xl">
@@ -150,6 +152,7 @@ function EditPromoForm({ promo, pending, onCancel, onSave }: {
     activeFrom: promo.activeFrom ?? "",
     activeTo: promo.activeTo ?? "",
   });
+  useDirtyGuard(JSON.stringify(form) !== JSON.stringify({ title: promo.title, text: promo.text, enabled: promo.enabled, activeFrom: promo.activeFrom ?? "", activeTo: promo.activeTo ?? "" }));
   const inputCls = "w-full min-h-11 px-3 rounded-[var(--radius)] border border-foreground/15 bg-card";
   const labelCls = "block text-xs text-muted";
   return (

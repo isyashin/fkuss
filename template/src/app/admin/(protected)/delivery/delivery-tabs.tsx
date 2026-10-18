@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { confirmDiscard } from "../admin-dirty";
 import type { ContentSettings } from "@/lib/content-schema";
 import type { DeliveryOption } from "@/generated/prisma/client";
 import { ZonesTab } from "./zones-tab";
@@ -26,7 +27,7 @@ export function DeliveryTabs({
           type="button"
           role="tab"
           aria-selected={tab === "zones"}
-          onClick={() => setTab("zones")}
+          onClick={() => { if (tab !== "zones") void confirmDiscard().then((proceed) => { if (proceed) setTab("zones"); }); }}
           className={`relative min-h-12 px-3 text-[13px] font-semibold ${
             tab === "zones" ? "text-[var(--rd-text)]" : "text-[var(--rd-muted)] hover:text-[var(--rd-text)]"
           } after:absolute after:right-2 after:left-2 after:-bottom-px after:h-0.5 ${
@@ -39,7 +40,7 @@ export function DeliveryTabs({
           type="button"
           role="tab"
           aria-selected={tab === "options"}
-          onClick={() => setTab("options")}
+          onClick={() => { if (tab !== "options") void confirmDiscard().then((proceed) => { if (proceed) setTab("options"); }); }}
           className={`relative min-h-12 px-3 text-[13px] font-semibold ${
             tab === "options" ? "text-[var(--rd-text)]" : "text-[var(--rd-muted)] hover:text-[var(--rd-text)]"
           } after:absolute after:right-2 after:left-2 after:-bottom-px after:h-0.5 ${

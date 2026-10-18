@@ -1,5 +1,7 @@
 "use client";
 
+import { useDirtyGuard } from "../../admin-dirty";
+
 import { useState, useTransition } from "react";
 import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../use-settings-save";
 import { savePricing } from "../actions";
@@ -23,6 +25,7 @@ export function PaymentEditor({ settings }: { settings: ContentSettings }) {
     setStatus(null);
   });
   const dirty = JSON.stringify(payment) !== JSON.stringify(saved);
+  useDirtyGuard(dirty);
 
   function save() {
     startTransition(async () => {
@@ -75,6 +78,7 @@ export function LoyaltyEditor({ settings }: { settings: ContentSettings }) {
     setStatus(null);
   });
   const dirty = JSON.stringify(loyalty) !== JSON.stringify(saved);
+  useDirtyGuard(dirty);
 
   function save() {
     startTransition(async () => {
@@ -127,6 +131,7 @@ export function PricingEditor({ settings, theme }: { settings: ContentSettings; 
     setStatus(null);
   });
   const dirty = mode !== saved.mode || percent !== saved.percent;
+  useDirtyGuard(dirty);
 
   function save() {
     startTransition(async () => {
@@ -181,6 +186,7 @@ export function BookingEditor({ settings }: { settings: ContentSettings }) {
     setStatus(null);
   });
   const dirty = JSON.stringify(booking) !== JSON.stringify(saved);
+  useDirtyGuard(dirty);
 
   function save() {
     startTransition(async () => {

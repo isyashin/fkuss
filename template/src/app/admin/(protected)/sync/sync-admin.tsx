@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useDirtyGuard } from "../admin-dirty";
 import { saveSyncSettings, runSyncNow } from "./actions";
 import type { ContentSettings } from "@/lib/content-schema";
 import { formatAdminDate } from "@/lib/admin-date";
@@ -18,6 +19,8 @@ export function SyncAdmin({
   menus: { id: string; name: string }[];
 }) {
   const [sync, setSync] = useState(settings.sync);
+  const [snapshot, setSnapshot] = useState(() => JSON.stringify(settings.sync));
+  useDirtyGuard(JSON.stringify(sync) !== snapshot);
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<string>("");
   const [saved, setSaved] = useState(false);
@@ -27,11 +30,12 @@ export function SyncAdmin({
   const settingsEpoch = useSettingsEpoch();
   useResetSettingsOnEpoch(settingsEpoch, () => {
     setSync(settings.sync);
+    setSnapshot(JSON.stringify(settings.sync));
     setResult("");
   });
   const saveSettings = () => startTransition(async () => {
     const outcome = await save({ ...settings, sync });
-    if (outcome === "ok") { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    if (outcome === "ok") { setSnapshot(JSON.stringify(sync)); setSaved(true); setTimeout(() => setSaved(false), 3000); }
   });
 
   const inputCls = "mt-1 w-full min-h-11 px-3 rounded-[var(--radius)] bg-card border border-foreground/15";

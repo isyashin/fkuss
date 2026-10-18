@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAdminActor, isAdmin } from "@/lib/admin-auth";
+import { isAdmin } from "@/lib/admin-auth";
 import { getPrisma } from "@/lib/db";
 import { getSiteSettings } from "@/lib/site";
 import { getSmtpConfig, normalizeGuestCabinet, type GuestCabinetSettings } from "@/lib/guest-cabinet";
@@ -28,7 +28,7 @@ async function saveGuestCabinet(patch: Partial<GuestCabinetSettings>): Promise<{
 }
 
 export async function GET() {
-  if (!(await getAdminActor())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!(await isAdmin("manage"))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   return NextResponse.json(normalizeGuestCabinet(await getSiteSettings()), { headers: { "Cache-Control": "no-store" } });
 }
 export async function PATCH(request: Request) {

@@ -436,7 +436,7 @@ def reconcile_preorder(config, slug):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("config")
-    parser.add_argument("command", choices=["check", "register", "backup", "export", "exports", "caddy", "adopt-caddy", "reconcile-preorder"])
+    parser.add_argument("command", choices=["check", "register", "backup", "export", "exports", "caddy", "adopt-caddy", "reconcile-preorder", "pwa-assets"])
     parser.add_argument("--slug")
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
@@ -456,6 +456,21 @@ def main():
         process_exports(config)
     elif args.command == "reconcile-preorder":
         reconcile_preorder(config, args.slug)
+    elif args.command == "pwa-assets":
+        for site in config["sites"]:
+            if args.slug and args.slug != site["slug"]:
+                continue
+            # Run as the application's numeric UID/GID so future logo uploads can
+            # regenerate these files. Only the content mount is writable.
+            uid = run(["docker", "exec", site["appContainer"], "id", "-u"]).strip()
+            gid = run(["docker", "exec", site["appContainer"], "id", "-g"]).strip()
+            if not uid.isdecimal() or not gid.isdecimal():
+                raise ValueError("application UID/GID must be numeric")
+            run(["docker", "run", "--rm", "--user", uid + ":" + gid,
+                "--network", site["dbNetwork"], "--env-file", site["envFile"],
+                "-e", "CONTENT_DIR=/content", "-v", site["contentDir"] + ":/content",
+                config["templateMigratorImage"], "node_modules/.bin/tsx", "scripts/backfill-pwa-icons.ts"])
+            print("PWA assets verified: " + site["slug"])
     else:
         sync_caddy(config, adopt=args.command == "adopt-caddy")
 

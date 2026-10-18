@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { logoutAction } from "./admin-shell-actions";
-import { setDirtyAsk } from "./admin-dirty";
+import { anyDirty, confirmDiscard, setDirtyAsk, useDirtyHistoryGuard } from "./admin-dirty";
 import { ConfirmDialog, type ConfirmRequest } from "./confirm-dialog";
 import type { AdminActor } from "@/lib/admin-users";
 import { AdminNotifications } from "./admin-notifications";
@@ -42,7 +42,37 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
   newOrdersCount: number; newBookingsCount: number; unlocked: boolean;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  useDirtyHistoryGuard();
+  const navigating = useRef(false);
+  const permittedLogout = useRef(false);
+  const guardLogout = (event: React.FormEvent<HTMLFormElement>) => {
+    if (permittedLogout.current || !anyDirty()) { resetNotificationsSession(); return; }
+    event.preventDefault();
+    const form = event.currentTarget;
+    void confirmDiscard().then((proceed) => {
+      if (proceed) { permittedLogout.current = true; form.requestSubmit(); }
+    });
+  };
+  const profileTrigger = useRef<HTMLButtonElement | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  useEffect(() => {
+    if (!profileOpen) return;
+    const close = (event: KeyboardEvent | PointerEvent) => {
+      if (event instanceof KeyboardEvent) {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        setProfileOpen(false); profileTrigger.current?.focus();
+      } else if (!(event.target instanceof Element && event.target.closest("[data-admin-profile]"))) {
+        setProfileOpen(false);
+        // Preserve focus on an outside control the user just selected.
+        if (document.activeElement?.closest("[data-admin-profile]")) profileTrigger.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", close);
+    document.addEventListener("pointerdown", close);
+    return () => { document.removeEventListener("keydown", close); document.removeEventListener("pointerdown", close); };
+  }, [profileOpen]);
   const [logoFailed, setLogoFailed] = useState(false);
   const [dirtyDialog, setDirtyDialog] = useState<ConfirmRequest | null>(null);
   const dirtyResolverRef = useRef<((proceed: boolean) => void) | null>(null);
@@ -108,14 +138,28 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
     </>
   );
 
-  return <div className={styles.shell} data-theme={dark ? "dark" : "light"} inert={!hydrated} aria-busy={!hydrated}>
+  return <div className={styles.shell} data-theme={dark ? "dark" : "light"} inert={!hydrated} aria-busy={!hydrated}
+    onClickCapture={(event) => {
+      if (!anyDirty() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const anchor = (event.target as Element).closest<HTMLAnchorElement>("a[href]");
+      if (!anchor || anchor.download || (anchor.target && anchor.target !== "_self")) return;
+      const target = new URL(anchor.href, location.href);
+      if (target.origin !== location.origin || target.pathname + target.search === location.pathname + location.search) return;
+      event.preventDefault(); event.stopPropagation();
+      if (navigating.current) return;
+      navigating.current = true;
+      void confirmDiscard().then((proceed) => {
+        navigating.current = false;
+        if (proceed) router.push(target.pathname + target.search + target.hash);
+      });
+    }}>
     <aside className={styles.rail} aria-label="Панель ресторана">
       <Link href="/admin" className={styles.brand} aria-label={`${restaurantName}: заказы`}>{brand}</Link>
       <nav className={styles.primaryNav} aria-label="Главная навигация">{navLinks("rail")}</nav>
       <div className={styles.railFoot}>
         <AdminNotifications actorId={actor.id} initialOrders={newOrdersCount} initialBookings={newBookingsCount} />
-        <div className={styles.popWrap}>
-          <button type="button" disabled={!hydrated} className={styles.footButton} onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}>
+        <div className={styles.popWrap} data-admin-profile>
+          <button type="button" disabled={!hydrated} className={styles.footButton} onClick={(event) => { profileTrigger.current = event.currentTarget; setProfileOpen((value) => !value); }} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}>
             <AdminIcon name="settings" size={20} />
             <span>{actor.name}</span>
           </button>
@@ -127,7 +171,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
                 <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
                 <button type="button" onClick={() => { setProfileOpen(false); window.dispatchEvent(new CustomEvent(ADMIN_PUSH_OPEN_EVENT)); }}>Уведомления на этом устройстве</button>
                 <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
-                <form action={logoutAction} onSubmit={resetNotificationsSession}><button type="submit">Выйти</button></form>
+                <form action={logoutAction} onSubmit={guardLogout}><button type="submit">Выйти</button></form>
               </nav>
             </div>
           )}
@@ -140,8 +184,8 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
         <span className={styles.logo}>{logo && !logoFailed ? <Image src={logo} width={34} height={34} alt="" unoptimized onError={() => setLogoFailed(true)} /> : restaurantName.slice(0, 1)}</span>
         <strong>{restaurantName}</strong>
         <AdminNotifications actorId={actor.id} initialOrders={newOrdersCount} initialBookings={newBookingsCount} />
-        <div className={styles.popWrap}>
-          <button type="button" disabled={!hydrated} className={styles.footButton} onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}>
+        <div className={styles.popWrap} data-admin-profile>
+          <button type="button" disabled={!hydrated} className={styles.footButton} onClick={(event) => { profileTrigger.current = event.currentTarget; setProfileOpen((value) => !value); }} aria-expanded={profileOpen} aria-label={`Профиль: ${actor.name}`}>
             <span className={styles.footBadge} style={{ background: "rgba(255,255,255,.16)", color: "#fff" }}>{initials}</span>
           </button>
           {profileOpen && (
@@ -152,7 +196,7 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
                 <button type="button" onClick={changeTheme} aria-pressed={dark}>{dark ? "☀ Светлая тема" : "☾ Тёмная тема"}</button>
                 <button type="button" onClick={() => { setProfileOpen(false); window.dispatchEvent(new CustomEvent(ADMIN_PUSH_OPEN_EVENT)); }}>Уведомления на этом устройстве</button>
                 <Link href="/" onClick={() => setProfileOpen(false)}>Открыть сайт ↗</Link>
-                <form action={logoutAction} onSubmit={resetNotificationsSession}><button type="submit">Выйти</button></form>
+                <form action={logoutAction} onSubmit={guardLogout}><button type="submit">Выйти</button></form>
               </nav>
             </div>
           )}

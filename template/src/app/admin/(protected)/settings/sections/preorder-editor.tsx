@@ -1,5 +1,7 @@
 "use client";
 
+import { useDirtyGuard } from "../../admin-dirty";
+
 import { useState, useTransition } from "react";
 import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../use-settings-save";
 import { savePreOrder } from "../actions";
@@ -27,6 +29,7 @@ export function PreOrderEditor({ settings }: { settings: ContentSettings }) {
     setStatus(null);
   });
   const dirty = JSON.stringify(preOrder) !== JSON.stringify(saved);
+  useDirtyGuard(dirty || draft.trim() !== "");
 
   function addSlot() {
     const time = coerceSlotTime(draft);

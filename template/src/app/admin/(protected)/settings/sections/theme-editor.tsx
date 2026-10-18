@@ -1,5 +1,7 @@
 "use client";
 
+import { useDirtyGuard } from "../../admin-dirty";
+
 import { useState, useTransition } from "react";
 import { saveBackground, saveTheme } from "../actions";
 import { contentAssetUrl } from "@/lib/assets";
@@ -31,6 +33,7 @@ export function ThemeEditor({ theme }: { theme: ThemeConfig }) {
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(null);
   const dirty = preset !== saved.preset || accent !== saved.accent || JSON.stringify(bg) !== JSON.stringify(saved.bg);
+  useDirtyGuard(dirty);
 
   function save() {
     startTransition(async () => {

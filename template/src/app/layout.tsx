@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { headers } from "next/headers";
 import { Playfair_Display, Inter } from "next/font/google";
 import { getSiteRestaurant, getSiteTheme } from "@/lib/site";
@@ -71,6 +72,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       data-preset={theme.preset}
     >
       <head>
+        <Script id="admin-history-bridge" strategy="beforeInteractive">{`
+          window.addEventListener('popstate', function (event) {
+            window.dispatchEvent(new CustomEvent('fkuss-admin-before-popstate', { detail: event }));
+          }, true);
+        `}</Script>
         <style>{`:root { ${style} }${bgStyle}`}</style>
       </head>
       <body className="min-h-full flex flex-col">

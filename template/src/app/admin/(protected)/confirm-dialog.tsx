@@ -22,16 +22,10 @@ export function ConfirmDialog({ request, onClose }: { request: ConfirmRequest | 
     if (!request && dialog.open) dialog.close();
   }, [request]);
 
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    const handleClose = () => onClose();
-    dialog.addEventListener("close", handleClose);
-    return () => dialog.removeEventListener("close", handleClose);
-  }, [onClose]);
-
   return (
-    <dialog ref={ref} className={rd.dialog} onClick={(event) => { if (event.target === ref.current) onClose(); }}>
+    <dialog ref={ref} className={rd.dialog}
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onClick={(event) => { if (event.target === ref.current) onClose(); }}>
       {request && (
         <div className={rd.dialogBody}>
           <h2 className={rd.dialogTitle}>{request.title}</h2>

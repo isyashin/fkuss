@@ -15,6 +15,12 @@ const manualEditors = [
   { section: "pricing", label: "Режим цен меню", kind: "select" },
   { section: "preorder", label: "На сколько суток вперёд предлагать слоты", kind: "number" },
   { section: "theme", label: "Пресет", kind: "select" },
+  { section: "hours", label: /Часовой пояс/, kind: "select" },
+  { section: "notify", label: /Telegram/, kind: "check" },
+  { section: "sync", label: "Автоматическая синхронизация по расписанию", kind: "check" },
+  { section: "banquets", label: "Заголовок", kind: "text" },
+  { section: "pages", label: "Заголовок", kind: "text" },
+  { section: "promos", label: "Заголовок акции", kind: "text" },
 ] as const;
 
 for (const editor of manualEditors) {
@@ -25,13 +31,18 @@ for (const editor of manualEditors) {
     // name for selects, rather than matching the wrapper's full text content.
     const field = editor.kind === "select"
       ? page.getByRole("combobox", { name: editor.label, exact: typeof editor.label === "string" })
-      : page.getByLabel(editor.label, { exact: typeof editor.label === "string" });
+      : editor.kind === "check"
+        ? page.getByRole("checkbox", { name: editor.label, exact: typeof editor.label === "string" })
+        : page.getByLabel(editor.label, { exact: typeof editor.label === "string" });
     let value: string | boolean;
     if (editor.kind === "check") { value = !(await field.isChecked()); await field.setChecked(value); }
     else if (editor.kind === "select") {
       value = await field.locator("option").evaluateAll((options, selected) => (options as HTMLOptionElement[]).find((o) => !o.disabled && o.value !== selected)!.value, await field.inputValue());
       await field.selectOption(value);
-    } else { value = String(Number(await field.inputValue()) + 1); await field.fill(value); }
+    } else {
+      value = editor.kind === "text" ? (await field.inputValue()) + " draft" : String(Number(await field.inputValue()) + 1);
+      await field.fill(value);
+    }
     const orders = page.getByRole("link", { name: /^Заказы/ }).filter({ visible: true });
     await orders.click();
     const dialog = page.getByRole("dialog").filter({ hasText: "Потерять правки?" });
@@ -49,6 +60,8 @@ for (const editor of manualEditors) {
 test("QA18-04: browser Back preserves the dirty editor on cancel and reaches the previous route on accept", async ({ page }) => {
   await login(page);
   await page.getByRole("link", { name: /^Настройки/ }).filter({ visible: true }).click();
+  await expect(page.getByRole("button", { name: "Открыть список разделов настроек" })
+    .or(page.getByRole("navigation", { name: "Разделы настроек" })).filter({ visible: true })).toBeVisible();
   // Real same-document navigation; goto/reload intentionally creates a new shell.
   if (await page.getByRole("button", { name: "Открыть список разделов настроек" }).isVisible()) {
     await page.getByRole("button", { name: "Открыть список разделов настроек" }).click();
@@ -117,4 +130,26 @@ test("QA18-07: profile closes on Escape/outside click and restores keyboard focu
   await profile.click();
   await page.locator("main").click({ position: { x: 10, y: 10 } });
   await expect(profile).toHaveAttribute("aria-expanded", "false");
+});
+
+test("QA18-04: new employee and existing employee drafts use the common navigation guard", async ({ page }) => {
+  await login(page);
+  await gotoAdmin(page, "/admin/settings?section=team");
+  const create = page.locator("form").filter({ has: page.getByRole("button", { name: "Добавить сотрудника", exact: true }) });
+  const orders = page.getByRole("link", { name: /^Заказы/ }).filter({ visible: true });
+  const dialog = page.getByRole("dialog").filter({ hasText: "Потерять правки?" });
+  await create.getByLabel("Имя", { exact: true }).fill("Несохранённый сотрудник");
+  await orders.click();
+  await dialog.getByRole("button", { name: "Отмена", exact: true }).click();
+  await expect(create.getByLabel("Имя", { exact: true })).toHaveValue("Несохранённый сотрудник");
+  await create.getByLabel("Имя", { exact: true }).fill("");
+  const existing = page.locator("form").filter({ has: page.getByText(process.env.E2E_ADMIN_LOGIN!, { exact: true }) });
+  const name = existing.getByLabel("Имя", { exact: true });
+  await name.fill((await name.inputValue()) + " draft");
+  await orders.click();
+  await dialog.getByRole("button", { name: "Отмена", exact: true }).click();
+  await expect(name).toHaveValue(/ draft$/);
+  await orders.click();
+  await dialog.getByRole("button", { name: "Потерять правки", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
 });

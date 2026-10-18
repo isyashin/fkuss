@@ -21,7 +21,11 @@ for (const editor of manualEditors) {
   test(`QA18-04: ${editor.section} keeps draft on cancel and discards only after confirmation`, async ({ page }) => {
     await login(page);
     await gotoAdmin(page, `/admin/settings?section=${editor.section}`);
-    const field = page.getByLabel(editor.label, { exact: typeof editor.label === "string" });
+    // A wrapping label also contains option text. Use the control's accessible
+    // name for selects, rather than matching the wrapper's full text content.
+    const field = editor.kind === "select"
+      ? page.getByRole("combobox", { name: editor.label, exact: typeof editor.label === "string" })
+      : page.getByLabel(editor.label, { exact: typeof editor.label === "string" });
     let value: string | boolean;
     if (editor.kind === "check") { value = !(await field.isChecked()); await field.setChecked(value); }
     else if (editor.kind === "select") {

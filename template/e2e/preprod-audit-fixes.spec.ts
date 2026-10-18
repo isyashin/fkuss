@@ -84,6 +84,24 @@ test("QA18-06: zone toggle has an independent 44px target and keyboard operation
   await checkbox.setChecked(wasChecked);
 });
 
+test("QA18-04: logout can be cancelled and confirmed after the profile popover closes", async ({ page }) => {
+  await login(page);
+  await gotoAdmin(page, "/admin/settings?section=loyalty");
+  const field = page.getByLabel(/Кэшбэк/);
+  await field.fill(String(Number(await field.inputValue()) + 1));
+  const profile = page.getByRole("button", { name: /Профиль:/ }).filter({ visible: true });
+  const dialog = page.getByRole("dialog").filter({ hasText: "Потерять правки?" });
+  await profile.click();
+  await page.getByRole("button", { name: "Выйти", exact: true }).filter({ visible: true }).click();
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Отмена", exact: true }).click();
+  await expect(page).toHaveURL(/section=loyalty/);
+  await profile.click();
+  await page.getByRole("button", { name: "Выйти", exact: true }).filter({ visible: true }).click();
+  await dialog.getByRole("button", { name: "Потерять правки", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/login$/);
+});
+
 test("QA18-07: profile closes on Escape/outside click and restores keyboard focus", async ({ page }) => {
   await login(page);
   const profile = page.getByRole("button", { name: /Профиль:/ }).filter({ visible: true });

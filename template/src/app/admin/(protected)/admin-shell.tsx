@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { startTransition, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { logoutAction } from "./admin-shell-actions";
 import { anyDirty, confirmDiscard, setDirtyAsk, useDirtyHistoryGuard } from "./admin-dirty";
 import { ConfirmDialog, type ConfirmRequest } from "./confirm-dialog";
@@ -45,13 +45,16 @@ export function AdminShell({ children, restaurantName, logo, actor, newOrdersCou
   const router = useRouter();
   useDirtyHistoryGuard();
   const navigating = useRef(false);
-  const permittedLogout = useRef(false);
   const guardLogout = (event: React.FormEvent<HTMLFormElement>) => {
-    if (permittedLogout.current || !anyDirty()) { resetNotificationsSession(); return; }
+    if (!anyDirty()) { resetNotificationsSession(); return; }
     event.preventDefault();
-    const form = event.currentTarget;
     void confirmDiscard().then((proceed) => {
-      if (proceed) { permittedLogout.current = true; form.requestSubmit(); }
+      if (proceed) {
+        // The outside click closes the profile while the dialog is open, so
+        // its form may already be unmounted. Invoke the action independently.
+        resetNotificationsSession();
+        startTransition(async () => { await logoutAction(); });
+      }
     });
   };
   const profileTrigger = useRef<HTMLButtonElement | null>(null);

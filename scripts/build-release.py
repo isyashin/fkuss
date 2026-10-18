@@ -49,16 +49,20 @@ def main():
     docker_root = subprocess.check_output(["docker", "info", "--format", "{{.DockerRootDir}}"], text=True).strip()
     # Both source and Docker storage must retain space (they may be different mounts).
     require_space(args.source, 8 * GIB)
+    require_space(docker_root, 8 * GIB)
     for folder, image in [("template", "resto-template"), ("platform", "fkuss-platform")]:
         for target in [None, "migrator"]:
             tag = image + ("-migrator" if target else "") + ":release-" + sha[:12]
             command = ["docker", "build", "--label", "org.opencontainers.image.revision=" + sha, "-t", tag]
             if target:
                 command += ["--target", target]
-            guarded_build(command + [str(args.source / folder)], docker_root)
+            guarded_build(command + [str(args.source / folder)], docker_root, start_free=2 * GIB)
             actual = subprocess.check_output(["docker", "image", "inspect", "--format", '{{index .Config.Labels "org.opencontainers.image.revision"}}', tag], text=True).strip()
             if actual != sha:
                 raise RuntimeError("Built image revision mismatch")
+        # Keep final/rollback images; only unused build cache is reclaimable.
+        # Otherwise two complete Node build trees coexist on a small dev disk.
+        subprocess.run(["docker", "builder", "prune", "--force", "--keep-storage", "256MB"], check=True)
 
 
 if __name__ == "__main__":

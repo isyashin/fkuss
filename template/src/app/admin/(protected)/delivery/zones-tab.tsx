@@ -303,9 +303,11 @@ export function ZonesTab({
                       {(busy.editing || busy.drawing) && (
                         <button
                           type="button"
-                          onClick={() =>
-                            busy.drawing ? setStopDrawToken((t) => t + 1) : setStopEditToken((t) => t + 1)
-                          }
+                          onClick={() => {
+                            if (busy.drawing) setStopDrawToken((t) => t + 1);
+                            else setStopEditToken((t) => t + 1);
+                            setSelected(null);
+                          }}
                           className="min-h-11 px-4 rounded-md bg-accent text-white text-sm font-medium"
                         >
                           {busy.drawing ? "Завершить рисование" : "Завершить правку"}

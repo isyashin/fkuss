@@ -220,10 +220,13 @@ export function CartSheet({
           suggest.events.add("select", (e) => {
             const item = e.get("item") as { value?: string; displayName?: string } | undefined;
             if (item?.value) {
+              const street = item.displayName || item.value;
+              // Повторный выбор того же адреса не запускает effect и не должен сбрасывать зону.
+              if (street === addressRef.current?.value) return;
               geoSeq.current += 1;
               setGeo({ status: "idle" });
               // displayName — короткая форма (улица без города/региона)
-              setForm((f) => ({ ...f, street: item.displayName || item.value || f.street }));
+              setForm((f) => ({ ...f, street }));
             }
           });
         } catch {

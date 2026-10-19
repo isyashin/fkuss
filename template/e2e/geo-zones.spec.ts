@@ -3,8 +3,8 @@ import { gotoAdmin, loginAdminUi } from "./login-admin";
 
 // Зоны на карте: geo-режим выключен по умолчанию; включение без ключа геокодера
 // даёт честные ответы (geocoder-error), заказ в geo-режиме — 503.
-// Дефолтный вариант «Курьер» временно удаляем (иначе вытесняет зоны),
-// всё состояние восстанавливаем, чтобы соседние спеки не пострадали.
+// Здесь проверяется ветка без варианта; сочетание с вариантом — в geo-checkout.
+// Варианты временно удаляем, затем восстанавливаем состояние для соседних спек.
 function ip(project: string, n: number) {
   const projectOctet = project === "mobile-360" ? 1 : project === "webkit-mobile" ? 2 : 3;
   return { "x-forwarded-for": `10.99.19.${projectOctet}${n}` };
@@ -26,8 +26,8 @@ test("geo-режим: default выключен; без ключа геокоде
   const disabled = await (await request.get("/api/delivery/zone?address=Тверская 1", { headers: ip(p, 1) })).json();
   expect(disabled.kind).toBe("disabled");
 
-  // 2. Админ: удаляем ВСЕ варианты доставки (иначе они вытесняют зоны;
-  //    соседние спеки оставляют свои варианты в общей БД)
+  // 2. Админ: убираем варианты для отдельной проверки заказа без deliveryOptionId;
+  //    соседние спеки оставляют свои варианты в общей БД.
   await page.goto("/admin/login");
   await loginAdminUi(page);
   await page.waitForURL(/\/admin$/);

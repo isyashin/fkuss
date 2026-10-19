@@ -1,10 +1,13 @@
 import { settingsSchema, themeSchema } from "./content-schema";
+import { deliveryGeoMode, GEO_CONFIGURATION_ERROR } from "./delivery/geo-policy";
 
 const themeMutationSchema = themeSchema.pick({ preset: true, accent: true });
 
 /** Проверка серверных изменений, включая суммы доставки и лимиты бонусов. */
 export function validateSettingsMutation(input: unknown) {
-  return settingsSchema.parse(input);
+  const settings = settingsSchema.parse(input);
+  if (deliveryGeoMode(settings.delivery) === "invalid") throw new Error(GEO_CONFIGURATION_ERROR);
+  return settings;
 }
 
 export function validatePreOrderMutation(input: unknown) {

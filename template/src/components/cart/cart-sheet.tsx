@@ -1,5 +1,7 @@
 "use client";
 
+import { GEO_ADDRESS_ERROR } from "@/lib/delivery/geo-policy";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart/store";
@@ -125,12 +127,12 @@ export function CartSheet({
   const zone = delivery.zones.find((z) => z.name === zoneName);
 
   // Зоны на карте: автоопределение зоны по адресу вместо выбора из списка.
-  // Варианты доставки (options), если настроены, вытесняют зоны — geo-режим не работает.
-  const geoZones = delivery.zones.filter((z) => (z.polygon?.length ?? 0) >= 3);
-  const geoActive = Boolean(delivery.geo?.enabled && options.length === 0 && geoZones.length > 0);
+  // География обязательна и с вариантами доставки; вариант задаёт только цену/время.
+  const geoZones = delivery.zones.filter((z) => z.enabled !== false && (z.polygon?.length ?? 0) >= 3);
+  const geoActive = Boolean(delivery.geo?.enabled);
 
   type GeoState =
-    | { status: "idle" | "loading" | "address-not-found" | "error" }
+    | { status: "idle" | "loading" | "address-not-found" | "address-imprecise" | "configuration-error" | "error" }
     | { status: "zone"; zoneName: string; tariffs: ZoneTariff[]; deliveryMinutes: number | null; lat: number; lng: number }
     | { status: "outside-allowed"; lat: number; lng: number }
     | { status: "outside-blocked"; lat: number; lng: number };
@@ -169,6 +171,12 @@ export function CartSheet({
           break;
         case "outside-blocked":
           setGeo({ status: "outside-blocked", lat: data.lat ?? 0, lng: data.lng ?? 0 });
+          break;
+        case "address-imprecise":
+          setGeo({ status: "address-imprecise" });
+          break;
+        case "configuration-error":
+          setGeo({ status: "configuration-error" });
           break;
         case "address-not-found":
           setGeo({ status: "address-not-found" });
@@ -212,8 +220,13 @@ export function CartSheet({
           suggest.events.add("select", (e) => {
             const item = e.get("item") as { value?: string; displayName?: string } | undefined;
             if (item?.value) {
+              const street = item.displayName || item.value;
+              // Повторный выбор того же адреса не запускает effect и не должен сбрасывать зону.
+              if (street === addressRef.current?.value) return;
+              geoSeq.current += 1;
+              setGeo({ status: "idle" });
               // displayName — короткая форма (улица без города/региона)
-              setForm((f) => ({ ...f, street: item.displayName || item.value || f.street }));
+              setForm((f) => ({ ...f, street }));
             }
           });
         } catch {
@@ -586,8 +599,10 @@ export function CartSheet({
                         ref={key === "street" ? addressRef : undefined}
                         value={form[key]}
                         onChange={(e) => {
-                          geoSeq.current += 1; // ответ по старому адресу не нужен
-                          setGeo({ status: "idle" });
+                          if (key === "city" || key === "street" || key === "house") {
+                            geoSeq.current += 1; // ответ по старому адресу не нужен
+                            setGeo({ status: "idle" });
+                          }
                           setForm({ ...form, [key]: e.target.value });
                           if (fieldErrors.address) setFieldErrors((current) => ({ ...current, address: undefined }));
                         }}
@@ -607,9 +622,9 @@ export function CartSheet({
                     {geo.status === "zone" && (
                       <p className="text-sm text-green-700">
                         Зона «{geo.zoneName}» — доставка{" "}
-                        {geoPrice === 0 ? "бесплатно" : formatPrice(geoPrice)}
-                        {geo.deliveryMinutes != null && <span> · ~{geo.deliveryMinutes} мин</span>}
-                        {geo.tariffs.length > 1 && (
+                        {deliveryPrice === 0 ? "бесплатно" : formatPrice(deliveryPrice)}
+                        {!selectedOption && geo.deliveryMinutes != null && <span> · ~{geo.deliveryMinutes} мин</span>}
+                        {!selectedOption && geo.tariffs.length > 1 && (
                           <span className="text-muted">
                             {" "}
                             · {geo.tariffs
@@ -622,7 +637,7 @@ export function CartSheet({
                     )}
                     {geo.status === "outside-allowed" && (
                       <p className="text-sm text-amber-700">
-                        Адрес вне основных зон — доставка {geoPrice === 0 ? "бесплатно" : formatPrice(geoPrice)},
+                        Адрес вне основных зон — доставка {deliveryPrice === 0 ? "бесплатно" : formatPrice(deliveryPrice)},
                         ресторан подтвердит заказ.
                       </p>
                     )}
@@ -630,6 +645,12 @@ export function CartSheet({
                       <p className="text-sm text-red-600">
                         Адрес вне зоны доставки. Выберите самовывоз или уточните адрес.
                       </p>
+                    )}
+                    {geo.status === "address-imprecise" && (
+                      <p className="text-sm text-red-600">{GEO_ADDRESS_ERROR}</p>
+                    )}
+                    {geo.status === "configuration-error" && (
+                      <p className="text-sm text-red-600">Доставка по карте временно недоступна. Выберите самовывоз.</p>
                     )}
                     {geo.status === "address-not-found" && (
                       <p className="text-sm text-red-600">Адрес не найден — проверьте написание.</p>

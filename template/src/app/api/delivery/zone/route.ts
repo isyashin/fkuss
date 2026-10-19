@@ -3,6 +3,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getSiteSettings } from "@/lib/site";
 import { geocodeAddress } from "@/lib/delivery/geocoder";
 import { resolveGeoDelivery } from "@/lib/delivery/zone-resolve";
+import { deliveryGeoMode } from "@/lib/delivery/geo-policy";
 import { calculateDeliveryPrice, zoneTariffs } from "@/lib/order/pricing";
 
 function getClientIp(request: Request): string {
@@ -38,10 +39,9 @@ export async function GET(request: Request) {
 
   const settings = await getSiteSettings();
   const geo = settings.delivery.geo ?? { enabled: false, outside: "block" as const, outsidePrice: 0 };
-  const hasPolygons = settings.delivery.zones.some((z) => (z.polygon?.length ?? 0) >= 3);
-  if (!geo.enabled || !hasPolygons) {
-    return NextResponse.json({ kind: "disabled" });
-  }
+  const mode = deliveryGeoMode(settings.delivery);
+  if (mode === "disabled") return NextResponse.json({ kind: "disabled" });
+  if (mode === "invalid") return NextResponse.json({ kind: "configuration-error" }, { status: 503 });
 
   const resolved = await resolveGeoDelivery({
     address,
@@ -79,6 +79,8 @@ export async function GET(request: Request) {
       });
     case "outside-blocked":
       return NextResponse.json({ kind: "outside-blocked", lat: resolved.lat, lng: resolved.lng });
+    case "address-imprecise":
+      return NextResponse.json({ kind: "address-imprecise" });
     case "address-not-found":
       return NextResponse.json({ kind: "address-not-found" });
     case "geocoder-error":

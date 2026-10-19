@@ -26,6 +26,13 @@ function mockFetchJson(payload: unknown, status = 200) {
 const KEY = "test-geocoder-key";
 
 describe("createGeocoder", () => {
+  it("retains the provider's address precision and kind for delivery validation", async () => {
+    const payload=yandexResponse("Москва",37.62,55.75);
+    Object.assign(payload.response.GeoObjectCollection.featureMember[0].GeoObject.metaDataProperty.GeocoderMetaData,{kind:"locality",precision:"other"});
+    const r=await createGeocoder({apiKey:KEY,fetchImpl:mockFetchJson(payload)}).geocode("Москва, НетТакойУлицы, 999");
+    expect(r).toMatchObject({ok:true,point:{kind:"locality",precision:"other"}});
+  });
+
   it("парсит координаты: pos = 'долгота широта'", async () => {
     const fetchImpl = mockFetchJson(yandexResponse("Россия, Москва, Красная площадь", 37.62, 55.75));
     const g = createGeocoder({ apiKey: KEY, fetchImpl });

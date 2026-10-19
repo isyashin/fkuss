@@ -111,6 +111,7 @@ export function ZoneMap({
     polygonsRef.current.forEach((p) => {
       p.editor.stopEditing();
       p.editor.stopDrawing();
+      p.options.set("draggable", false);
     });
   }, []);
 
@@ -158,6 +159,7 @@ export function ZoneMap({
       if (!polygon || !map) return false;
       stopAllEditing();
       polygon.editor.startEditing();
+      polygon.options.set("draggable", true);
       editingIndexRef.current = index;
       const handler = () => scheduleSync();
       polygon.geometry.events.add("change", handler);
@@ -259,7 +261,7 @@ export function ZoneMap({
               fillOpacity: 0.3,
               strokeWidth: 2,
               zIndex: i,
-              draggable: true, // тянуть зону за тело, а не только вершины
+              draggable: false, // перетаскивание включается только в режиме правки
             },
           );
           polygon.events.add("click", () => onSelectRef.current(i));
@@ -317,7 +319,8 @@ export function ZoneMap({
     };
   }, []);
 
-  // Выбор зоны = режим правки (drag тела/вершин)
+  // Только новый выбор включает правку. Обновление координат (в том числе
+  // замыкание кольца SDK при завершении) не должно заново открывать редактор.
   useEffect(() => {
     if (drawingIndexRef.current !== null) return; // рисуем — не перебиваем
     if (selectedIndex === null) {
@@ -334,7 +337,7 @@ export function ZoneMap({
       finishEditing();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIndex, zonesKey]);
+  }, [selectedIndex]);
 
   // Свободное рисование (legacy-зоны без полигона)
   useEffect(() => {

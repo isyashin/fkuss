@@ -6,6 +6,7 @@ import { recordAdminEvent } from "@/lib/admin-events";
 import { rateLimit } from "@/lib/rate-limit";
 import { calculateOrder, type OrderItemInput } from "@/lib/order/pricing";
 import { lockAndCheckBonusBalance } from "@/lib/order/bonus-lock";
+import { deliveryGeoMode, GEO_ADDRESS_ERROR } from "@/lib/delivery/geo-policy";
 import { geocodeAddress } from "@/lib/delivery/geocoder";
 import { resolveGeoDelivery, OUTSIDE_ZONE_NAME } from "@/lib/delivery/zone-resolve";
 import { getSiteRestaurant, getSiteSettings } from "@/lib/site";
@@ -339,18 +340,18 @@ export async function POST(request: Request) {
   }
 
   // Зоны на карте (geo-режим): сервер сам геокодирует адрес и определяет зону.
-  // Клиентскому zoneName в geo-режиме не доверяем. Доступность адреса по зонам
-  // проверяем и при выбранном варианте доставки (иначе варианты молча отключали
-  // geo-проверку — заказы уезжали в любой город). Без ключа карт проверку для
-  // вариантов пропускаем, чтобы не ломать ранее работавшие заказы.
+  // Клиентским зоне/координатам не доверяем. Вариант задаёт цену и время,
+  // но не отменяет проверку адреса. Недоступная конфигурация закрывает доставку.
   let orderZoneName: string | null = null;
   let snapshotZoneName: string | null = null;
   let orderZones = settings.delivery.zones;
-  if (input.type === "delivery" && (!option || process.env.YANDEX_MAPS_API_KEY)) {
+  if (input.type === "delivery") {
     const geo = settings.delivery.geo ?? { enabled: false, outside: "block" as const, outsidePrice: 0 };
-    const geoActive =
-      geo.enabled && settings.delivery.zones.some((z) => (z.polygon?.length ?? 0) >= 3);
-    if (geoActive) {
+    const geoMode = deliveryGeoMode(settings.delivery);
+    if (geoMode === "invalid") {
+      return NextResponse.json({ error: "Доставка по карте временно недоступна. Выберите самовывоз." }, { status: 503 });
+    }
+    if (geoMode === "active") {
       const resolved = await resolveGeoDelivery({
         address: geoAddress,
         zones: settings.delivery.zones,
@@ -361,6 +362,9 @@ export async function POST(request: Request) {
       if (resolved.kind === "outside-blocked") {
         return NextResponse.json({ error: "Адрес вне зоны доставки" }, { status: 400 });
       }
+      if (resolved.kind === "address-imprecise") {
+        return NextResponse.json({ error: GEO_ADDRESS_ERROR }, { status: 400 });
+      }
       if (resolved.kind === "address-not-found") {
         return NextResponse.json({ error: "Адрес не найден — проверьте написание" }, { status: 400 });
       }
@@ -370,6 +374,7 @@ export async function POST(request: Request) {
           { status: 503 },
         );
       }
+      snapshotZoneName = resolved.kind === "zone" ? resolved.zoneName : "Вне зон";
       if (!option) {
         if (resolved.kind === "zone") {
           orderZoneName = resolved.zoneName;

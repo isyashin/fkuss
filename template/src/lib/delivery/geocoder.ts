@@ -9,6 +9,8 @@ export interface GeocodedPoint {
   lat: number;
   lng: number;
   formatted: string;
+  kind?: string;
+  precision?: string;
 }
 
 export type GeocodeError =
@@ -37,7 +39,7 @@ interface YandexGeocodeResponse {
     GeoObjectCollection?: {
       featureMember?: Array<{
         GeoObject?: {
-          metaDataProperty?: { GeocoderMetaData?: { text?: string } };
+          metaDataProperty?: { GeocoderMetaData?: { text?: string; kind?: string; precision?: string } };
           Point?: { pos?: string };
         };
       }>;
@@ -119,10 +121,13 @@ export function createGeocoder(deps: {
         return { ok: false, error: { kind: "unavailable" } };
       }
 
+      const metadata = geoObject?.metaDataProperty?.GeocoderMetaData;
       const point: GeocodedPoint = {
         lat,
         lng,
-        formatted: geoObject?.metaDataProperty?.GeocoderMetaData?.text ?? address.trim(),
+        formatted: metadata?.text ?? address.trim(),
+        ...(metadata?.kind ? { kind: metadata.kind } : {}),
+        ...(metadata?.precision ? { precision: metadata.precision } : {}),
       };
 
       if (cache.size >= maxEntries) {
@@ -141,7 +146,7 @@ let singleton: Geocoder | null = null;
 export function geocodeAddress(address: string, bounds?: GeocodeBounds): Promise<GeocodeResult> {
   if (!singleton) {
     singleton = createGeocoder({
-      apiKey: process.env.YANDEX_GEOCODER_API_KEY ?? process.env.YANDEX_MAPS_API_KEY ?? "",
+      apiKey: process.env.YANDEX_GEOCODER_API_KEY || process.env.YANDEX_MAPS_API_KEY || "",
     });
   }
   return singleton.geocode(address, bounds);

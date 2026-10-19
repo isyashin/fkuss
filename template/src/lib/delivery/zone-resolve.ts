@@ -15,6 +15,7 @@ export type GeoDeliveryResult =
   | { kind: "outside-blocked"; lat: number; lng: number }
   | { kind: "outside-allowed"; lat: number; lng: number }
   | { kind: "address-not-found" }
+  | { kind: "address-imprecise" }
   | { kind: "geocoder-error"; error: Exclude<GeocodeError, { kind: "not-found" }> };
 
 /** Область поиска служит только приоритетом: адрес вне зон остаётся доступен для outside=allow. */
@@ -44,6 +45,10 @@ export async function resolveGeoDelivery(input: {
     return { kind: "geocoder-error", error: result.error };
   }
 
+  // A locality/street centroid or approximate neighbouring house cannot confirm delivery.
+  if (result.point.kind !== "house" || result.point.precision !== "exact") {
+    return { kind: "address-imprecise" };
+  }
   const { lat, lng } = result.point;
   const zoneName = findZoneByPoint(lat, lng, input.zones);
   if (zoneName) return { kind: "zone", zoneName, lat, lng };

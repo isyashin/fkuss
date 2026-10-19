@@ -10,6 +10,7 @@ import { useRef, useState, useTransition } from "react";
 import { useDirtyGuard } from "../admin-dirty";
 import { useSettingsSave, useSettingsEpoch, useResetSettingsOnEpoch } from "../settings/use-settings-save";
 import { tariffLines, zoneTariffs } from "@/lib/order/pricing";
+import { deliveryGeoMode, GEO_CONFIGURATION_ERROR } from "@/lib/delivery/geo-policy";
 import { defaultZonePolygon } from "@/lib/delivery/geo";
 import type { ContentSettings } from "@/lib/content-schema";
 import { ZoneMap, zoneColor } from "./zone-map";
@@ -102,7 +103,7 @@ export function ZonesTab({
         const revResult = await saveWithRev(next); if (revResult !== "ok") { if (revResult === "error") throw new Error(errorMessage ?? "Не удалось сохранить"); return; }
         setZones(nextZones);
         setSavedSnapshot(JSON.stringify([nextZones, geo]));
-        setFeedback({ text: "Сохранено", error: false });
+        setFeedback({ text: "Сохранено. Зоны применены к новым заказам.", error: false });
       } catch (cause) {
         setFeedback({
           text: cause instanceof Error ? cause.message : "Не удалось сохранить",
@@ -113,6 +114,7 @@ export function ZonesTab({
   }
 
   const dirty = JSON.stringify([zones, geo]) !== savedSnapshot;
+  const invalidGeo = deliveryGeoMode({ zones, geo }) === "invalid";
   useDirtyGuard(dirty);
 
   return (
@@ -155,25 +157,7 @@ export function ZonesTab({
             )}
           </div>
         )}
-        {/* F21: кнопка сохранения всегда на месте; без изменений недоступна */}
-        <div className="flex items-center gap-3 ml-auto" role="group" aria-label="Сохранение зон доставки">
-          {dirty && <span className="text-sm text-muted">Есть несохранённые изменения</span>}
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending || !dirty}
-            className="min-h-11 px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50"
-          >
-            {pending ? "Сохраняю…" : "Сохранить"}
-          </button>
-        </div>
-        <div className="flex items-center gap-3 ml-auto">
-          {feedback.text && (
-            <span role={feedback.error ? "alert" : "status"} className={feedback.error ? "text-sm text-red-600" : "text-sm text-green-700"}>
-              {feedback.text}
-            </span>
-          )}
-        </div>
+
       </div>
 
       <div className="relative">
@@ -195,8 +179,8 @@ export function ZonesTab({
         {(busy.drawing || busy.editing) && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-black/70 text-white text-sm px-4 py-2 rounded-md pointer-events-none">
             {busy.drawing
-              ? "Рисование: клик — точка, «Готово» или двойной клик — завершить"
-              : "Перетаскивайте зону и точки границы; «Готово» — закончить"}
+              ? "Рисование: клик — точка. Затем завершите рисование и примените зоны."
+              : "Перетаскивайте зону и границы. Затем завершите правку и примените зоны."}
           </div>
         )}
       </div>
@@ -324,7 +308,7 @@ export function ZonesTab({
                           }
                           className="min-h-11 px-4 rounded-md bg-accent text-white text-sm font-medium"
                         >
-                          Готово
+                          {busy.drawing ? "Завершить рисование" : "Завершить правку"}
                         </button>
                       )}
                       {!hasPolygon && !busy.drawing && (
@@ -351,6 +335,23 @@ export function ZonesTab({
             </div>
           );
         })}
+      </div>
+      <div
+        role="group"
+        aria-label="Сохранение зон доставки"
+        className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] min-[901px]:bottom-0 z-20 border-t border-foreground/15 bg-background px-4 py-3 -mx-4 flex flex-wrap items-center gap-3"
+      >
+        <div className="flex-1 min-w-48 text-sm" aria-live="polite">
+          {invalidGeo ? <p role="alert" className="text-red-600">{GEO_CONFIGURATION_ERROR}</p>
+            : busy.drawing || busy.editing ? <p>Сначала завершите {busy.drawing ? "рисование" : "правку границ"}.</p>
+            : dirty ? <p>Изменения ещё не применены к заказам.</p>
+            : <p className="text-muted">{geo.enabled ? geo.outside === "block" ? "Действуют сохранённые границы. Вне зон доставка запрещена." : "Действуют сохранённые границы и условия доставки вне зон." : "Проверка адресов по карте выключена."}</p>}
+          {feedback.text && (feedback.error || !dirty) && <p role={feedback.error ? "alert" : "status"} className={feedback.error ? "text-red-600" : "text-green-700"}>{feedback.text}</p>}
+        </div>
+        <button type="button" onClick={save} disabled={pending || !dirty || invalidGeo || busy.drawing || busy.editing}
+          className="min-h-11 w-full sm:w-auto px-5 rounded-md bg-accent text-white text-sm font-medium disabled:opacity-50">
+          {pending ? "Применяю…" : "Сохранить и применить"}
+        </button>
       </div>
     {revControl}</div>
   );

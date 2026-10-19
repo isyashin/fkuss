@@ -23,7 +23,7 @@ const zones: DeliveryZone[] = [
 
 const okAt = (lat: number, lng: number): GeocodeResult => ({
   ok: true,
-  point: { lat, lng, formatted: "Адрес" },
+  point: { lat, lng, formatted: "Адрес", kind: "house", precision: "exact" },
 });
 
 function resolver(geocode: (a: string) => Promise<GeocodeResult>, outside: "block" | "allow" = "block") {

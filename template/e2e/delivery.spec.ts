@@ -116,9 +116,17 @@ test("админ создаёт scheduled-вариант, гость заказ�
 
 test("DEL-01: asap — заказ «как можно скорее» без интервала", async ({ request }, testInfo) => {
   // Берём ASAP-вариант 24/7, созданный в первом тесте файла
-  const slots = await (await request.get("/api/delivery/slots")).json();
-  const asap = slots.options.find((o: { name: string; mode: string }) => o.mode === "asap" && o.name.startsWith("Экспресс 24/7"));
-  expect(asap).toBeTruthy();
+  test.setTimeout(90_000);
+  let asapId = "";
+  // UI's 23:59 end is exclusive. At 23:59 wait for 00:00 rather than
+  // asserting that an unavailable option accepts orders outside its hours.
+  await expect.poll(async () => {
+    const slots = await (await request.get("/api/delivery/slots")).json();
+    const asap = slots.options.find((o: { id: string; name: string; mode: string; available: boolean }) =>
+      o.mode === "asap" && o.name.startsWith("Экспресс 24/7") && o.available);
+    asapId = asap?.id ?? "";
+    return Boolean(asap);
+  }, { timeout: 65_000, intervals: [1000, 3000] }).toBe(true);
 
   const response = await request.post("/api/order", {
     data: {
@@ -130,9 +138,9 @@ test("DEL-01: asap — заказ «как можно скорее» без ин
       customerPhone: "+79990000004",
       website: "",
       deliveryMode: "asap",
-      deliveryOptionId: asap.id,
+      deliveryOptionId: asapId,
     },
     headers: ip(testInfo.project.name, 4),
   });
-  expect(response.ok()).toBe(true);
+  expect(response.status()).toBe(200);
 });

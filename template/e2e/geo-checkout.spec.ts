@@ -56,7 +56,7 @@ test("геозона остаётся обязательной с вариант
     await page.goto("/menu");await page.getByRole("button",{name:/Хачапури по-аджарски/}).click();
     await page.getByRole("button",{name:/Добавить ·/}).click();await page.getByRole("button",{name:/Корзина · 1/}).click();
     await page.getByRole("button",{name:"Больше",exact:true}).click();await page.getByRole("button",{name:/Оформить ·/}).click();
-    await page.getByLabel("Способ доставки",{exact:true}).selectOption(optionId);
+    await page.getByLabel("Способ доставки").selectOption(optionId);
     await page.getByLabel("Имя",{exact:true}).fill("E2E Гео");await page.getByLabel("Телефон",{exact:true}).fill("+79990000019");
     await address(page,"Москва","Тверская улица","1");
     await expect(page.getByTestId("geo-zone")).toContainText("Зона «Центр»",{timeout:15000});

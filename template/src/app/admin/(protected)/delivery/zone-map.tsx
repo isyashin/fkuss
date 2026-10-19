@@ -317,7 +317,8 @@ export function ZoneMap({
     };
   }, []);
 
-  // Выбор зоны = режим правки (drag тела/вершин)
+  // Только новый выбор включает правку. Обновление координат (в том числе
+  // замыкание кольца SDK при завершении) не должно заново открывать редактор.
   useEffect(() => {
     if (drawingIndexRef.current !== null) return; // рисуем — не перебиваем
     if (selectedIndex === null) {
@@ -334,7 +335,7 @@ export function ZoneMap({
       finishEditing();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIndex, zonesKey]);
+  }, [selectedIndex]);
 
   // Свободное рисование (legacy-зоны без полигона)
   useEffect(() => {

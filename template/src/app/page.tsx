@@ -86,7 +86,19 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* Полное меню сразу после первого экрана */}
+        {blocks.includes("promos") && promos.promos.length > 0 && (
+          <section className="mx-auto max-w-5xl px-4 py-8">
+            <h2 className="text-2xl mb-4">Акции</h2>
+            {promos.promos.map((promo) => (
+              <div key={promo.id} className="bg-card rounded-[var(--radius)] p-5 shadow-sm">
+                <h3 className="text-lg">{promo.title}</h3>
+                <p className="text-muted mt-1">{promo.text}</p>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Полное меню после акций */}
         <div id="menu" className="scroll-mt-16">
           <MenuClient
             menu={menu}
@@ -102,18 +114,6 @@ export default async function HomePage() {
             ymapsKey={process.env.YANDEX_MAPS_API_KEY ?? ""}
           />
         </div>
-
-        {blocks.includes("promos") && promos.promos.length > 0 && (
-          <section className="mx-auto max-w-5xl px-4 py-8">
-            <h2 className="text-2xl mb-4">Акции</h2>
-            {promos.promos.map((promo) => (
-              <div key={promo.id} className="bg-card rounded-[var(--radius)] p-5 shadow-sm">
-                <h3 className="text-lg">{promo.title}</h3>
-                <p className="text-muted mt-1">{promo.text}</p>
-              </div>
-            ))}
-          </section>
-        )}
 
         {blocks.includes("gallery") && galleryImages.length > 0 && (
           <section className="mx-auto max-w-5xl px-4 py-8">

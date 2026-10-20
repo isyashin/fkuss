@@ -6,7 +6,7 @@ export async function SiteHeader() {
   const [restaurant, settings] = await Promise.all([getSiteRestaurant(), getSiteSettings()]);
   const cabinetEnabled = isGuestCabinetEnabled(settings);
   return (
-    <header className="sticky top-0 z-40 bg-background/90 backdrop-blur border-b border-foreground/10">
+    <header data-site-header className="sticky top-0 z-40 bg-background/90 backdrop-blur border-b border-foreground/10">
       <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
         <Link href="/" className="font-bold text-lg truncate">
           {restaurant.name}

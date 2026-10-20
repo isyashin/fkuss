@@ -62,10 +62,30 @@ export function MenuClient({
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const add = useCart((s) => s.add);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const navigationRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startX: number; startScroll: number; moved: boolean } | null>(null);
   // Гасим только клик, завершающий жест драга (400 мс), а не все следующие клики
   const suppressClickUntil = useRef(0);
+
+  // Both navigation rows share one sticky box. Measure the actual header and
+  // navigation, including borders, font changes and a missing menu-switch row.
+  useEffect(() => {
+    const root = menuRef.current;
+    const navigation = navigationRef.current;
+    const header = document.querySelector<HTMLElement>("[data-site-header]");
+    if (!root || !navigation || !header) return;
+    const measure = () => {
+      root.style.setProperty("--menu-header-height", `${header.getBoundingClientRect().height}px`);
+      root.style.setProperty("--menu-nav-height", `${navigation.getBoundingClientRect().height}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    observer.observe(navigation);
+    return () => observer.disconnect();
+  }, []);
 
   // Вертикальное колесо над табами прокручивает ряд по горизонтали
   // (нативный слушатель: React вешает wheel пассивно и preventDefault не сработал бы).
@@ -125,83 +145,95 @@ export function MenuClient({
   }, [activeCategory]);
 
   return (
-    <div className="pb-24">
+    <div ref={menuRef} className="pb-24">
       {isOpen === false && (
         <div className="bg-amber-100 text-amber-900 text-center text-sm py-2 px-4">
           Сейчас ресторан закрыт — принимаем предзаказы на время открытия
         </div>
       )}
-      {/* Переключатель меню («Хинкальная» / «Пироги и пицца») */}
-      {switchItems.length > 0 && (
-        <div className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b border-foreground/10">
-          <div className="mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-3 scrollbar-none" data-testid="menu-switch" role="tablist" aria-label="Меню ресторана">
-            {switchItems.map((group) => (
+      <div
+        ref={navigationRef}
+        data-testid="menu-navigation"
+        className="sticky z-30 bg-background/95 backdrop-blur"
+        style={{ top: "var(--menu-header-height, 3.5rem)" }}
+      >
+        {/* Переключатель меню («Хинкальная» / «Пироги и пицца») */}
+        {switchItems.length > 0 && (
+          <div className="border-b border-foreground/10">
+            <div className="mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-3 scrollbar-none" data-testid="menu-switch" role="tablist" aria-label="Меню ресторана">
+              {switchItems.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeMenuId === group.id}
+                  data-active={activeMenuId === group.id ? "true" : undefined}
+                  onClick={() => {
+                    setActiveMenuId(group.id);
+                    const first = displayCategories.find((c) => (c.menuId ?? "") === group.id);
+                    setActiveCategory(first?.id ?? "");
+                  }}
+                  className={`min-h-11 shrink-0 px-5 rounded-full text-sm font-semibold transition-colors ${
+                    activeMenuId === group.id ? "bg-foreground text-background" : "bg-card text-foreground"
+                  }`}
+                >
+                  {group.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {/* Табы категорий — прилипают к верху; драг мышью / колесо / свайп */}
+        <div className="border-b border-foreground/10">
+          <div
+            ref={tabsRef}
+            data-testid="menu-tabs"
+            role="tablist"
+            aria-label="Категории меню"
+            style={{ touchAction: "pan-x" }}
+            className="mx-auto flex max-w-5xl cursor-grab gap-2 overflow-x-auto px-4 py-3 scrollbar-none select-none active:cursor-grabbing md:justify-[safe_center]"
+            onPointerDown={(event) => {
+              if (event.pointerType !== "mouse") return;
+              suppressClickUntil.current = 0; // новый жест отменяет подавление прошлого драга
+              dragRef.current = { startX: event.clientX, startScroll: tabsRef.current?.scrollLeft ?? 0, moved: false };
+            }}
+            onClickCapture={(event) => {
+              if (suppressClickUntil.current && Date.now() < suppressClickUntil.current) {
+                event.preventDefault();
+                event.stopPropagation();
+              }
+              suppressClickUntil.current = 0;
+            }}
+          >
+            {visibleCategories.map((c) => (
               <button
-                key={group.id}
-                type="button"
+                key={c.id}
                 role="tab"
-                aria-selected={activeMenuId === group.id}
-                data-active={activeMenuId === group.id ? "true" : undefined}
+                data-active={activeCategory === c.id ? "true" : undefined}
+                aria-selected={activeCategory === c.id}
                 onClick={() => {
-                  setActiveMenuId(group.id);
-                  const first = displayCategories.find((c) => (c.menuId ?? "") === group.id);
-                  setActiveCategory(first?.id ?? "");
+                  setActiveCategory(c.id);
+                  document.getElementById(`cat-${c.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className={`min-h-11 shrink-0 px-5 rounded-full text-sm font-semibold transition-colors ${
-                  activeMenuId === group.id ? "bg-foreground text-background" : "bg-card text-foreground"
+                className={`min-h-11 shrink-0 px-4 rounded-full text-sm font-medium transition-colors ${
+                  activeCategory === c.id ? "bg-accent text-white" : "bg-card text-foreground"
                 }`}
               >
-                {group.name}
+                {c.name}
               </button>
             ))}
           </div>
-        </div>
-      )}
-      {/* Табы категорий — прилипают к верху; драг мышью / колесо / свайп */}
-      <div className={`sticky z-30 bg-background/95 backdrop-blur border-b border-foreground/10 ${switchItems.length > 0 ? "top-[104px]" : "top-14"}`}>
-        <div
-          ref={tabsRef}
-          data-testid="menu-tabs"
-          role="tablist"
-          aria-label="Категории меню"
-          style={{ touchAction: "pan-x" }}
-          className="mx-auto flex max-w-5xl cursor-grab gap-2 overflow-x-auto px-4 py-3 scrollbar-none select-none active:cursor-grabbing md:justify-[safe_center]"
-          onPointerDown={(event) => {
-            if (event.pointerType !== "mouse") return;
-            suppressClickUntil.current = 0; // новый жест отменяет подавление прошлого драга
-            dragRef.current = { startX: event.clientX, startScroll: tabsRef.current?.scrollLeft ?? 0, moved: false };
-          }}
-          onClickCapture={(event) => {
-            if (suppressClickUntil.current && Date.now() < suppressClickUntil.current) {
-              event.preventDefault();
-              event.stopPropagation();
-            }
-            suppressClickUntil.current = 0;
-          }}
-        >
-          {visibleCategories.map((c) => (
-            <button
-              key={c.id}
-              role="tab"
-              data-active={activeCategory === c.id ? "true" : undefined}
-              aria-selected={activeCategory === c.id}
-              onClick={() => {
-                setActiveCategory(c.id);
-                document.getElementById(`cat-${c.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              className={`min-h-11 shrink-0 px-4 rounded-full text-sm font-medium transition-colors ${
-                activeCategory === c.id ? "bg-accent text-white" : "bg-card text-foreground"
-              }`}
-            >
-              {c.name}
-            </button>
-          ))}
         </div>
       </div>
 
       <div className="mx-auto max-w-5xl px-4">
         {visibleCategories.map((category) => (
-          <section key={category.id} id={`cat-${category.id}`} className="pt-6 scroll-mt-28">
+          <section
+            key={category.id}
+            id={`cat-${category.id}`}
+            className="pt-6"
+            style={{ scrollMarginTop: "calc(var(--menu-header-height, 3.5rem) + var(--menu-nav-height, 0px))" }}
+          >
             <h2 className="text-2xl mb-4">{category.name}</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
               {category.dishes
@@ -212,9 +244,9 @@ export function MenuClient({
                     data-dish-id={dish.id}
                     data-testid="dish-card"
                     onClick={() => setSelectedDish(dish)}
-                    className="text-left bg-card rounded-[var(--radius)] overflow-hidden shadow-sm active:scale-[0.98] transition-transform select-none"
+                    className="flex flex-col text-left bg-card rounded-[var(--radius)] overflow-hidden shadow-sm active:scale-[0.98] transition-transform select-none"
                   >
-                    <div className="relative aspect-square bg-foreground/5 overflow-hidden">
+                    <div className="relative w-full shrink-0 aspect-square bg-foreground/5 overflow-hidden">
                       {/* Карточка: 400px WebP напрямую, без runtime-оптимизатора */}
                       {/* scale: у исходников разная композиция (крупный план/общий),
                           лёгкий зум от центра визуально унифицирует кадры. Значение
@@ -232,10 +264,10 @@ export function MenuClient({
                         </span>
                       )}
                     </div>
-                    <div className="p-3">
-                      <p className="font-medium leading-snug line-clamp-2">{dish.name}</p>
-                      <p className="text-muted text-xs mt-0.5">{dish.weight}</p>
-                      <div className="mt-2 flex items-center justify-between">
+                    <div className="flex flex-1 flex-col p-3">
+                      <p className="min-h-[2lh] font-medium leading-snug line-clamp-2">{dish.name}</p>
+                      <p className="min-h-[1lh] text-muted text-xs mt-0.5">{dish.weight}</p>
+                      <div className="mt-auto flex items-center justify-between gap-2 pt-2">
                         <span className="font-semibold text-accent">{formatPrice(dish.price)}</span>
                         <span className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-full bg-accent/10 text-accent text-xl leading-none">
                           +

@@ -67,12 +67,14 @@ test("QA18-04: browser Back preserves the dirty editor on cancel and reaches the
     await page.getByRole("button", { name: "Открыть список разделов настроек" }).click();
     await page.getByRole("button", { name: "Бонусы и лояльность", exact: true }).click();
   } else await page.getByRole("link", { name: "Бонусы и лояльность", exact: true }).click();
-  await page.getByLabel(/Кэшбэк/).fill("17");
+  const bonusToggle = page.getByRole("checkbox", { name: "Бонусная программа включена" });
+  const nextEnabled = !(await bonusToggle.isChecked());
+  await bonusToggle.setChecked(nextEnabled);
   await page.evaluate(() => history.back());
   const dialog = page.getByRole("dialog").filter({ hasText: "Потерять правки?" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Отмена", exact: true }).click();
-  await expect(page.getByLabel(/Кэшбэк/)).toHaveValue("17");
+  await expect.poll(() => bonusToggle.isChecked()).toBe(nextEnabled);
   await page.evaluate(() => history.back());
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Потерять правки", exact: true }).click();

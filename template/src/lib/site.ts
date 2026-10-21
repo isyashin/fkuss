@@ -16,6 +16,7 @@ import {
 } from "./content";
 import type { ContentSettings } from "./content-schema";
 import { getContentDir } from "./content-dir";
+import { isLoyaltyEnabled } from "./loyalty-settings";
 
 export { contentAssetUrl } from "./assets";
 
@@ -24,6 +25,7 @@ function withSettingsDefaults(settings: ContentSettings): ContentSettings {
     guestCabinet: settings.guestCabinet ?? { enabled: false, authMode: "email", smtpUrl: "", smtpFrom: "" },
     preOrder: settings.preOrder ?? { enabled: false, slots: [], daysAhead: 1, minAheadMinutes: 30 },
     timezone: settings.timezone ?? "Europe/Moscow",
+    loyalty: { enabled: isLoyaltyEnabled(settings), cashbackPercent: settings.loyalty?.cashbackPercent ?? 5, maxSpendPercent: settings.loyalty?.maxSpendPercent ?? 20 },
     delivery: {
       ...settings.delivery,
       geo: settings.delivery.geo ?? { enabled: false, outside: "block" as const, outsidePrice: 0 },

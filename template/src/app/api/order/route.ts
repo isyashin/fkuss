@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { attachOrderConfirmation } from "@/lib/order-confirmation";
 import { z } from "zod";
+import { guestOrderSummary, privateOrderJson, replayCheckout, sameOrderOrigin, trackingHash, trackingSession } from "@/lib/order/guest-order-tracking";
+import { isGuestOrderFinished } from "@/lib/order/guest-order-state";
 import { getPrisma } from "@/lib/db";
 import { recordAdminEvent } from "@/lib/admin-events";
 import { rateLimit } from "@/lib/rate-limit";
@@ -69,10 +71,6 @@ function getClientIp(request: Request): string {
 export async function POST(request: Request) {
   const ip = getClientIp(request);
 
-  // Антибот: rate limit по IP (5 заказов за 10 минут)
-  if (!rateLimit(`order:${ip}`, 5, 10 * 60 * 1000)) {
-    return NextResponse.json({ error: "Слишком много заказов. Подождите несколько минут." }, { status: 429 });
-  }
 
   let body: unknown;
   try {
@@ -98,6 +96,18 @@ export async function POST(request: Request) {
   const input = parsed.data;
 
   const prisma = getPrisma();
+  const requestKey = request.headers.get("idempotency-key");
+  const tracking = requestKey ? await trackingSession(request) : null;
+  const requestHash = requestKey ? trackingHash(JSON.stringify(input)) : "";
+  if (requestKey) {
+    if (!sameOrderOrigin(request)) return privateOrderJson({ error: "Недопустимый источник запроса" }, 403);
+    if (!/^[A-Za-z0-9_-]{16,128}$/.test(requestKey) || !tracking) return privateOrderJson({ error: "Обновите страницу и отправьте заказ ещё раз" }, 409);
+    // Replay before menu/price validation: a lost response remains recoverable after a price change.
+    const replay = await replayCheckout(tracking.id, requestKey, requestHash);
+    if (replay) return replay;
+  }
+  // Replays do not consume the new-order limit.
+  if (!rateLimit(`order:${ip}`, 5, 10 * 60 * 1000)) return privateOrderJson({ error: "Слишком много заказов. Подождите несколько минут." },429);
   const settings = await getSiteSettings();
 
   // Проверяем конфигурацию онлайн-оплаты до создания заказа и списания бонусов.
@@ -106,7 +116,7 @@ export async function POST(request: Request) {
     try {
       paymentProvider = getPaymentProvider(settings.payment.provider);
     } catch {
-      return NextResponse.json({ error: "Онлайн-оплата временно недоступна" }, { status: 503 });
+      return privateOrderJson({ error: "Онлайн-оплата временно недоступна", createdOrder:false },503);
     }
     if (!paymentProvider) {
       return NextResponse.json({ error: "Онлайн-оплата не настроена" }, { status: 400 });
@@ -349,7 +359,7 @@ export async function POST(request: Request) {
     const geo = settings.delivery.geo ?? { enabled: false, outside: "block" as const, outsidePrice: 0 };
     const geoMode = deliveryGeoMode(settings.delivery);
     if (geoMode === "invalid") {
-      return NextResponse.json({ error: "Доставка по карте временно недоступна. Выберите самовывоз." }, { status: 503 });
+      return privateOrderJson({ error: "Доставка по карте временно недоступна. Выберите самовывоз.", createdOrder:false },503);
     }
     if (geoMode === "active") {
       const resolved = await resolveGeoDelivery({
@@ -370,7 +380,7 @@ export async function POST(request: Request) {
       }
       if (resolved.kind === "geocoder-error") {
         return NextResponse.json(
-          { error: "Не удалось проверить адрес. Попробуйте ещё раз." },
+          { error: "Не удалось проверить адрес. Попробуйте ещё раз.", createdOrder:false },
           { status: 503 },
         );
       }
@@ -438,6 +448,12 @@ export async function POST(request: Request) {
   let order;
   try {
     order = await prisma.$transaction(async (tx) => {
+      if (tracking && requestKey) {
+        const lock = `guest-checkout:${tracking.id}:${requestKey}`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lock}))`;
+        const existing = await tx.guestCheckout.findUnique({ where: { sessionId_requestKey: { sessionId:tracking.id, requestKey } } });
+        if (existing) throw new Error("GUEST_CHECKOUT_REPLAY");
+      }
       if (customerId && calc.bonusSpent > 0) {
         const enough = await lockAndCheckBonusBalance(tx, customerId, calc.bonusSpent);
         if (!enough) {
@@ -490,6 +506,9 @@ export async function POST(request: Request) {
         include: { items: true },
       });
 
+      if (tracking && requestKey) {
+        await tx.guestCheckout.create({ data: { sessionId:tracking.id, requestKey, requestHash, orderId:created.id } });
+      }
       if (customerId && calc.bonusSpent > 0) {
         await tx.bonusTransaction.create({
           data: {
@@ -509,6 +528,9 @@ export async function POST(request: Request) {
       return created;
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "GUEST_CHECKOUT_REPLAY" && tracking && requestKey) {
+      return (await replayCheckout(tracking.id,requestKey,requestHash))!;
+    }
     if (error instanceof Error && error.message === "BONUS_BALANCE_RACE") {
       return NextResponse.json(
         { error: "Недостаточно бонусов — обновите страницу и попробуйте снова" },
@@ -538,10 +560,8 @@ export async function POST(request: Request) {
         returnUrl: `${baseUrl}/order/success?n=${order.number}`,
       });
       confirmationUrl = payment.confirmationUrl;
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { paymentId: payment.paymentId },
-      });
+      await prisma.order.update({ where: { id: order.id }, data: { paymentId: payment.paymentId } });
+      if (tracking) await prisma.guestCheckout.update({ where: { orderId:order.id }, data: { confirmationUrl } });
     } catch {
       // Компенсация: провайдер недоступен — возвращаем списанные бонусы,
       // заказ помечаем failed, клиент может выбрать оплату при получении
@@ -564,10 +584,12 @@ export async function POST(request: Request) {
           data: { paymentStatus: "failed", comment: `${order.comment} [оплата не создана]` },
         }),
       ]);
-      return NextResponse.json(
-        { error: "Не удалось создать платёж. Выберите оплату при получении или попробуйте позже." },
-        { status: 502 },
-      );
+      if (tracking) {
+        const failed = await prisma.order.findUniqueOrThrow({ where: { id:order.id } });
+        return attachOrderConfirmation(privateOrderJson({ createdOrder:true, orderNumber:order.number,
+          order:guestOrderSummary(failed,requestKey), error:"Заказ сохранён, но оплата не прошла. Свяжитесь с рестораном." },502),order.id);
+      }
+      return NextResponse.json({ error:"Не удалось создать платёж. Выберите оплату при получении или попробуйте позже." },{ status:502 });
     }
   }
 
@@ -596,8 +618,11 @@ export async function POST(request: Request) {
     // метрики не должны ронять заказ
   }
 
-  return attachOrderConfirmation(NextResponse.json({
+  const latest = tracking ? await prisma.order.findUniqueOrThrow({ where:{ id:order.id } }) : order;
+  if (tracking && (isGuestOrderFinished(latest) || latest.paymentStatus !== "pending")) confirmationUrl = null;
+  return attachOrderConfirmation(privateOrderJson({
     ok: true,
+    ...(tracking ? { createdOrder:true, order:guestOrderSummary(latest,requestKey) } : {}),
     orderNumber: order.number,
     total: totalFinal,
     itemsTotal: calc.itemsTotal,

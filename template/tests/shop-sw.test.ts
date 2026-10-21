@@ -54,6 +54,11 @@ describe("shop sw — мутации и чувствительные маршр�
     expect(decide(`${ORIGIN}/api/pv`, { method: "POST" })).toBe("network-only");
   });
 
+  it("guest order status and details never enter the service worker cache", () => {
+    expect(decide(`${ORIGIN}/api/order/active`)).toBe("network-only");
+    expect(decide(`${ORIGIN}/api/order/active/private-id`)).toBe("network-only");
+    expect(decide(`${ORIGIN}/api/order/session`, { method:"POST" })).toBe("network-only");
+  });
   it("админка и её API — network-only даже для GET", () => {
     expect(decide(`${ORIGIN}/admin`)).toBe("network-only");
     expect(decide(`${ORIGIN}/admin/orders`)).toBe("network-only");

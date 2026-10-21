@@ -61,6 +61,16 @@ export function MenuClient({
   const visibleCategories = switchItems.length === 0 ? displayCategories : displayCategories.filter((c) => (c.menuId ?? "") === activeMenuId);
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  useEffect(() => {
+    const open = () => setCartOpen(true);
+    window.addEventListener("fkuss-open-cart", open);
+    const url = new URL(location.href);
+    let frame = 0;
+    if (url.searchParams.get("cart") === "1") {
+      frame = requestAnimationFrame(open); url.searchParams.delete("cart"); history.replaceState(history.state,"",url);
+    }
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("fkuss-open-cart", open); };
+  }, []);
   const add = useCart((s) => s.add);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigationRef = useRef<HTMLDivElement>(null);

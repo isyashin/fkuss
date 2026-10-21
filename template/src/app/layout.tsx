@@ -6,6 +6,7 @@ import { getSiteRestaurant, getSiteTheme } from "@/lib/site";
 import { getContentDir } from "@/lib/content-dir";
 import { themeCssVars } from "@/lib/theme";
 import { SiteHeader } from "@/components/site-header";
+import { GuestOrderTracker } from "@/components/cart/guest-order-tracker";
 import { InstallPrompt } from "@/components/install-prompt";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
@@ -49,6 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const theme = await getSiteTheme();
+  const restaurant = await getSiteRestaurant();
   const vars = themeCssVars(theme);
   const style = Object.entries(vars)
     .map(([key, value]) => `${key}: ${value}`)
@@ -82,6 +84,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <SiteHeader />
         {children}
+        <GuestOrderTracker restaurantPhone={restaurant.phone} />
         <InstallPrompt />
         <OfflineBanner />
         <ServiceWorkerRegister />

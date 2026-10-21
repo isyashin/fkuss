@@ -5,6 +5,7 @@ import { GEO_ADDRESS_ERROR } from "@/lib/delivery/geo-policy";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart/store";
+import { checkoutFingerprint, prepareGuestCheckout, useGuestOrders } from "@/lib/order/guest-order-store";
 import { dishImageUrl } from "@/lib/assets";
 import { DishImage } from "@/components/menu/dish-image";
 import { tariffPrice, tariffLines, zoneTariffs, type ZoneTariff } from "@/lib/order/pricing";
@@ -48,7 +49,10 @@ export function CartSheet({
   ymapsKey?: string;
   onClose: () => void;
 }) {
-  const { items, setQuantity, clear, total } = useCart();
+  const { items, setQuantity, total, draftId } = useCart();
+  const submittingRef = useRef(false);
+  const alive = useRef(true);
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
   const router = useRouter();
   const [step, setStep] = useState<Step>("cart");
   const [error, setError] = useState("");
@@ -316,8 +320,10 @@ export function CartSheet({
   }
 
   async function submit() {
+    if (submittingRef.current) return;
     setError("");
     if (!validateForm()) return;
+    submittingRef.current = true;
     setSubmitting(true);
     // Слоты доставки отправляем только для доставки с выбранным окном:
     // иначе самовывоз с scheduled-вариантом в настройках шлёт пустую дату
@@ -330,10 +336,7 @@ export function CartSheet({
     ].filter(Boolean).join(", ");
     const fullAddress = addressExtras ? `${geoAddress}, ${addressExtras}` : geoAddress;
     try {
-      const response = await fetch("/api/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const payload = {
           items: items.map((i) => ({
             dishId: i.dishId,
             quantity: i.quantity,
@@ -365,9 +368,19 @@ export function CartSheet({
           deliveryOptionId: selectedOption?.id ?? null,
           preOrderDate: preOrderSelected ? preOrderDate : null,
           preOrderTime: preOrderSelected ? preOrderTime : null,
-        }),
-      });
+      };
+      await prepareGuestCheckout();
+      const key = useCart.getState().beginCheckout(await checkoutFingerprint(payload), draftId);
+      const response = await fetch("/api/order", { method:"POST", headers:{"Content-Type":"application/json","Idempotency-Key":key}, body:JSON.stringify(payload) });
       const data = await response.json();
+      // Commit the server acknowledgement before navigating to any payment provider.
+      if (!response.ok && !data.createdOrder && (response.status<500 || data.createdOrder===false)) useCart.getState().rejectCheckout(key);
+      if (data.createdOrder && data.order) {
+        useGuestOrders.getState().receive([data.order]);
+        if (!alive.current) return;
+        if (!response.ok) { onClose(); router.push(`/order/success?n=${data.orderNumber}`); return; }
+      }
+      if (!alive.current) return;
       if (!response.ok) {
         setError(data.error ?? "Ошибка оформления");
         return;
@@ -378,11 +391,12 @@ export function CartSheet({
         return;
       }
       // Оплата при получении: общий success-экран, как после онлайн-оплаты.
-      clear();
+      onClose();
       router.push(`/order/success?n=${data.orderNumber}`);
     } catch {
       setError("Нет связи. Попробуйте ещё раз.");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }

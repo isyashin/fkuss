@@ -374,7 +374,7 @@ export function CartSheet({
       const response = await fetch("/api/order", { method:"POST", headers:{"Content-Type":"application/json","Idempotency-Key":key}, body:JSON.stringify(payload) });
       const data = await response.json();
       // Commit the server acknowledgement before navigating to any payment provider.
-      if (!response.ok && !data.createdOrder && response.status<500) useCart.getState().rejectCheckout(key);
+      if (!response.ok && !data.createdOrder && (response.status<500 || data.createdOrder===false)) useCart.getState().rejectCheckout(key);
       if (data.createdOrder && data.order) {
         useGuestOrders.getState().receive([data.order]);
         if (!alive.current) return;

@@ -5,7 +5,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 import settingsSource from "../content/settings.json";
 import { settingsSchema } from "@/lib/content-schema";
 
-const state = vi.hoisted(() => ({ prisma: null as unknown as PrismaClient, customer: null as { id: string } | null, settings: null as ReturnType<typeof settingsSchema.parse> | null, failEvent: false, paymentFails: false, payments: 0, notifications: 0 }));
+const state = vi.hoisted(() => ({ prisma: null as unknown as PrismaClient, customer: null as { id: string } | null, settings: null as ReturnType<typeof settingsSchema.parse> | null, failEvent: false, paymentFails: false, providerUnavailable: false, payments: 0, notifications: 0 }));
 vi.mock("@/lib/db", () => ({ getPrisma: () => state.prisma }));
 vi.mock("@/lib/site", () => ({ getSiteSettings: async () => state.settings,
   getSiteRestaurant: async () => ({ schedule: { days: Object.fromEntries(["mon","tue","wed","thu","fri","sat","sun"].map(d=>[d,{open:true,from:"00:00",to:"00:00"}])), exceptions: [] } }) }));
@@ -14,7 +14,7 @@ vi.mock("@/lib/rate-limit", () => ({ rateLimit: () => true }));
 vi.mock("@/lib/notify", () => ({ notifyNewOrder: async () => { state.notifications++; } }));
 vi.mock("@/lib/admin-push", () => ({ schedulePushAttempt: () => {} }));
 vi.mock("@/lib/metrics-report", () => ({ runMetricsReport: async () => {} }));
-vi.mock("@/lib/payments", () => ({ getPaymentProvider: () => ({ createPayment: async ({ orderId }: { orderId: string }) => { state.payments++; if(state.paymentFails) throw new Error("provider offline"); return { paymentId: `test-${orderId}`, confirmationUrl: "https://pay.example.test/checkout" }; } }) }));
+vi.mock("@/lib/payments", () => ({ getPaymentProvider: () => { if(state.providerUnavailable)throw new Error("not configured");return { createPayment: async ({ orderId }: { orderId: string }) => { state.payments++; if(state.paymentFails) throw new Error("provider offline"); return { paymentId: `test-${orderId}`, confirmationUrl: "https://pay.example.test/checkout" }; } }; } }));
 vi.mock("@/lib/admin-events", () => ({ recordAdminEvent: async (tx: PrismaClient, kind: string, reference: string, label: string) => { if(state.failEvent) throw new Error("forced rollback"); await tx.adminEvent.create({ data: { kind, reference, label } }); } }));
 
 import { POST } from "@/app/api/order/route";
@@ -133,5 +133,14 @@ describe("anonymous order tracking and idempotent checkout on PostgreSQL", () =>
     const replay=await submit(key,{paymentMethod:"online"});expect(replay.data.confirmationUrl).toBeNull();
     const response=await detail(request(`/api/order/active/${first.data.order.id}`),{params:Promise.resolve({id:first.data.order.id})});
     expect((await response.json()).order.confirmationUrl).toBeNull();
+  });
+  it("explicitly distinguishes a rejection before order creation from an uncertain transport failure",async()=>{
+    state.providerUnavailable=true;
+    try {
+      const before=await prisma.order.count({where:{customerName:prefix}});
+      const result=await submit(randomUUID(),{paymentMethod:"online"});
+      expect(result.r.status).toBe(503);expect(result.data.createdOrder).toBe(false);
+      expect(await prisma.order.count({where:{customerName:prefix}})).toBe(before);
+    } finally {state.providerUnavailable=false;}
   });
 });

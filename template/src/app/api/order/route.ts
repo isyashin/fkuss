@@ -116,7 +116,7 @@ export async function POST(request: Request) {
     try {
       paymentProvider = getPaymentProvider(settings.payment.provider);
     } catch {
-      return NextResponse.json({ error: "Онлайн-оплата временно недоступна" }, { status: 503 });
+      return privateOrderJson({ error: "Онлайн-оплата временно недоступна", createdOrder:false },503);
     }
     if (!paymentProvider) {
       return NextResponse.json({ error: "Онлайн-оплата не настроена" }, { status: 400 });
@@ -359,7 +359,7 @@ export async function POST(request: Request) {
     const geo = settings.delivery.geo ?? { enabled: false, outside: "block" as const, outsidePrice: 0 };
     const geoMode = deliveryGeoMode(settings.delivery);
     if (geoMode === "invalid") {
-      return NextResponse.json({ error: "Доставка по карте временно недоступна. Выберите самовывоз." }, { status: 503 });
+      return privateOrderJson({ error: "Доставка по карте временно недоступна. Выберите самовывоз.", createdOrder:false },503);
     }
     if (geoMode === "active") {
       const resolved = await resolveGeoDelivery({
@@ -380,7 +380,7 @@ export async function POST(request: Request) {
       }
       if (resolved.kind === "geocoder-error") {
         return NextResponse.json(
-          { error: "Не удалось проверить адрес. Попробуйте ещё раз." },
+          { error: "Не удалось проверить адрес. Попробуйте ещё раз.", createdOrder:false },
           { status: 503 },
         );
       }

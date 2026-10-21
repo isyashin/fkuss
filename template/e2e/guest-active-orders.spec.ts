@@ -171,6 +171,17 @@ test("a late checkout response cannot empty a new draft or close its editor",asy
   } finally {release();}
 });
 
+test("a definitive rejection before creation keeps all dishes editable",async({page})=>{
+  await page.goto("/menu");await add(page);
+  await page.route("**/api/order",route=>route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({createdOrder:false,error:"Онлайн-оплата временно недоступна"})}));
+  await page.getByRole("button",{name:/Корзина ·/}).click();await page.getByRole("button",{name:/Оформить ·/}).click();
+  await page.getByRole("button",{name:"Самовывоз",exact:true}).click();await page.getByLabel("Имя",{exact:true}).fill("QA Tracking E2E");await page.getByLabel("Телефон",{exact:true}).fill("+79990001133");
+  await page.getByRole("button",{name:/Заказать ·/}).click();await expect(page.getByText("Онлайн-оплата временно недоступна",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Закрыть",exact:true}).last().click();await add(page,true);
+  await expect(page.getByRole("button",{name:/Корзина · 2/})).toBeVisible();
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem("resto-cart")!).state.pending)).toEqual([]);
+});
+
 test("online payment navigation preserves the order and paid still remains active",async({page})=>{
   const saved=(await pool.query('SELECT value FROM "Settings" WHERE key=\'settings\'')).rows[0].value;
   let data:{order:{id:string};orderNumber:number}|null=null;

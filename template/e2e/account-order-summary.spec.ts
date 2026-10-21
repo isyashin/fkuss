@@ -34,8 +34,12 @@ async function cleanup(customer:{id:string;email:string}|undefined) {
 }
 async function fit(page:Page){
   await page.evaluate(()=>document.fonts.ready);
-  const geometry=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,offenders:[...document.querySelectorAll('main *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,class:e.className,width:e.getBoundingClientRect().width,right:e.getBoundingClientRect().right,text:e.textContent?.slice(0,35)})).slice(0,12)}));
+  const geometry=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,rows:[...document.querySelectorAll('a[href^="/account/orders/"]')].map(link=>{
+    const row=link.parentElement!.parentElement!.parentElement!,r=row.getBoundingClientRect(),p=row.parentElement!.getBoundingClientRect(),main=row.children[0].getBoundingClientRect(),actions=row.children[1].getBoundingClientRect();
+    return{outside:Math.max(0,r.right-p.right,p.left-r.left),overlap:Math.min(main.bottom,actions.bottom)-Math.max(main.top,actions.top)>1?Math.max(0,main.right-actions.left):0,textOverflow:row.children[0].scrollWidth-row.children[0].clientWidth};
+  })}));
   expect(geometry.overflow,JSON.stringify(geometry)).toBeLessThanOrEqual(1);
+  for(const row of geometry.rows)for(const value of Object.values(row))expect(value,JSON.stringify(geometry)).toBeLessThanOrEqual(1);
 }
 
 test("кабинет: историческая цена с добавками ×2, оба меню, ожидаемые и фактические бонусы",async({page,browser},info)=>{
@@ -55,7 +59,7 @@ test("кабинет: историческая цена с добавками ×
     await expect(page.getByText("Блюдо второй группы",{exact:false})).toBeVisible();await expect(page.getByText("Бонусы после выполнения",{exact:true})).toBeVisible();await expect(page.getByText("Начислено бонусов",{exact:true})).toHaveCount(0);await fit(page);
     await page.screenshot({path:info.outputPath("account-bonus-expected.png")});
     expect((await pool.query('SELECT count(*)::int n FROM "BonusTransaction" WHERE "orderId"=$1 AND type=\'accrual\'',[order.id])).rows[0].n).toBe(0);
-    await page.goto("/account");await expect(page.getByRole("link",{name:`Заказ №${order.number}`,exact:true}).locator("../..")).toContainText(`Бонусы после выполнения: +${stored.bonusAccrued}`);await expect(page.getByTestId("bonus-balance")).toHaveText("0");await fit(page);
+    await page.goto("/account");await expect(page.getByRole("link",{name:`Заказ №${order.number}`,exact:true}).locator("../..")).toContainText(`Бонусы после выполнения: +${stored.bonusAccrued}`);await expect(page.getByTestId("bonus-balance")).toHaveText("0");await fit(page);await page.screenshot({path:info.outputPath("account-history-expected.png")});
     const admin=await adminContext.newPage();await gotoAdmin(admin,"/admin/login");await loginAdminUi(admin);await gotoAdmin(admin,"/admin?selected="+order.id);
     const detail=admin.getByRole("region",{name:"Детали заказа"});
     for(const [label,next] of [["Принять","Готовится"],["Готовится","Готов"],["Готов","Выдан"]]){await detail.getByRole("button",{name:label,exact:true}).click();await expect(detail.getByRole("button",{name:next,exact:true})).toBeVisible();}

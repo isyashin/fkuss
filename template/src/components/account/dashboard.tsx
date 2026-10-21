@@ -124,8 +124,8 @@ export async function AccountDashboard({ customer, ordersPage }: { customer: Cus
               {orders.map((order) => {
                 const bonus = describeOrderBonus(order, recordedBonuses.get(order.id));
                 return (
-                  <div key={order.id} className={styles.row}>
-                    <div className={styles.rowMain} style={{ flex: 1 }}>
+                  <div key={order.id} className={styles.row + " " + styles.orderRow}>
+                    <div className={styles.rowMain} style={{ flex: "1 1 180px" }}>
                       <span>
                         <Link href={`/account/orders/${order.id}`} className={styles.rowLink} style={{ fontWeight: 700 }}>
                           Заказ №{order.number}
@@ -140,7 +140,7 @@ export async function AccountDashboard({ customer, ordersPage }: { customer: Cus
                       </small>
                       <small>{order.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}</small>
                     </div>
-                    <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
+                    <div style={{ display: "grid", gap: 6, justifyItems: "end", marginLeft: "auto" }}>
                       <strong>{order.total.toLocaleString("ru-RU")} ₽</strong>
                       <div style={{ display: "flex", gap: 6 }}>
                         <RepeatOrderButton orderId={order.id} />

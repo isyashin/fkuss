@@ -121,7 +121,7 @@ export function createDefaultPrintMaterial(
     headline: kind === "card" ? "Заказывайте напрямую" : "Меню всегда под рукой",
     subheadline:
       kind === "card"
-        ? "Сканируйте QR-код: актуальное меню, доставка и бонусы"
+        ? "Сканируйте QR-код: актуальное меню и доставка"
         : "Наведите камеру и закажите любимые блюда",
     offer: "Спасибо, что выбираете нас!",
     qrUrl: canonicalToPublicUrl(input.canonical),

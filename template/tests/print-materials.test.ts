@@ -14,6 +14,13 @@ import {
 const input = { canonical: "orders.example.ru", accent: "#b45309" };
 
 describe("print materials", () => {
+  it("не обещает бонусы в стандартных материалах для гостя", () => {
+    for (const kind of ["card", "magnet"] as const) {
+      const design = createDefaultPrintMaterial(kind, input);
+      expect([design.headline, design.subheadline, design.offer].join(" ")).not.toMatch(/бонус|кэшбэк/i);
+    }
+  });
+
   it("задаёт типографские размеры с вылетами и 300 dpi", () => {
     expect(PRINT_MATERIAL_SPECS.card).toMatchObject({
       trimWidthMm: 90,

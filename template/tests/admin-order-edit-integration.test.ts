@@ -12,7 +12,7 @@ const prefix = `edit-${crypto.randomUUID()}`;
 const settings = JSON.parse(readFileSync(resolve(process.cwd(), "content/settings.json"), "utf8"));
 settings.delivery.minOrder = 300;
 settings.delivery.zones = [{ name: "Тестовая зона", price: 150, freeFrom: 1000 }];
-settings.loyalty = { cashbackPercent: 5, maxSpendPercent: 20 };
+settings.loyalty = { enabled: true, cashbackPercent: 5, maxSpendPercent: 20 };
 
 beforeAll(async () => {
   await prisma.settings.create({ data: { key: "settings", value: settings } });
@@ -67,6 +67,18 @@ async function makeOrder(options: {
 }
 
 describe("admin order composition edit on PostgreSQL", () => {
+  it("редактирование нового заказа при выключенных бонусах не добавляет кэшбэк",async()=>{
+    const created=await makeOrder();const order=await prisma.order.update({where:{id:created.id},data:{bonusAccrued:0},include:{items:true}});
+    await prisma.settings.update({where:{key:"settings"},data:{value:{...settings,loyalty:{...settings.loyalty,enabled:false}}}});
+    try{const result=await editOrderItems(prisma,{orderId:order.id,expectedUpdatedAt:order.updatedAt.toISOString(),lines:[{kind:"existing",itemId:order.items[0].id,quantity:2}],deliveryChoice:null});expect(result).toMatchObject({itemsTotal:800,total:800,bonusSpent:0,bonusAccrued:0});}
+    finally{await prisma.settings.update({where:{key:"settings"},data:{value:settings}});}
+  });
+  it("редактирование прежнего бонусного заказа после выключения сохраняет его условия",async()=>{
+    const order=await makeOrder();await prisma.settings.update({where:{key:"settings"},data:{value:{...settings,loyalty:{...settings.loyalty,enabled:false}}}});
+    try{expect(await editOrderItems(prisma,{orderId:order.id,expectedUpdatedAt:order.updatedAt.toISOString(),lines:[{kind:"existing",itemId:order.items[0].id,quantity:2}],deliveryChoice:null})).toMatchObject({itemsTotal:800,total:800,bonusAccrued:40});}
+    finally{await prisma.settings.update({where:{key:"settings"},data:{value:settings}});}
+  });
+
   it("changes quantity, removes a line, adds an available dish and saves server prices", async () => {
     const order = await makeOrder();
     const result = await editOrderItems(prisma, {

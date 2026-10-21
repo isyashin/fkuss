@@ -203,7 +203,7 @@ async function applyManifest(input: SiteInput, outDir: string): Promise<void> {
   settings.channels = channels;
   settings.payment = settings.payment ?? { provider: "none", shopIdRef: "YOOKASSA_SHOP_ID", secretRef: "YOOKASSA_SECRET" };
   settings.captcha = settings.captcha ?? { provider: "none" };
-  settings.loyalty = { cashbackPercent: input.business.cashbackPercent, maxSpendPercent: input.business.maxSpendPercent };
+  settings.loyalty = { enabled: false, cashbackPercent: input.business.cashbackPercent, maxSpendPercent: input.business.maxSpendPercent };
   const booking = (settings.booking ?? {}) as { enabled?: boolean };
   booking.enabled = input.business.bookingEnabled;
   settings.booking = booking;

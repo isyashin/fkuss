@@ -17,7 +17,7 @@ function safePaymentUrl(value:string|null):string|null {
   if(!value) return null;
   try { const url=new URL(value,location.origin);return url.protocol==="https:" || url.origin===location.origin?url.href:null; } catch { return null; }
 }
-export function GuestOrderTracker({restaurantPhone}:{restaurantPhone:string}) {
+export function GuestOrderTracker({restaurantPhone,loyaltyEnabled=false}:{restaurantPhone:string;loyaltyEnabled?:boolean}) {
   const pathname=usePathname();const router=useRouter();const mounted=useMounted();
   const orders=useGuestOrders(s=>s.orders);const error=useGuestOrders(s=>s.error);const verified=useGuestOrders(s=>s.verified);
   const count=useCart(s=>s.count());const total=useCart(s=>s.total());
@@ -142,7 +142,7 @@ export function GuestOrderTracker({restaurantPhone}:{restaurantPhone:string}) {
               <dl className={styles.totals}>
                 <div><dt>Блюда</dt><dd>{money(shown.itemsTotal)}</dd></div>
                 {shown.type==="delivery" && <div><dt>Доставка</dt><dd>{shown.deliveryPrice?money(shown.deliveryPrice):"Бесплатно"}</dd></div>}
-                {shown.bonusSpent>0 && <div><dt>Бонусами</dt><dd>−{money(shown.bonusSpent)}</dd></div>}
+                {shown.bonusSpent>0 && <div><dt>{loyaltyEnabled ? "Бонусами" : "Скидка"}</dt><dd>−{money(shown.bonusSpent)}</dd></div>}
                 <div className={styles.total}><dt>Итого</dt><dd>{money(shown.total)}</dd></div>
                 <div><dt>Оплата</dt><dd>{paymentLabel(shown.paymentStatus,shown.paymentMethod)}</dd></div>
               </dl>

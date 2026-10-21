@@ -125,7 +125,7 @@
   },
   "guestContact": { "whatsapp": true, "telegram": true },
   "payment": { "provider": "none", "shopIdRef": "YOOKASSA_SHOP_ID", "secretRef": "YOOKASSA_SECRET" },
-  "loyalty": { "cashbackPercent": 5, "maxSpendPercent": 20 },
+  "loyalty": { "enabled": false, "cashbackPercent": 5, "maxSpendPercent": 20 },
   "pricing": { "globalMode": "yandex", "globalPercent": 0 },
   "sync": { "enabled": false, "placeSlug": "", "intervalMinutes": 60 },
   "booking": { "enabled": true, "slotMinutes": 30, "maxGuestsPerSlot": 20, "minHoursAhead": 2 },
@@ -137,6 +137,11 @@
 (`*Ref`), сами значения в `secrets/sites/<slug>.env`.
 `guestContact` управляет только ручными ссылками сотрудников на гостей и
 вариантами выбора при заказе; при отсутствии поля оба канала разрешены.
+
+`loyalty.enabled` — общий выключатель бонусной программы. По умолчанию `false`,
+включая старые настройки без этого поля. При выключении новые заказы не получают
+кэшбэк и не могут списывать бонусы; гостевые подсказки, баланс и операции скрыты.
+Прежний баланс и условия уже оформленных заказов сохраняются.
 
 `delivery.geo` — зоны доставки на карте (автоопределение зоны по адресу гостя):
 - `enabled` — включить режим. Работает только при заданном

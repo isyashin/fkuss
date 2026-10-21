@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSessionCustomer } from "@/lib/auth";
 import { getSiteSettings } from "@/lib/site";
+import { isLoyaltyEnabled } from "@/lib/loyalty-settings";
 import { isGuestCabinetEnabled } from "@/lib/guest-cabinet";
 import { getPrisma } from "@/lib/db";
 import { orderStatusLabel } from "@/lib/order-status";
@@ -31,8 +32,9 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
   const prisma = getPrisma();
   const order = await prisma.order.findUnique({ where: { id }, include: { items: true } });
   if (!order || order.customerId !== customer.id) notFound();
-  const recordedBonuses = await getRecordedOrderBonuses(prisma, customer.id, [order.id]);
-  const bonus = describeOrderBonus(order, recordedBonuses.get(order.id));
+  const loyaltyEnabled = isLoyaltyEnabled(settings);
+  const recordedBonuses = loyaltyEnabled ? await getRecordedOrderBonuses(prisma, customer.id, [order.id]) : new Map<string, number>();
+  const bonus = loyaltyEnabled ? describeOrderBonus(order, recordedBonuses.get(order.id)) : null;
 
   return (
     <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-8">
@@ -63,7 +65,7 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
         <div className={styles.totals}>
           <div><span>Блюда</span><span>{order.itemsTotal.toLocaleString("ru-RU")} ₽</span></div>
           {order.deliveryPrice > 0 && <div><span>Доставка</span><span>{order.deliveryPrice.toLocaleString("ru-RU")} ₽</span></div>}
-          {order.bonusSpent > 0 && <div className={styles.bonus}><span>Оплачено бонусами</span><span>−{order.bonusSpent}</span></div>}
+          {order.bonusSpent > 0 && <div className={styles.bonus}><span>{loyaltyEnabled ? "Оплачено бонусами" : "Скидка"}</span><span>−{order.bonusSpent.toLocaleString("ru-RU")} ₽</span></div>}
           <div className={styles.grand}><span>Итого</span><span>{order.total.toLocaleString("ru-RU")} ₽</span></div>
           {bonus && <div className={styles.bonus}><span>{bonus.label}</span><span>{formatOrderBonus(bonus.amount)}</span></div>}
         </div>

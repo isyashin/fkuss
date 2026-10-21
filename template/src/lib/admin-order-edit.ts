@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { settingsSchema } from "@/lib/content-schema";
+import { isLoyaltyEnabled } from "@/lib/loyalty-settings";
 import { calculateOrder, calculateBonusAccrual } from "@/lib/order/pricing";
 import { deliveryPrice as optionDeliveryPrice, type DeliveryOptionRule } from "@/lib/delivery/slots";
 import { validateModifierSelection } from "@/lib/order/modifier-validation";
@@ -141,16 +142,19 @@ export async function editOrderItems(prisma: PrismaClient, rawInput: OrderEditIn
       throw new Error("Выберите действующую зону или вариант доставки");
     }
 
+    // Уже обещанные бонусы и оплаченная скидка сохраняются при выключении программы.
+    const loyaltyEnabled = isLoyaltyEnabled(settings) || order.bonusAccrued > 0 || order.bonusSpent > 0;
     const calc = calculateOrder({
       items: pricedItems, type: calculationType, zoneName, zones: settings.delivery.zones,
       minOrder: order.type === "delivery" ? settings.delivery.minOrder : 0,
       requestedBonusSpend: order.bonusSpent, bonusBalance,
-      maxSpendPercent: settings.loyalty.maxSpendPercent, cashbackPercent: settings.loyalty.cashbackPercent,
+      maxSpendPercent: loyaltyEnabled ? settings.loyalty.maxSpendPercent : 0,
+      cashbackPercent: loyaltyEnabled ? settings.loyalty.cashbackPercent : 0,
     });
     if (!calc.ok) throw new Error(calc.reason);
     const deliveryPrice = selectedOption ? optionDeliveryPrice(selectedOption, calc.itemsTotal) : calc.deliveryPrice;
     const total = calc.itemsTotal + deliveryPrice - calc.bonusSpent;
-    const bonusAccrued = calculateBonusAccrual(calc.itemsTotal + deliveryPrice, settings.loyalty.cashbackPercent, calc.bonusSpent);
+    const bonusAccrued = calculateBonusAccrual(calc.itemsTotal + deliveryPrice, loyaltyEnabled ? settings.loyalty.cashbackPercent : 0, calc.bonusSpent);
     if (![calc.itemsTotal, deliveryPrice, calc.bonusSpent, total, bonusAccrued].every((value) => Number.isSafeInteger(value) && value >= 0)) {
       throw new Error("Сумма заказа вне допустимого диапазона");
     }

@@ -8,7 +8,7 @@ async function login(page: Page) {
 }
 
 const manualEditors = [
-  { section: "loyalty", label: /Кэшбэк/, kind: "number" },
+  { section: "loyalty", label: "Бонусная программа включена", kind: "check" },
   { section: "payment", label: "Онлайн-оплата заказов", kind: "select" },
   { section: "booking", label: "Бронирование включено", kind: "check" },
   { section: "delivery", label: "Минимальная сумма для доставки, ₽", kind: "number" },
@@ -104,8 +104,8 @@ test("QA18-06: zone toggle has an independent 44px target and keyboard operation
 test("QA18-04: logout can be cancelled and confirmed after the profile popover closes", async ({ page }) => {
   await login(page);
   await gotoAdmin(page, "/admin/settings?section=loyalty");
-  const field = page.getByLabel(/Кэшбэк/);
-  await field.fill(String(Number(await field.inputValue()) + 1));
+  const field = page.getByRole("checkbox", { name: "Бонусная программа включена" });
+  await field.setChecked(!(await field.isChecked()));
   const profile = page.getByRole("button", { name: /Профиль:/ }).filter({ visible: true });
   const dialog = page.getByRole("dialog").filter({ hasText: "Потерять правки?" });
   await profile.click();

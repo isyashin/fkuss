@@ -235,9 +235,10 @@ export const settingsSchema = z.object({
     secretRef: z.string().default("YOOKASSA_SECRET"),
   }),
   loyalty: z.object({
+    enabled: z.boolean().default(false),
     cashbackPercent: z.number().min(0).max(100).default(5),
     maxSpendPercent: z.number().min(0).max(100).default(20),
-  }),
+  }).default({ enabled: false, cashbackPercent: 5, maxSpendPercent: 20 }),
   pricing: z
     .object({
       globalMode: z.enum(["yandex", "manual", "coefficient"]).default("yandex"),

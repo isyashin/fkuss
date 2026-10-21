@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { headers } from "next/headers";
 import { Playfair_Display, Inter } from "next/font/google";
-import { getSiteRestaurant, getSiteTheme } from "@/lib/site";
+import { getSiteRestaurant, getSiteTheme, getSiteSettings } from "@/lib/site";
+import { isLoyaltyEnabled } from "@/lib/loyalty-settings";
 import { getContentDir } from "@/lib/content-dir";
 import { themeCssVars } from "@/lib/theme";
 import { SiteHeader } from "@/components/site-header";
@@ -51,6 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const theme = await getSiteTheme();
   const restaurant = await getSiteRestaurant();
+  const settings = await getSiteSettings();
   const vars = themeCssVars(theme);
   const style = Object.entries(vars)
     .map(([key, value]) => `${key}: ${value}`)
@@ -84,7 +86,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <SiteHeader />
         {children}
-        <GuestOrderTracker restaurantPhone={restaurant.phone} />
+        <GuestOrderTracker restaurantPhone={restaurant.phone} loyaltyEnabled={isLoyaltyEnabled(settings)} />
         <InstallPrompt />
         <OfflineBanner />
         <ServiceWorkerRegister />

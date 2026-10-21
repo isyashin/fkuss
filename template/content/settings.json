@@ -30,7 +30,7 @@
     "whatsapp": { "enabled": true, "phone": "+79991234567" }
   },
   "payment": { "provider": "none", "shopIdRef": "YOOKASSA_SHOP_ID", "secretRef": "YOOKASSA_SECRET" },
-  "loyalty": { "cashbackPercent": 5, "maxSpendPercent": 20 },
+  "loyalty": { "enabled": false, "cashbackPercent": 5, "maxSpendPercent": 20 },
   "pricing": { "globalMode": "yandex", "globalPercent": 0 },
   "sync": { "enabled": false, "placeSlug": "", "intervalMinutes": 60 },
   "booking": { "enabled": true, "slotMinutes": 30, "maxGuestsPerSlot": 20, "minHoursAhead": 2 },

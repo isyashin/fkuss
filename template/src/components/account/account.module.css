@@ -56,7 +56,7 @@
 .badgeBlue { background: color-mix(in srgb, #436e8b 14%, transparent); color: #436e8b; }
 .badgeNeutral { background: color-mix(in srgb, var(--foreground) 8%, transparent); color: var(--muted); }
 
-.rows { display: grid; gap: 8px; }
+.rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);

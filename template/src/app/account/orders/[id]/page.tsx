@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/db";
 import { orderStatusLabel } from "@/lib/order-status";
 import { formatPhoneDisplay } from "@/lib/guest-contact";
 import { formatStoredOrderTime } from "@/lib/order/preorder";
+import { describeOrderBonus, formatOrderBonus, getRecordedOrderBonuses } from "@/lib/account-order-bonus";
 import { RepeatOrderButton } from "@/components/account/repeat-order-button";
 import { CancelOrderButton } from "@/components/account/cancel-order-button";
 import styles from "@/components/account/account.module.css";
@@ -30,6 +31,8 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
   const prisma = getPrisma();
   const order = await prisma.order.findUnique({ where: { id }, include: { items: true } });
   if (!order || order.customerId !== customer.id) notFound();
+  const recordedBonuses = await getRecordedOrderBonuses(prisma, customer.id, [order.id]);
+  const bonus = describeOrderBonus(order, recordedBonuses.get(order.id));
 
   return (
     <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-8">
@@ -53,7 +56,7 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
                   <span key={m.name} style={{ color: "var(--muted)" }}><br />+ {m.name}</span>
                 ))}
               </span>
-              <span>{(item.price * item.quantity).toLocaleString("ru-RU")} ₽</span>
+              <span>{item.total.toLocaleString("ru-RU")} ₽</span>
             </li>
           ))}
         </ul>
@@ -62,7 +65,7 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
           {order.deliveryPrice > 0 && <div><span>Доставка</span><span>{order.deliveryPrice.toLocaleString("ru-RU")} ₽</span></div>}
           {order.bonusSpent > 0 && <div className={styles.bonus}><span>Оплачено бонусами</span><span>−{order.bonusSpent}</span></div>}
           <div className={styles.grand}><span>Итого</span><span>{order.total.toLocaleString("ru-RU")} ₽</span></div>
-          {order.bonusAccrued > 0 && <div className={styles.bonus}><span>Начислено бонусов</span><span>+{order.bonusAccrued}</span></div>}
+          {bonus && <div className={styles.bonus}><span>{bonus.label}</span><span>{formatOrderBonus(bonus.amount)}</span></div>}
         </div>
       </div>
 

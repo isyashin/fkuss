@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPrisma } from "@/lib/db";
 import { getBonusBalance } from "@/lib/loyalty";
+import { describeOrderBonus, formatOrderBonus, getRecordedOrderBonuses } from "@/lib/account-order-bonus";
 import { formatPhoneDisplay } from "@/lib/guest-contact";
 import { orderStatusLabel } from "@/lib/order-status";
 import type { Customer } from "@/generated/prisma/client";
@@ -60,6 +61,7 @@ export async function AccountDashboard({ customer, ordersPage }: { customer: Cus
     }),
     prisma.address.findMany({ where: { customerId: customer.id } }),
   ]);
+  const recordedBonuses = await getRecordedOrderBonuses(prisma, customer.id, orders.map(order => order.id));
   const pageCount = Math.max(1, Math.ceil(ordersTotal / ORDERS_PER_PAGE));
 
   return (
@@ -119,32 +121,35 @@ export async function AccountDashboard({ customer, ordersPage }: { customer: Cus
         ) : (
           <>
             <div className={styles.rows}>
-              {orders.map((order) => (
-                <div key={order.id} className={styles.row}>
-                  <div className={styles.rowMain} style={{ flex: 1 }}>
-                    <span>
-                      <Link href={`/account/orders/${order.id}`} className={styles.rowLink} style={{ fontWeight: 700 }}>
-                        Заказ №{order.number}
-                      </Link>{" "}
-                      <span className={styles.badge + " " + orderBadgeClass(order.status)}>
-                        {orderStatusLabel(order.status)}
+              {orders.map((order) => {
+                const bonus = describeOrderBonus(order, recordedBonuses.get(order.id));
+                return (
+                  <div key={order.id} className={styles.row}>
+                    <div className={styles.rowMain} style={{ flex: 1 }}>
+                      <span>
+                        <Link href={`/account/orders/${order.id}`} className={styles.rowLink} style={{ fontWeight: 700 }}>
+                          Заказ №{order.number}
+                        </Link>{" "}
+                        <span className={styles.badge + " " + orderBadgeClass(order.status)}>
+                          {orderStatusLabel(order.status)}
+                        </span>
                       </span>
-                    </span>
-                    <small>
-                      {order.createdAt.toLocaleString("ru-RU")} · {order.type === "delivery" ? "доставка" : "самовывоз"}
-                      {order.bonusAccrued > 0 && ` · +${order.bonusAccrued} бонусов`}
-                    </small>
-                    <small>{order.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}</small>
-                  </div>
-                  <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
-                    <strong>{order.total.toLocaleString("ru-RU")} ₽</strong>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <RepeatOrderButton orderId={order.id} />
-                      {order.status === "new" && <CancelOrderButton orderId={order.id} />}
+                      <small>
+                        {order.createdAt.toLocaleString("ru-RU")} · {order.type === "delivery" ? "доставка" : "самовывоз"}
+                        {bonus && ` · ${bonus.label}: ${formatOrderBonus(bonus.amount)}`}
+                      </small>
+                      <small>{order.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}</small>
+                    </div>
+                    <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
+                      <strong>{order.total.toLocaleString("ru-RU")} ₽</strong>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <RepeatOrderButton orderId={order.id} />
+                        {order.status === "new" && <CancelOrderButton orderId={order.id} />}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                  );
+              })}
             </div>
             {pageCount > 1 && (
               <nav className={styles.pager} aria-label="Страницы заказов">

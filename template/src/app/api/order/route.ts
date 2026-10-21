@@ -8,6 +8,7 @@ import { recordAdminEvent } from "@/lib/admin-events";
 import { rateLimit } from "@/lib/rate-limit";
 import { calculateOrder, type OrderItemInput } from "@/lib/order/pricing";
 import { lockAndCheckBonusBalance } from "@/lib/order/bonus-lock";
+import { isLoyaltyEnabled } from "@/lib/loyalty-settings";
 import { deliveryGeoMode, GEO_ADDRESS_ERROR } from "@/lib/delivery/geo-policy";
 import { geocodeAddress } from "@/lib/delivery/geocoder";
 import { resolveGeoDelivery, OUTSIDE_ZONE_NAME } from "@/lib/delivery/zone-resolve";
@@ -204,24 +205,27 @@ export async function POST(request: Request) {
   let bonusBalance = 0;
   let customerId: string | null = null;
   const cabinet = (await import("@/lib/guest-cabinet")).normalizeGuestCabinet(settings);
+  const loyaltyEnabled = isLoyaltyEnabled(settings) && cabinet.enabled;
   try {
     const { getSessionCustomer } = await import("@/lib/auth");
     const sessionCustomer = await getSessionCustomer();
     if (sessionCustomer && cabinet.enabled) {
       customerId = sessionCustomer.id;
-      const agg = await prisma.bonusTransaction.aggregate({
-        where: { customerId: sessionCustomer.id },
-        _sum: { amount: true },
-      });
-      bonusBalance = agg._sum.amount ?? 0;
+      if (loyaltyEnabled) {
+        const agg = await prisma.bonusTransaction.aggregate({
+          where: { customerId: sessionCustomer.id },
+          _sum: { amount: true },
+        });
+        bonusBalance = agg._sum.amount ?? 0;
+      }
     }
   } catch {
     // нет сессии — анонимный заказ без бонусов
   }
   // Деньги: при выключенном кабинете списание бонусов недопустимо,
   // даже если у гостя осталась живая сессия.
-  if (!cabinet.enabled && input.bonusSpend > 0) {
-    return NextResponse.json({ error: "Бонусы недоступны: личный кабинет отключён" }, { status: 400 });
+  if (!loyaltyEnabled && input.bonusSpend > 0) {
+    return NextResponse.json({ error: !cabinet.enabled ? "Бонусы недоступны: личный кабинет отключён" : "Бонусная программа выключена. Обновите страницу и оформите заказ без бонусов." }, { status: 400 });
   }
 
   // Структурированный адрес: гео-проверка идёт по «город, улица, дом»,
@@ -416,8 +420,8 @@ export async function POST(request: Request) {
     minOrder: input.type === "delivery" ? settings.delivery.minOrder : 0,
     requestedBonusSpend: customerId ? input.bonusSpend : 0,
     bonusBalance,
-    maxSpendPercent: settings.loyalty.maxSpendPercent,
-    cashbackPercent: settings.loyalty.cashbackPercent,
+    maxSpendPercent: loyaltyEnabled ? settings.loyalty.maxSpendPercent : 0,
+    cashbackPercent: loyaltyEnabled ? settings.loyalty.cashbackPercent : 0,
   });
   if (!calc.ok) {
     return NextResponse.json({ error: calc.reason }, { status: 400 });
@@ -438,7 +442,7 @@ export async function POST(request: Request) {
     deliveryPriceFinal !== calc.deliveryPrice
       ? (await import("@/lib/order/pricing")).calculateBonusAccrual(
           calc.itemsTotal + deliveryPriceFinal,
-          settings.loyalty.cashbackPercent,
+          loyaltyEnabled ? settings.loyalty.cashbackPercent : 0,
           calc.bonusSpent,
         )
       : calc.bonusAccrued;

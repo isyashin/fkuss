@@ -1,3 +1,5 @@
+import {enabledLoyaltyFixture} from "./loyalty-fixture";
+enabledLoyaltyFixture();
 import { test, expect, type Page } from "@playwright/test";
 import { loginAdminUi } from "./login-admin";
 

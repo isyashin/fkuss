@@ -35,6 +35,7 @@ beforeAll(async () => {
   state.settings = settingsSchema.parse(settingsSource);
   state.settings.delivery.pickupEnabled = true; state.settings.delivery.minOrder = 0;
   state.settings.guestCabinet.enabled = true;
+  state.settings.loyalty.enabled = true;
   state.settings.loyalty.maxSpendPercent = 20;
   state.settings.payment.provider = "mock";
   await prisma.category.create({ data: { id: prefix, name: prefix } });
@@ -69,11 +70,15 @@ describe("anonymous order tracking and idempotent checkout on PostgreSQL", () =>
   });
   it("five simultaneous retries create one order, one bonus spend and one event", async () => {
     state.customer = { id: customerId }; state.notifications = 0;
+    expect(state.settings!.loyalty.enabled).toBe(true);
+    expect(state.settings!.guestCabinet.enabled).toBe(true);
+    expect(await prisma.bonusTransaction.aggregate({where:{customerId},_sum:{amount:true}})).toMatchObject({_sum:{amount:5000}});
     const key = randomUUID();
     const responses = await Promise.all(Array.from({length:5},()=>submit(key,{ bonusSpend:100 })));
     expect(responses.every(x=>x.r.ok)).toBe(true);
     expect(new Set(responses.map(x=>x.data.order.id)).size).toBe(1);
     const id = responses[0].data.order.id;
+    expect(await prisma.order.findUnique({where:{id}})).toMatchObject({customerId,bonusSpent:100,bonusAccrued:45,total:900});
     expect(await prisma.bonusTransaction.count({ where: { orderId:id,type:"spend" } })).toBe(1);
     expect(await prisma.adminEvent.count({ where: { reference:id } })).toBe(1);
     expect(state.notifications).toBe(1);
@@ -133,6 +138,21 @@ describe("anonymous order tracking and idempotent checkout on PostgreSQL", () =>
     const replay=await submit(key,{paymentMethod:"online"});expect(replay.data.confirmationUrl).toBeNull();
     const response=await detail(request(`/api/order/active/${first.data.order.id}`),{params:Promise.resolve({id:first.data.order.id})});
     expect((await response.json()).order.confirmationUrl).toBeNull();
+  });
+  it.each(["cash","online"])("выключение бонусов запрещает списание через API (%s)",async paymentMethod=>{
+    state.settings!.loyalty.enabled=false;state.customer={id:customerId};
+    try{const before=await prisma.bonusTransaction.count({where:{customerId}});const result=await submit(randomUUID(),{paymentMethod,bonusSpend:100});expect(result.r.status).toBe(400);expect(await prisma.bonusTransaction.count({where:{customerId}})).toBe(before);}
+    finally{state.settings!.loyalty.enabled=true;state.customer=null;}
+  });
+  it.each(["cash","online"])("выключено: новый заказ без обещаний кэшбэка и без начисления (%s)",async paymentMethod=>{
+    state.settings!.loyalty.enabled=false;state.customer={id:customerId};
+    try{const result=await submit(randomUUID(),{paymentMethod});expect(result.r.ok).toBe(true);const order=await prisma.order.findUniqueOrThrow({where:{id:result.data.order.id}});expect(order.bonusSpent).toBe(0);expect(order.bonusAccrued).toBe(0);expect(order.total).toBe(1000);await prisma.order.update({where:{id:order.id},data:{status:"issued",paymentStatus:paymentMethod==="online"?"paid":"none"}});const {accrueOrderBonus}=await import("@/lib/loyalty");await accrueOrderBonus(prisma,order.id);expect(await prisma.bonusTransaction.count({where:{orderId:order.id}})).toBe(0);}
+    finally{state.settings!.loyalty.enabled=true;state.customer=null;}
+  });
+  it("выключение сохраняет обещанный кэшбэк прежнего заказа и возврат прежнего списания",async()=>{
+    state.customer={id:customerId};
+    try{const result=await submit(randomUUID(),{bonusSpend:100});state.settings!.loyalty.enabled=false;const id=result.data.order.id;await prisma.order.update({where:{id},data:{status:"issued"}});const {accrueOrderBonus,reverseOrderBonus}=await import("@/lib/loyalty");await accrueOrderBonus(prisma,id);expect(await prisma.bonusTransaction.findFirst({where:{orderId:id,type:"accrual"}})).toMatchObject({amount:45});await reverseOrderBonus(prisma,id);await reverseOrderBonus(prisma,id);expect(await prisma.bonusTransaction.count({where:{orderId:id,type:"refund"}})).toBe(1);expect(await prisma.bonusTransaction.aggregate({where:{orderId:id},_sum:{amount:true}})).toMatchObject({_sum:{amount:0}});}
+    finally{state.settings!.loyalty.enabled=true;state.customer=null;}
   });
   it("explicitly distinguishes a rejection before order creation from an uncertain transport failure",async()=>{
     state.providerUnavailable=true;

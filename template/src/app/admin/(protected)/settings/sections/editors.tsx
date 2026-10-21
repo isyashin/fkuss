@@ -97,15 +97,16 @@ export function LoyaltyEditor({ settings }: { settings: ContentSettings }) {
 
   return <section className={styles.editorCard} aria-label="Бонусы и лояльность">
     <h2 className={styles.editorTitle}>Бонусы и лояльность</h2>
-    <p className={styles.editorHint}>Программа лояльности гостей: начисление и списание бонусов.</p>
-    <div className={styles.formGrid}>
+    <p className={styles.editorHint}>При выключении бонусы скрыты на сайте. Баланс гостей сохраняется.</p>
+    <label className={styles.toggleRow}><input type="checkbox" checked={loyalty.enabled} disabled={pending} onChange={(e) => setLoyalty({ ...loyalty, enabled: e.target.checked })} />Бонусная программа включена</label>
+    {loyalty.enabled && <div className={styles.formGrid}>
       <label className={rd.field}><span>Кэшбэк, %</span>
         <input className={rd.input} type="number" min={0} max={100} value={loyalty.cashbackPercent} onChange={(e) => setLoyalty({ ...loyalty, cashbackPercent: Number(e.target.value) })} />
       </label>
       <label className={rd.field}><span>Списание бонусов до, %</span>
         <input className={rd.input} type="number" min={0} max={100} value={loyalty.maxSpendPercent} onChange={(e) => setLoyalty({ ...loyalty, maxSpendPercent: Number(e.target.value) })} />
       </label>
-    </div>
+    </div>}
     <div className={styles.saveBar} data-dirty={dirty || undefined}>
       <button type="button" className={`${rd.btn} ${rd.btnPrimary}`} disabled={pending || !dirty} onClick={save}>{pending ? "Сохраняю…" : "Сохранить"}</button>
       {status && <span role={status.error ? "alert" : "status"} className={`${styles.saveStatus}${status.error ? ` ${styles.error}` : ""}`} style={status.error ? {} : { color: "var(--rd-success)" }}>{status.text}</span>}

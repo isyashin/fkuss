@@ -27,7 +27,7 @@ async function render() { return renderToStaticMarkup(await AccountOrderPage({ p
 
 describe("сохранённые суммы и бонусы в деталях заказа гостя", () => {
   beforeEach(() => {
-    vi.clearAllMocks();mocks.settings.mockResolvedValue({ guestCabinet: { enabled: true } });
+    vi.clearAllMocks();mocks.settings.mockResolvedValue({ guestCabinet: { enabled: true }, loyalty: { enabled: true } });
     mocks.customer.mockResolvedValue({ id: "guest-1" });mocks.order.mockResolvedValue(fixture());mocks.groupBy.mockResolvedValue([]);
   });
   it("показывает историческую сумму позиции с добавками и количеством, не базовую цену", async () => {
@@ -55,6 +55,13 @@ describe("сохранённые суммы и бонусы в деталях з
   it("не выдаёт расчёт за факт, если выполненный заказ не имеет начисления", async () => {
     mocks.order.mockResolvedValue(fixture({status:"issued"}));const html=await render();
     expect(html).toContain("Бонусы не начислены");expect(html).not.toContain("Начислено бонусов");
+  });
+  it.each([undefined, {enabled:false}])("при выключенной программе скрывает бонусы и сохраняет реальную скидку", async loyalty => {
+    mocks.settings.mockResolvedValue({guestCabinet:{enabled:true},loyalty});
+    mocks.order.mockResolvedValue(fixture({bonusSpent:100,total:1060}));
+    const html=await render();expect(html).not.toMatch(/бонус|кэшбэк|начислен/i);
+    expect(html).toContain("Скидка");expect(html).toMatch(/−100 ₽/);expect(html).toMatch(/1[\s\u00a0\u202f]060 ₽/);
+    expect(mocks.groupBy).not.toHaveBeenCalled();
   });
   it("не читает бонусы чужого заказа", async () => {
     mocks.order.mockResolvedValue(fixture({customerId:"other-guest"}));await expect(render()).rejects.toThrow("404");expect(mocks.groupBy).not.toHaveBeenCalled();

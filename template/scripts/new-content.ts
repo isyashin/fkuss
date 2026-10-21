@@ -60,7 +60,7 @@ async function main() {
           whatsapp: { enabled: false, phone: "" },
         },
         payment: { provider: "none", shopIdRef: "YOOKASSA_SHOP_ID", secretRef: "YOOKASSA_SECRET" },
-        loyalty: { cashbackPercent: 5, maxSpendPercent: 20 },
+        loyalty: { enabled: false, cashbackPercent: 5, maxSpendPercent: 20 },
         booking: { enabled: true, slotMinutes: 30, maxGuestsPerSlot: 20, minHoursAhead: 2 },
         captcha: { provider: "none" },
       },

@@ -36,7 +36,7 @@ function orderBadgeClass(status: string): string {
   return styles.badgeNeutral;
 }
 
-export async function AccountDashboard({ customer, ordersPage }: { customer: Customer; ordersPage: number }) {
+export async function AccountDashboard({ customer, ordersPage, loyaltyEnabled = false }: { customer: Customer; ordersPage: number; loyaltyEnabled?: boolean }) {
   const prisma = getPrisma();
   const page = Math.max(1, ordersPage);
   const [ordersTotal, orders, bookings, balance, transactions, addresses] = await Promise.all([
@@ -53,15 +53,15 @@ export async function AccountDashboard({ customer, ordersPage }: { customer: Cus
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
-    getBonusBalance(prisma, customer.id),
-    prisma.bonusTransaction.findMany({
+    loyaltyEnabled ? getBonusBalance(prisma, customer.id) : Promise.resolve(0),
+    loyaltyEnabled ? prisma.bonusTransaction.findMany({
       where: { customerId: customer.id },
       orderBy: { createdAt: "desc" },
       take: 15,
-    }),
+    }) : Promise.resolve([]),
     prisma.address.findMany({ where: { customerId: customer.id } }),
   ]);
-  const recordedBonuses = await getRecordedOrderBonuses(prisma, customer.id, orders.map(order => order.id));
+  const recordedBonuses = loyaltyEnabled ? await getRecordedOrderBonuses(prisma, customer.id, orders.map(order => order.id)) : new Map<string, number>();
   const pageCount = Math.max(1, Math.ceil(ordersTotal / ORDERS_PER_PAGE));
 
   return (
@@ -69,11 +69,11 @@ export async function AccountDashboard({ customer, ordersPage }: { customer: Cus
       <div className={styles.intro}>
         <span>Личный кабинет</span>
         <h1>Здравствуйте{customer.name ? `, ${customer.name}` : ""}!</h1>
-        <p>Ваши заказы, бонусы, брони и адреса.</p>
+        <p>{loyaltyEnabled ? "Ваши заказы, бонусы, брони и адреса." : "Ваши заказы, брони и адреса."}</p>
       </div>
 
-      <div className={styles.grid2} style={{ marginBottom: 14 }}>
-        <div className={styles.panel}>
+      <div className={loyaltyEnabled ? styles.grid2 : undefined} style={{ marginBottom: 14 }}>
+        {loyaltyEnabled && <div className={styles.panel}>
           <div className={styles.stat}>
             <div>
               <p className={styles.statLabel}>Бонусы</p>
@@ -99,7 +99,7 @@ export async function AccountDashboard({ customer, ordersPage }: { customer: Cus
               </ul>
             )}
           </div>
-        </div>
+        </div>}
 
         <div className={styles.panel}>
           <h2 className={styles.h2}>Профиль</h2>
@@ -122,7 +122,7 @@ export async function AccountDashboard({ customer, ordersPage }: { customer: Cus
           <>
             <div className={styles.rows}>
               {orders.map((order) => {
-                const bonus = describeOrderBonus(order, recordedBonuses.get(order.id));
+                const bonus = loyaltyEnabled ? describeOrderBonus(order, recordedBonuses.get(order.id)) : null;
                 return (
                   <div key={order.id} className={styles.row + " " + styles.orderRow}>
                     <div className={styles.rowMain} style={{ flex: "1 1 180px" }}>

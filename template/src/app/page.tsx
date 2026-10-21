@@ -33,7 +33,7 @@ export default async function HomePage() {
     const customer = await getSessionCustomer();
     if (customer && cabinet.enabled) {
       const prisma = getPrisma();
-      bonusBalance = await getBonusBalance(prisma, customer.id);
+      if (settings.loyalty.enabled) bonusBalance = await getBonusBalance(prisma, customer.id);
       const [address, lastOrder] = await Promise.all([
         prisma.address.findFirst({ where: { customerId: customer.id } }),
         prisma.order.findFirst({

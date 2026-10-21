@@ -1,5 +1,6 @@
 import { getSessionCustomer, isDevGuestLoginEnabled } from "@/lib/auth";
 import { getSiteSettings } from "@/lib/site";
+import { isLoyaltyEnabled } from "@/lib/loyalty-settings";
 import { isGuestCabinetEnabled } from "@/lib/guest-cabinet";
 import { LoginForm } from "@/components/account/login-form";
 import { AccountDashboard } from "@/components/account/dashboard";
@@ -22,7 +23,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
   return (
     <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-8">
-      {customer ? <AccountDashboard customer={customer} ordersPage={page} /> : (
+      {customer ? <AccountDashboard customer={customer} ordersPage={page} loyaltyEnabled={isLoyaltyEnabled(settings)} /> : (
         <>
           <h1 className="text-3xl mb-6">Вход</h1>
           <LoginForm devLogin={isDevGuestLoginEnabled()} />

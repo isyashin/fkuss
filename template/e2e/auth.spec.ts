@@ -24,7 +24,9 @@ test("гость входит по коду и видит кабинет", async
 
   await page.goto("/account");
   await expect(page.getByRole("heading", { name: /Здравствуйте/ })).toBeVisible();
-  await expect(page.getByText(/бонусы/i).first()).toBeVisible();
+  // Программа выключена по умолчанию; вход в кабинет не раскрывает бонусы.
+  await expect(page.getByTestId("bonus-balance")).toHaveCount(0);
+  await expect(page.getByText(/бонус|кэшбэк/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "История заказов" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Профиль" })).toBeVisible();
 });

@@ -275,11 +275,13 @@ export function CartSheet({
             ? tariffPrice(zoneTariffs(zone), itemsTotal)
             : 0;
   const orderTotal = itemsTotal + deliveryPrice;
-  const maxBonusSpend = Math.min(
+  const loyaltyEnabled = loyalty.enabled === true && cabinetEnabled;
+  const maxBonusSpend = loyaltyEnabled ? Math.min(
     Math.floor((itemsTotal * loyalty.maxSpendPercent) / 100),
     bonusBalance,
-  );
-  const finalTotal = orderTotal - Math.min(bonusSpend, maxBonusSpend);
+  ) : 0;
+  const effectiveBonusSpend = loyaltyEnabled ? Math.min(bonusSpend, maxBonusSpend) : 0;
+  const finalTotal = orderTotal - effectiveBonusSpend;
 
   const optionDates = selectedOption
     ? [...new Set(selectedOption.windows.map((w) => w.date))]
@@ -357,7 +359,7 @@ export function CartSheet({
           customerEmail: form.email,
           comment: form.comment,
           website: form.website, // honeypot
-          bonusSpend,
+          bonusSpend: effectiveBonusSpend,
           paymentMethod,
           deliveryMode: scheduledDelivery ? "scheduled" : "asap",
           deliveryDate: scheduledDelivery ? deliveryDate : null,
@@ -795,7 +797,7 @@ export function CartSheet({
             </fieldset>
             {cabinetEnabled && (
               <label className="block">
-                <span className="text-sm text-muted">Email (для бонусов и истории заказов)</span>
+                <span className="text-sm text-muted">{loyaltyEnabled ? "Email (для бонусов и истории заказов)" : "Email (для истории заказов)"}</span>
                 <input
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -837,7 +839,7 @@ export function CartSheet({
                 <span>Доставка</span>
                 <span>{deliveryPending ? deliveryQuoteText : type === "pickup" ? "Самовывоз" : deliveryPrice === 0 ? "бесплатно" : formatPrice(deliveryPrice)}</span>
               </div>
-              {bonusSpend > 0 && (
+              {loyaltyEnabled && effectiveBonusSpend > 0 && (
                 <div className="flex justify-between text-accent">
                   <span>Бонусы</span>
                   <span>−{Math.min(bonusSpend, maxBonusSpend)} ₽</span>
@@ -848,7 +850,7 @@ export function CartSheet({
                 <span>{formatPrice(finalTotal)}</span>
               </div>
 
-              {cabinetEnabled && bonusBalance > 0 && (
+              {loyaltyEnabled && bonusBalance > 0 && (
                 <label className="flex items-center justify-between gap-3 pt-1 text-sm">
                   <span className="text-muted">Списать бонусы (доступно {bonusBalance} ₽)</span>
                   <input
@@ -882,7 +884,7 @@ export function CartSheet({
                 </div>
               )}
               <p className="text-muted text-xs pt-1">
-                {paymentMethod === "online" ? "Переход к оплате картой после оформления." : "Оплата при получении."} Кэшбэк {loyalty.cashbackPercent}% после выполнения заказа.
+                {paymentMethod === "online" ? "Переход к оплате картой после оформления." : "Оплата при получении."}{loyaltyEnabled && ` Кэшбэк ${loyalty.cashbackPercent}% после выполнения заказа.`}
               </p>
             </div>
 

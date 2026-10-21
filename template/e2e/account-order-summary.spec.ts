@@ -32,7 +32,11 @@ async function cleanup(customer:{id:string;email:string}|undefined) {
   await pool.query('DELETE FROM "BonusTransaction" WHERE "customerId"=$1',[customer.id]);await pool.query('DELETE FROM "OrderItem" WHERE "orderId"=ANY($1::text[])',[ids]);await pool.query('DELETE FROM "Order" WHERE id=ANY($1::text[])',[ids]);
   await pool.query('DELETE FROM "Session" WHERE "customerId"=$1',[customer.id]);await pool.query('DELETE FROM "AuthCode" WHERE email=$1',[customer.email]);await pool.query('DELETE FROM "Customer" WHERE id=$1',[customer.id]);
 }
-async function fit(page:Page){expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBeLessThanOrEqual(1);}
+async function fit(page:Page){
+  await page.evaluate(()=>document.fonts.ready);
+  const geometry=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,offenders:[...document.querySelectorAll('main *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,class:e.className,width:e.getBoundingClientRect().width,right:e.getBoundingClientRect().right,text:e.textContent?.slice(0,35)})).slice(0,12)}));
+  expect(geometry.overflow,JSON.stringify(geometry)).toBeLessThanOrEqual(1);
+}
 
 test("кабинет: историческая цена с добавками ×2, оба меню, ожидаемые и фактические бонусы",async({page,browser},info)=>{
   test.setTimeout(150_000);let customer:Awaited<ReturnType<typeof login>>|undefined;

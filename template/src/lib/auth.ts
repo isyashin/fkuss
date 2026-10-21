@@ -3,11 +3,11 @@
  * Сессия — httpOnly cookie на 30 дней.
  */
 import { cookies } from "next/headers";
-import { randomInt } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
 import { getPrisma } from "./db";
 import type { Customer, PrismaClient } from "@/generated/prisma/client";
 
-import { GUEST_SESSION_COOKIE as SESSION_COOKIE, ORDER_CONFIRMATION_COOKIE, ORDER_CONFIRMATION_COOKIE_PATH } from "./auth-cookie-names";
+import { GUEST_SESSION_COOKIE as SESSION_COOKIE, ORDER_CONFIRMATION_COOKIE, ORDER_CONFIRMATION_COOKIE_PATH, GUEST_ORDER_COOKIE } from "./auth-cookie-names";
 
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 минут
 const CODE_MAX_ATTEMPTS = 3;
@@ -125,7 +125,13 @@ export async function logout(): Promise<void> {
     const prisma = getPrisma();
     await prisma.session.deleteMany({ where: { id: sessionId } });
   }
+  const tracking = jar.get(GUEST_ORDER_COOKIE)?.value;
+  if (tracking && /^[A-Za-z0-9_-]{64}$/.test(tracking)) {
+    await getPrisma().guestOrderSession.deleteMany({ where:{ id:createHash("sha256").update(tracking).digest("hex") } });
+  }
   jar.delete(SESSION_COOKIE);
+  jar.set(GUEST_ORDER_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax",
+    secure: process.env.NODE_ENV === "production" && process.env.INSECURE_HTTP !== "1" });
   jar.set(ORDER_CONFIRMATION_COOKIE, "", {
     path: ORDER_CONFIRMATION_COOKIE_PATH, maxAge: 0, httpOnly: true, sameSite: "lax",
     secure: process.env.NODE_ENV === "production" && process.env.INSECURE_HTTP !== "1",

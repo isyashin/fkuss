@@ -18,6 +18,8 @@ export default defineConfig({
       DATABASE_URL: process.env.DATABASE_URL ?? "",
       AUTH_DEV_CODE: "1",
       INSECURE_HTTP: "1",
+      // Only the disposable E2E server: exercise the full mock-payment return.
+      ALLOW_MOCK_PAYMENT: "1",
       SITE_KEY: "e2e-test-site-key",
       ADMIN_LOGIN_ATTEMPTS: "1000",
       // Только для E2E: выброшенная пара ключей, реальная доставка не выполняется

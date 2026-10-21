@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@/lib/cart/store";
+import { useGuestOrders } from "@/lib/order/guest-order-store";
 import { useMounted } from "@/lib/use-mounted";
 
 /** Sticky нижняя панель корзины — всегда под пальцем на мобильном */
@@ -9,7 +10,8 @@ export function CartBar({ onOpen }: { onOpen: () => void }) {
   const count = useCart((s) => s.count());
   const total = useCart((s) => s.total());
 
-  if (!mounted || count === 0) return null;
+  const hasOrders = useGuestOrders((s) => s.orders.length > 0);
+  if (!mounted || count === 0 || hasOrders) return null;
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-40 p-3 safe-area-inset-bottom">

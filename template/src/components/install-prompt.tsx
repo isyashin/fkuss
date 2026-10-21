@@ -45,7 +45,7 @@ export function InstallPrompt() {
 
   return (
     <>
-      <div className="fixed bottom-20 inset-x-0 z-30 px-4 flex justify-center pointer-events-none">
+      <div className="fixed bottom-28 inset-x-0 z-30 px-4 flex justify-center pointer-events-none">
         <div className="pointer-events-auto bg-foreground text-background rounded-full shadow-lg flex items-center gap-2 pl-5 pr-2 py-2">
           <button
             onClick={async () => {

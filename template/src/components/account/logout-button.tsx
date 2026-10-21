@@ -9,6 +9,7 @@ export function LogoutButton() {
     <button
       onClick={async () => {
         await fetch("/api/auth/logout", { method: "POST" });
+        window.dispatchEvent(new Event("fkuss-guest-logout"));
         router.refresh();
       }}
       className={styles.btn + " " + styles.btnOutline}

@@ -217,7 +217,31 @@ model Address {
   comment    String  @default("")
 }
 
+model GuestOrderSession {
+  id        String @id // SHA-256 of the HttpOnly browser token, never its raw value
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  checkouts GuestCheckout[]
+
+  @@index([expiresAt])
+}
+
+model GuestCheckout {
+  id              String @id @default(cuid())
+  sessionId       String
+  session         GuestOrderSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  requestKey      String
+  requestHash     String
+  orderId         String @unique
+  order           Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  confirmationUrl String?
+  createdAt       DateTime @default(now())
+
+  @@unique([sessionId, requestKey])
+}
+
 model Order {
+  guestCheckout GuestCheckout?
   id             String   @id @default(cuid())
   number         Int      @unique @default(autoincrement())
   customerId     String?

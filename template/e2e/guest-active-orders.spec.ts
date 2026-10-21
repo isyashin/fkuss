@@ -120,6 +120,16 @@ test("offline and server errors preserve the last status; recovery refreshes it"
   await page.route("**/api/order/active?*",route=>route.fulfill({status:503,body:"{}"}));
   await expect.poll(async()=>{await refresh(page);return dock.innerText();},{timeout:20000}).toContain("Нет связи");await expect(dock).toContainText("Можно забирать");
   await page.unroute("**/api/order/active?*");await refresh(page);await expect(dock).not.toContainText("Нет связи",{timeout:10000});
+  await page.route("**/api/order/active?*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({available:true,orders:[]})}));
+  await expect.poll(async()=>{await refresh(page);return dock.innerText();},{timeout:15000}).toContain("Не удалось обновить часть заказов");
+  await expect(dock).toContainText("Можно забирать");
+  await page.evaluate(()=>{window.dispatchEvent(new Event("beforeinstallprompt",{cancelable:true}));document.documentElement.style.fontSize="20px";});
+  await expect(page.getByTestId("install-prompt")).toBeVisible();
+  await expect.poll(async()=>{
+    const prompt=await page.getByTestId("install-prompt").boundingBox(),bar=await dock.boundingBox();
+    return prompt && bar ? bar.y-prompt.y-prompt.height : -1;
+  }).toBeGreaterThanOrEqual(8);
+  await page.unroute("**/api/order/active?*");await refresh(page);
 });
 
 test("a lost POST response is recovered without a second order or losing its draft acknowledgement",async({page})=>{

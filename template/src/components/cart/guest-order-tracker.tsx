@@ -24,7 +24,9 @@ export function GuestOrderTracker({restaurantPhone}:{restaurantPhone:string}) {
   const [selected,setSelected]=useState<string|null>(null);
   const [detail,setDetail]=useState<GuestOrderDetail|null>(null);const [detailError,setDetailError]=useState("");
   const dialog=useRef<HTMLDialogElement>(null);const terminalTimers=useRef(new Map<string,ReturnType<typeof setTimeout>>());
+  const dockRef=useRef<HTMLDivElement>(null);
   const hidden=/^\/(admin|payment|offline)(\/|$)/.test(pathname);
+  const ownAccountDetail=pathname.startsWith("/account/orders/");
   const close=useCallback(()=>{
     setSelected(null);setDetail(null);
     if(history.state?.fkussGuestOrder) history.back();
@@ -90,14 +92,20 @@ export function GuestOrderTracker({restaurantPhone}:{restaurantPhone:string}) {
     }
   },[orders,selected]);
   useEffect(()=>{const timers=terminalTimers.current;return()=>{for(const timer of timers.values()) clearTimeout(timer);};},[]);
+  useEffect(()=>{
+    const dock=dockRef.current;if(!dock) return;
+    const measure=()=>document.documentElement.style.setProperty("--guest-order-dock-height",`${dock.getBoundingClientRect().height}px`);
+    measure();const observer=new ResizeObserver(measure);observer.observe(dock);
+    return()=>{observer.disconnect();document.documentElement.style.removeProperty("--guest-order-dock-height");};
+  },[mounted,hidden,ownAccountDetail,orders.length]);
   if(!mounted || hidden) return null;
   const current=orders.find(o=>o.id===selected);
   const shown=detail && detail.id===selected ? {...detail,...current} : null;
   const paymentUrl=shown && !isGuestOrderFinished(shown)?safePaymentUrl(shown.confirmationUrl):null;
   return <>
-    {orders.length>0 && <>
+    {orders.length>0 && !ownAccountDetail && <>
       <div className={styles.spacer} aria-hidden="true" />
-      <div className={styles.dock} data-testid="guest-order-dock">
+      <div ref={dockRef} className={styles.dock} data-testid="guest-order-dock">
         <div className={styles.dockInner}>
           <button className={styles.orderButton} onClick={()=>open(orders.length===1?orders[0].id:"list")}>
             <span className={styles.dockTitle}>{orders.length===1?`Заказ №${orders[0].number}`:`Ваши заказы · ${orders.length}`}</span>
@@ -111,7 +119,7 @@ export function GuestOrderTracker({restaurantPhone}:{restaurantPhone:string}) {
         {error && <p className={styles.connection} role="status">{error} <button onClick={()=>void refreshGuestOrders()}>Обновить</button></p>}
       </div>
     </>}
-    <dialog ref={dialog} className={styles.dialog} aria-label={selected==="list"?"Ваши заказы":`Заказ №${current?.number ?? ""}`} onClose={()=>{setSelected(null);setDetail(null);}} onCancel={e=>{e.preventDefault();close();}} onClick={e=>{if(e.target===dialog.current) close();}}>
+    {selected && <dialog ref={dialog} className={styles.dialog} aria-label={selected==="list"?"Ваши заказы":`Заказ №${current?.number ?? ""}`} onClose={()=>{setSelected(null);setDetail(null);}} onCancel={e=>{e.preventDefault();close();}} onClick={e=>{if(e.target===dialog.current) close();}}>
       <div className={styles.panel}>
         <header className={styles.header}>
           <button className={styles.back} aria-label="Закрыть заказ" onClick={close}>←</button>
@@ -149,6 +157,6 @@ export function GuestOrderTracker({restaurantPhone}:{restaurantPhone:string}) {
           </>}
         </div>
       </div>
-    </dialog>
+    </dialog>}
   </>;
 }

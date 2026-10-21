@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { attachOrderConfirmation } from "@/lib/order-confirmation";
 import { z } from "zod";
 import { guestOrderSummary, privateOrderJson, replayCheckout, sameOrderOrigin, trackingHash, trackingSession } from "@/lib/order/guest-order-tracking";
+import { isGuestOrderFinished } from "@/lib/order/guest-order-state";
 import { getPrisma } from "@/lib/db";
 import { recordAdminEvent } from "@/lib/admin-events";
 import { rateLimit } from "@/lib/rate-limit";
@@ -617,9 +618,11 @@ export async function POST(request: Request) {
     // метрики не должны ронять заказ
   }
 
+  const latest = tracking ? await prisma.order.findUniqueOrThrow({ where:{ id:order.id } }) : order;
+  if (tracking && (isGuestOrderFinished(latest) || latest.paymentStatus !== "pending")) confirmationUrl = null;
   return attachOrderConfirmation(privateOrderJson({
     ok: true,
-    ...(tracking ? { createdOrder:true, order:guestOrderSummary(order,requestKey) } : {}),
+    ...(tracking ? { createdOrder:true, order:guestOrderSummary(latest,requestKey) } : {}),
     orderNumber: order.number,
     total: totalFinal,
     itemsTotal: calc.itemsTotal,

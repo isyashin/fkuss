@@ -48,6 +48,10 @@ export function refreshGuestOrders():Promise<void> {
         return;
       }
       useGuestOrders.getState().receive(data.orders);
+      const received=new Set(data.orders.map((order:GuestOrderSummary)=>order.id));
+      if(known.split(",").filter(Boolean).some(id=>!received.has(id))) {
+        useGuestOrders.setState({error:"Не удалось обновить часть заказов. Показан последний известный статус."});
+      }
     } catch {
       if(current===generation) useGuestOrders.setState({error:"Нет связи. Показан последний известный статус."});
     }

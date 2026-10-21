@@ -127,4 +127,11 @@ describe("anonymous order tracking and idempotent checkout on PostgreSQL", () =>
     expect(await prisma.bonusTransaction.count({where:{orderId:first.data.order.id,type:"refund"}})).toBe(1);
     state.paymentFails=false;state.customer=null;
   });
+  it("never offers payment again after cancellation even if a payment URL already exists",async()=>{
+    const key=randomUUID();const first=await submit(key,{paymentMethod:"online"});
+    await prisma.order.update({where:{id:first.data.order.id},data:{status:"cancelled"}});
+    const replay=await submit(key,{paymentMethod:"online"});expect(replay.data.confirmationUrl).toBeNull();
+    const response=await detail(request(`/api/order/active/${first.data.order.id}`),{params:Promise.resolve({id:first.data.order.id})});
+    expect((await response.json()).order.confirmationUrl).toBeNull();
+  });
 });

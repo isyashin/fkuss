@@ -6,6 +6,7 @@ import { getSessionCustomer } from "@/lib/auth";
 import { GUEST_ORDER_COOKIE } from "@/lib/auth-cookie-names";
 import { attachOrderConfirmation } from "@/lib/order-confirmation";
 import type { GuestOrderSummary } from "./guest-order-state";
+import { isGuestOrderFinished } from "./guest-order-state";
 
 export const GUEST_ORDER_TTL = 60 * 24 * 3600;
 export function privateOrderJson(data: unknown, status = 200) {
@@ -63,6 +64,6 @@ export async function replayCheckout(sessionId: string, requestKey: string, requ
   const order = checkout.order;
   return attachOrderConfirmation(privateOrderJson({ ok: true, createdOrder: true, order: guestOrderSummary(order, requestKey),
     orderNumber: order.number, total: order.total, itemsTotal: order.itemsTotal, deliveryPrice: order.deliveryPrice, bonusSpent: order.bonusSpent,
-    confirmationUrl: order.paymentStatus === "pending" ? checkout.confirmationUrl : null,
+    confirmationUrl: order.paymentStatus === "pending" && !isGuestOrderFinished(order) ? checkout.confirmationUrl : null,
     preparingPayment: order.paymentMethod === "online" && order.paymentStatus === "pending" && !checkout.confirmationUrl }), order.id);
 }

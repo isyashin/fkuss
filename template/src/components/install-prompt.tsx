@@ -36,7 +36,7 @@ export function InstallPrompt() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  if (pathname.startsWith("/admin") || hidden || isStandalone || (!deferred && !isIOS)) return null;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/account") || hidden || isStandalone || (!deferred && !isIOS)) return null;
 
   function dismiss() {
     localStorage.setItem("install-prompt-hidden", "1");
@@ -45,7 +45,7 @@ export function InstallPrompt() {
 
   return (
     <>
-      <div className="fixed bottom-28 inset-x-0 z-30 px-4 flex justify-center pointer-events-none">
+      <div data-testid="install-prompt" style={{bottom:"calc(var(--guest-order-dock-height, 80px) + 12px)"}} className="fixed inset-x-0 z-30 px-4 flex justify-center pointer-events-none">
         <div className="pointer-events-auto bg-foreground text-background rounded-full shadow-lg flex items-center gap-2 pl-5 pr-2 py-2">
           <button
             onClick={async () => {

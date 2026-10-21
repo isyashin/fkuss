@@ -37,9 +37,11 @@ export function refreshGuestOrders():Promise<void> {
   if(polling) return polling;
   const current=generation;
   polling=(async()=>{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),12_000);
     try {
       const known=useGuestOrders.getState().orders.map(o=>o.id).slice(0,100).join(",");
-      const response=await fetch(`/api/order/active?known=${encodeURIComponent(known)}`,{cache:"no-store",signal:AbortSignal.timeout(12_000)});
+      const response=await fetch(`/api/order/active?known=${encodeURIComponent(known)}`,{cache:"no-store",signal:controller.signal});
       if(!response.ok) throw new Error("poll failed");
       const data=await response.json();
       if(current!==generation) return;
@@ -54,7 +56,7 @@ export function refreshGuestOrders():Promise<void> {
       }
     } catch {
       if(current===generation) useGuestOrders.setState({error:"Нет связи. Показан последний известный статус."});
-    }
+    } finally {clearTimeout(timeout);}
   })().finally(()=>{polling=null;});
   return polling;
 }

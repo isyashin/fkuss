@@ -75,9 +75,10 @@ describe("shop sw — мутации и чувствительные маршр�
 });
 
 describe("shop sw — GET API витрины: network-first (офлайн — последний кэш)", () => {
-  it("слоты брони попадают в network-first, а не под префикс /api/booking", () => {
+  it("слоты брони доступны офлайн; время заказа проверяется только через сеть", () => {
     expect(decide(`${ORIGIN}/api/booking/slots?date=2026-10-13`)).toBe("network-first");
-    expect(decide(`${ORIGIN}/api/delivery/slots`)).toBe("network-first");
+    expect(decide(`${ORIGIN}/api/delivery/slots`)).toBe("network-only");
+    expect(decide(`${ORIGIN}/api/delivery/slots?date=2026-10-23`)).toBe("network-only");
   });
 });
 
@@ -113,6 +114,7 @@ describe("shop sw — private documents and address previews", () => {
   });
   it("does not retain the v2 cache that could contain private documents", () => {
     expect(S.ALL_CACHES).not.toContain("fkuss-shop-pages-v2");
+    expect(S.ALL_CACHES).not.toContain("fkuss-shop-pages-v3");
   });
   it("never stores a personalized public page response", () => {
     expect(S.canCacheResponse({ ok: true, type: "basic", headers: new Headers({ "x-fkuss-cache": "public" }) })).toBe(true);

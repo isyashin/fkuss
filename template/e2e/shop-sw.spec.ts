@@ -32,3 +32,27 @@ test("SW-02: повторный визит офлайн — последние �
   await expect(page.getByRole("heading", { name: "Хинкали" })).toBeVisible({ timeout: 15000 });
   await context.setOffline(false);
 });
+
+test("SW-03: delivery availability cannot fall back to a cached future preorder offline", async ({ page, context }) => {
+  try {
+    await page.goto("/#menu");
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+    const online = await page.evaluate(async () => {
+      const response = await fetch("/api/delivery/slots");
+      return { status: response.status, cacheControl: response.headers.get("cache-control") };
+    });
+    expect(online.status).toBe(200);
+    expect(online.cacheControl).toContain("no-store");
+    const entries = await page.evaluate(async () => {
+      const all = await Promise.all((await caches.keys()).map(async name => (await (await caches.open(name)).keys()).map(request => new URL(request.url).pathname)));
+      return all.flat();
+    });
+    expect(entries).not.toContain("/api/delivery/slots");
+    // Even a previously poisoned cache cannot replace the failed network check.
+    await page.evaluate(async () => {
+      await (await caches.open("qa-stale-delivery")).put("/api/delivery/slots", new Response(JSON.stringify({asapAvailable:true,preOrder:{enabled:true,slots:[{date:"2099-01-01",time:"12:00"}]}}), {headers:{"Content-Type":"application/json"}}));
+    });
+    await context.setOffline(true);
+    expect(await page.evaluate(async () => { try { await fetch("/api/delivery/slots"); return true; } catch { return false; } })).toBe(false);
+  } finally { await context.setOffline(false); }
+});

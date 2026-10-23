@@ -113,6 +113,14 @@ test("disabled pickup and delivery cannot expose preorder controls", async ({ pa
   await expect(cart.getByRole("status")).toHaveText(CLOSED_WITHOUT_SLOTS);
   await expect(cart.getByRole("button", { name: /^Заказать/ })).toBeDisabled();
 });
+test("unavailable network cannot substitute a preorder or enable checkout", async ({ page }) => {
+  await page.route("**/api/delivery/slots", route => route.abort());
+  await page.goto("/");
+  const cart = await checkout(page);
+  await expect(cart.getByRole("alert")).toHaveText("Не удалось проверить доступность заказа. Закройте корзину и попробуйте снова.");
+  await expect(cart.getByRole("radio", { name: "Предзаказ ко времени" })).toHaveCount(0);
+  await expect(cart.getByRole("button", { name: /^Заказать/ })).toBeDisabled();
+});
 test("open storefront has no closed message, reopening removes it on reload", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("order-availability-notice")).toHaveText(CLOSED_WITHOUT_SLOTS);

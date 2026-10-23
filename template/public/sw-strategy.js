@@ -6,8 +6,9 @@
 
   /* Версия кэша: бамп при правке стратегий/прекэша — на activate
      старые кэши удаляются. v3 очищает прежние приватные записи; кэшируются
-     только явно публичные документы без персонального контекста. */
-  var VERSION = "v3";
+     только явно публичные документы без персонального контекста.
+     v4 удаляет старые слоты доставки: доступность заказа требует сети. */
+  var VERSION = "v4";
   var STATIC_CACHE = "fkuss-shop-static-" + VERSION;
   var PAGE_CACHE = "fkuss-shop-pages-" + VERSION;
 
@@ -37,7 +38,7 @@
 
   /* Публичные слоты проверяются ДО network-only по точному пути.
      Геопревью содержит адрес/координаты и никогда не сохраняется. */
-  var NETWORK_FIRST_PATHS = ["/api/booking/slots", "/api/delivery/slots"];
+  var NETWORK_FIRST_PATHS = ["/api/booking/slots"];
   var PUBLIC_DOCUMENT_PATHS = ["/", "/menu", "/delivery", "/booking", "/banquets"];
 
   /* Статика: хешированные чанки, оптимизированные изображения, ассеты

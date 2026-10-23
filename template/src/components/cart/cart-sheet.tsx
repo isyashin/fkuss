@@ -1,6 +1,7 @@
 "use client";
 
-import { GEO_ADDRESS_ERROR } from "@/lib/delivery/geo-policy";
+import { deliveryGeoMode, GEO_ADDRESS_ERROR } from "@/lib/delivery/geo-policy";
+import { CLOSED_WITHOUT_SLOTS } from "@/lib/order/availability";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -82,6 +83,7 @@ export function CartSheet({
     available: boolean;
     windows: { date: string; start: string; end: string }[];
   }[]>([]);
+  const [hasConfiguredOptions, setHasConfiguredOptions] = useState(false);
   const [deliveryOptionId, setDeliveryOptionId] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [slotStart, setSlotStart] = useState("");
@@ -103,6 +105,7 @@ export function CartSheet({
       .then((data) => {
         const opts = data.options ?? [];
         setOptions(opts);
+        setHasConfiguredOptions(data.hasConfiguredOptions ?? opts.length > 0);
         // F03: выбираем первый доступный — недоступные варианты не предлагаем.
         setDeliveryOptionId(opts.find((o: { available?: boolean }) => o.available)?.id ?? "");
         setPreOrder(data.preOrder ?? { enabled: false, slots: [] });
@@ -119,14 +122,14 @@ export function CartSheet({
   const minOrderShort = belowMinOrder ? minOrder - itemsTotal : 0;
   const selectedOption = options.find((o) => o.id === deliveryOptionId);
   // F03: если варианты настроены, но все недоступны сегодня — объясняем до отправки.
-  const noDeliveryAvailable = options.length > 0 && !selectedOption;
+  const noDeliveryAvailable = hasConfiguredOptions && !selectedOption;
   // F03: если все варианты доставки недоступны сегодня — сразу переключаем
   // гостя на самовывоз, чтобы итог и следующий шаг не вводили в заблуждение.
   // Корректировка состояния во время рендера (react-compiler: не setState в эффекте).
   const [prevNoDelivery, setPrevNoDelivery] = useState(false);
   if (noDeliveryAvailable !== prevNoDelivery) {
     setPrevNoDelivery(noDeliveryAvailable);
-    if (noDeliveryAvailable && type === "delivery") setType("pickup");
+    if (noDeliveryAvailable && delivery.pickupEnabled && type === "delivery") setType("pickup");
   }
   const zone = delivery.zones.find((z) => z.name === zoneName);
 
@@ -291,7 +294,9 @@ export function CartSheet({
   // Предзаказ: самовывоз всегда, доставка — только без настроенных вариантов
   // (варианты со scheduled-режимом уже дают выбор времени доставки)
   const preOrderApplicable =
-    preOrder.enabled && preOrder.slots.length > 0 && (type === "pickup" || options.length === 0);
+    preOrder.enabled && preOrder.slots.length > 0 && (
+      type === "pickup" ? delivery.pickupEnabled : delivery.enabled && !hasConfiguredOptions && deliveryGeoMode(delivery) !== "invalid"
+    );
   // Сброс выбора, когда предзаказ перестал применяться (варианты доставки подгрузились)
   const [prevPreOrderApplicable, setPrevPreOrderApplicable] = useState(false);
   if (preOrderApplicable !== prevPreOrderApplicable) {
@@ -513,7 +518,7 @@ export function CartSheet({
 
             {type === "delivery" && (
               <>
-                {options.length > 0 && (
+                {hasConfiguredOptions && (
                   <label className="block">
                     <span className="text-sm text-muted">Способ доставки</span>
                     <select
@@ -535,7 +540,7 @@ export function CartSheet({
                     </select>
                     {noDeliveryAvailable && (
                       <span className="mt-1 block text-sm text-red-600">
-                        Сегодня доставка недоступна по всем вариантам — выберите самовывоз.
+                        {delivery.pickupEnabled ? "Сейчас доставка недоступна — выберите самовывоз." : "Сейчас доставка недоступна."}
                       </span>
                     )}
                   </label>
@@ -889,7 +894,7 @@ export function CartSheet({
             </div>
 
             {error && <p className="text-red-600 text-sm">{error}</p>}
-            {asapBlocked && <p role="status" className="text-muted text-sm">Ресторан сейчас закрыт. Выберите доступное время предзаказа или вернитесь в часы работы.</p>}
+            {asapBlocked && <p role="status" className="text-muted text-sm">{preOrderApplicable ? "Сейчас ресторан закрыт. Выберите доступное время предзаказа." : CLOSED_WITHOUT_SLOTS}</p>}
             {availabilityError && <p role="alert" className="text-red-600 text-sm">Не удалось проверить доступность заказа. Закройте корзину и попробуйте снова.</p>}
             {belowMinOrder && (
               <p className="text-red-600 text-sm">

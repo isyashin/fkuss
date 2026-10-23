@@ -22,7 +22,7 @@ export function MenuClient({
   delivery,
   loyalty,
   guestContact,
-  isOpen,
+  closedMessage,
   paymentProvider = "none",
   bonusBalance = 0,
   cabinetEnabled = false,
@@ -34,7 +34,7 @@ export function MenuClient({
   delivery: ContentSettings["delivery"];
   loyalty: ContentSettings["loyalty"];
   guestContact: GuestChannels;
-  isOpen?: boolean;
+  closedMessage?: string | null;
   paymentProvider?: string;
   bonusBalance?: number;
   cabinetEnabled?: boolean;
@@ -156,17 +156,17 @@ export function MenuClient({
 
   return (
     <div ref={menuRef} className="pb-24">
-      {isOpen === false && (
-        <div className="bg-amber-100 text-amber-900 text-center text-sm py-2 px-4">
-          Сейчас ресторан закрыт — принимаем предзаказы на время открытия
-        </div>
-      )}
       <div
         ref={navigationRef}
         data-testid="menu-navigation"
         className="sticky z-30 bg-background/95 backdrop-blur"
         style={{ top: "var(--menu-header-height, 3.5rem)" }}
       >
+        {closedMessage && (
+          <div role="status" data-testid="order-availability-notice" className="bg-amber-100 text-amber-900 text-center text-sm py-2 px-4">
+            {closedMessage}
+          </div>
+        )}
         {/* Переключатель меню («Хинкальная» / «Пироги и пицца») */}
         {switchItems.length > 0 && (
           <div className="border-b border-foreground/10">

@@ -5,6 +5,7 @@ import { MenuClient } from "@/components/menu/menu-client";
 import { getPrisma } from "@/lib/db";
 import { visibleGuestChannels } from "@/lib/guest-contact";
 import { normalizeGuestCabinet } from "@/lib/guest-cabinet";
+import { orderAvailability } from "@/lib/order/availability";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +21,20 @@ export default async function HomePage() {
 
   const schedule = resolveSchedule(restaurant);
   const tz = (settings as { timezone?: string }).timezone ?? "Europe/Moscow";
-  const nowLocal = nowInTimeZone(tz);
+  const now = new Date();
+  const nowLocal = nowInTimeZone(tz, now);
   const open = isOpenAt(schedule, nowLocal.date, nowLocal.time);
+
+  let closedMessage: string | null = null;
+  if (!open) {
+    try {
+      const options = await getPrisma().deliveryOption.findMany({ orderBy: { position: "asc" } });
+      closedMessage = orderAvailability(settings, restaurant, options, now).closedMessage;
+    } catch {
+      // A failed availability lookup must not promise a future order.
+      closedMessage = "Сейчас ресторан закрыт. Проверьте доступное время в корзине.";
+    }
+  }
 
   // Баланс бонусов и адрес авторизованного гостя (для корзины)
   const cabinet = normalizeGuestCabinet(settings);
@@ -105,7 +118,7 @@ export default async function HomePage() {
             delivery={settings.delivery}
             loyalty={settings.loyalty}
             guestContact={visibleGuestChannels(settings)}
-            isOpen={open}
+            closedMessage={closedMessage}
             paymentProvider={settings.payment.provider}
             bonusBalance={bonusBalance}
             cabinetEnabled={cabinet.enabled}

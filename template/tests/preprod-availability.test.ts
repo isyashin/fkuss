@@ -45,6 +45,13 @@ describe("preproduction API boundaries", () => {
     expect((await response.json()).error).toMatch(/закрыт/i);
     expect(mock.create).not.toHaveBeenCalled();
   });
+  it("does not suggest an unavailable preorder in the closed-order error", async () => {
+    mock.settings.preOrder = { enabled: false, slots: [], daysAhead: 0, minAheadMinutes: 30 };
+    const response = await order(request(payload));
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe("Сейчас ресторан закрыт. Заказ на ближайшее время недоступен.");
+    expect(mock.create).not.toHaveBeenCalled();
+  });
   it("still accepts an explicitly configured future preorder while closed", async () => {
     const response = await order(request({ ...payload, preOrderDate: "2026-10-20", preOrderTime: "13:00" }));
     expect(response.status).toBe(200);

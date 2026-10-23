@@ -349,7 +349,7 @@ export async function POST(request: Request) {
     const restaurant = await getSiteRestaurant();
     const local = nowInTimeZone(tz, now);
     if (!isOpenAt(resolveSchedule(restaurant), local.date, local.time)) {
-      return NextResponse.json({ error: "Ресторан сейчас закрыт. Выберите доступное время предзаказа." }, { status: 400 });
+      return NextResponse.json({ error: "Сейчас ресторан закрыт. Заказ на ближайшее время недоступен." }, { status: 400 });
     }
   }
 

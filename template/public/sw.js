@@ -4,7 +4,7 @@
    stale-while-revalidate; документ без сети и без кэша — заглушка
    /offline.html. POST/заказы/оплата/админка — только сеть, кэш запрещён.
    Правила выбора стратегии — в sw-strategy.js (юнит-тесты: tests/shop-sw.test.ts). */
-importScripts("/sw-strategy.js?v=3");
+importScripts("/sw-strategy.js?v=4");
 
 var STRATEGY = self.ShopSwStrategy;
 var SELF_ORIGIN = self.location.origin;

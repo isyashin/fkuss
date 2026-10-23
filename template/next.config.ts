@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     // HTML ревалидируется; персональные ответы заказов вообще не хранятся.
     return [
       { source: "/:path*", headers: [{ key: "Cache-Control", value: "no-cache" }] },
+      { source: "/api/delivery/slots", headers: [{ key: "Cache-Control", value: "no-store" }] },
       { source: "/api/order/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }, { key: "Vary", value: "Cookie" }] },
     ];
   },

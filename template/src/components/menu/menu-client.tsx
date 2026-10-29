@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useMounted } from "@/lib/use-mounted";
 import { dishImageUrl } from "@/lib/assets";
 import { DishImage } from "@/components/menu/dish-image";
 import type { Menu, Dish } from "@/lib/content";
@@ -44,6 +45,7 @@ export function MenuClient({
   /** Ключ JS API Яндекс.Карт — зоны на карте и подсказки адресов. */
   ymapsKey?: string;
 }) {
+  const mounted = useMounted();
   const menus = menu.menus ?? [];
   // Пустые категории (нет доступных блюд) на витрине не показываем —
   // и в табах, и в секциях (issue #43).
@@ -79,23 +81,88 @@ export function MenuClient({
   // Гасим только клик, завершающий жест драга (400 мс), а не все следующие клики
   const suppressClickUntil = useRef(0);
 
-  // Both navigation rows share one sticky box. Measure the actual header and
-  // navigation, including borders, font changes and a missing menu-switch row.
-  useEffect(() => {
+  const scrollTarget = useRef<string | null>(null);
+  const menuChanged = useRef(false);
+
+  // Read current geometry on the actual tap as well as on resize: a font or
+  // notice can change between the observer's last callback and this event.
+  const measureNavigation = useCallback(() => {
     const root = menuRef.current;
+    const headerHeight = document.querySelector<HTMLElement>("[data-site-header]")?.getBoundingClientRect().height ?? 0;
+    const navHeight = navigationRef.current?.getBoundingClientRect().height ?? 0;
+    root?.style.setProperty("--menu-header-height", `${headerHeight}px`);
+    root?.style.setProperty("--menu-nav-height", `${navHeight}px`);
+    return { headerHeight, navHeight };
+  }, []);
+
+  const revealActiveCategory = useCallback(() => {
+    const container = tabsRef.current;
+    const chip = container?.querySelector<HTMLElement>('[data-active="true"]');
+    if (!container || !chip) return;
+    const row = container.getBoundingClientRect();
+    const tab = chip.getBoundingClientRect();
+    if (tab.left < row.left) container.scrollLeft += tab.left - row.left - 8;
+    else if (tab.right > row.right) container.scrollLeft += tab.right - row.right + 8;
+  }, []);
+
+  const scrollToCategory = useCallback((id: string, animated = true) => {
+    const section = document.getElementById(`cat-${id}`);
+    if (!section) return;
+    const { headerHeight, navHeight } = measureNavigation();
+    window.scrollTo({
+      top: window.scrollY + section.getBoundingClientRect().top - headerHeight - navHeight,
+      behavior: animated && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "instant",
+    });
+  }, [measureNavigation]);
+
+  // Measure before useMounted enables the SSR-disabled controls. Late font or
+  // viewport changes keep a requested heading visible until the guest scrolls.
+  useLayoutEffect(() => {
     const navigation = navigationRef.current;
     const header = document.querySelector<HTMLElement>("[data-site-header]");
-    if (!root || !navigation || !header) return;
-    const measure = () => {
-      root.style.setProperty("--menu-header-height", `${header.getBoundingClientRect().height}px`);
-      root.style.setProperty("--menu-nav-height", `${navigation.getBoundingClientRect().height}px`);
+    if (!navigation) return;
+    let previous = { ...measureNavigation(), width: navigation.getBoundingClientRect().width };
+    const resize = () => {
+      const next = { ...measureNavigation(), width: navigation.getBoundingClientRect().width };
+      if (next.headerHeight === previous.headerHeight && next.navHeight === previous.navHeight && next.width === previous.width) return;
+      previous = next;
+      if (!dragRef.current) revealActiveCategory();
+      if (scrollTarget.current) scrollToCategory(scrollTarget.current, false);
     };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(header);
+    measureNavigation();
+    const observer = new ResizeObserver(resize);
     observer.observe(navigation);
-    return () => observer.disconnect();
-  }, []);
+    if (header) observer.observe(header);
+    window.addEventListener("resize", resize);
+    // A new gesture cancels automatic alignment; never fight manual scrolling.
+    const cancel = () => { scrollTarget.current = null; };
+    const key = (event: KeyboardEvent) => {
+      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) cancel();
+    };
+    window.addEventListener("wheel", cancel, { passive: true });
+    window.addEventListener("touchstart", cancel, { passive: true });
+    window.addEventListener("pointerdown", cancel, { passive: true });
+    window.addEventListener("keydown", key);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("wheel", cancel);
+      window.removeEventListener("touchstart", cancel);
+      window.removeEventListener("pointerdown", cancel);
+      window.removeEventListener("keydown", key);
+    };
+  }, [measureNavigation, revealActiveCategory, scrollToCategory]);
+
+  useLayoutEffect(() => {
+    if (!menuChanged.current) return;
+    menuChanged.current = false;
+    scrollTarget.current = null;
+    const { headerHeight } = measureNavigation();
+    const root = menuRef.current;
+    if (root) window.scrollTo({ top: window.scrollY + root.getBoundingClientRect().top - headerHeight, behavior: "instant" });
+  }, [activeMenuId, measureNavigation]);
+
+  useLayoutEffect(revealActiveCategory, [activeCategory, revealActiveCategory]);
 
   // Вертикальное колесо над табами прокручивает ряд по горизонтали
   // (нативный слушатель: React вешает wheel пассивно и preventDefault не сработал бы).
@@ -142,26 +209,16 @@ export function MenuClient({
     };
   }, []);
 
-  // Активная категория доводится в видимую область ряда (только по горизонтали,
-  // без вертикального скролла страницы).
-  useEffect(() => {
-    const container = tabsRef.current;
-    const chip = container?.querySelector<HTMLElement>('[data-active="true"]');
-    if (!container || !chip) return;
-    const chipLeft = chip.offsetLeft;
-    const chipRight = chipLeft + chip.offsetWidth;
-    if (chipLeft < container.scrollLeft) container.scrollLeft = chipLeft - 8;
-    else if (chipRight > container.scrollLeft + container.clientWidth) container.scrollLeft = chipRight - container.clientWidth + 8;
-  }, [activeCategory]);
-
   return (
     <div ref={menuRef} className="pb-24">
       <div
         ref={navigationRef}
         data-testid="menu-navigation"
+        aria-busy={!mounted}
         className="sticky z-30 bg-background/95 backdrop-blur"
         style={{ top: "var(--menu-header-height, 3.5rem)" }}
       >
+        {!mounted && <span role="status" className="absolute right-4 bottom-0 text-xs text-muted">Загрузка меню…</span>}
         {closedMessage && (
           <div role="status" data-testid="order-availability-notice" className="bg-amber-100 text-amber-900 text-center text-sm py-2 px-4">
             {closedMessage}
@@ -177,13 +234,16 @@ export function MenuClient({
                   type="button"
                   role="tab"
                   aria-selected={activeMenuId === group.id}
+                  disabled={!mounted}
                   data-active={activeMenuId === group.id ? "true" : undefined}
                   onClick={() => {
+                    if (activeMenuId === group.id) return;
+                    menuChanged.current = true;
                     setActiveMenuId(group.id);
                     const first = displayCategories.find((c) => (c.menuId ?? "") === group.id);
                     setActiveCategory(first?.id ?? "");
                   }}
-                  className={`min-h-11 shrink-0 px-5 rounded-full text-sm font-semibold transition-colors ${
+                  className={`min-h-11 shrink-0 px-5 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-wait ${
                     activeMenuId === group.id ? "bg-foreground text-background" : "bg-card text-foreground"
                   }`}
                 >
@@ -221,11 +281,13 @@ export function MenuClient({
                 role="tab"
                 data-active={activeCategory === c.id ? "true" : undefined}
                 aria-selected={activeCategory === c.id}
+                disabled={!mounted}
                 onClick={() => {
                   setActiveCategory(c.id);
-                  document.getElementById(`cat-${c.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  scrollTarget.current = c.id;
+                  scrollToCategory(c.id);
                 }}
-                className={`min-h-11 shrink-0 px-4 rounded-full text-sm font-medium transition-colors ${
+                className={`min-h-11 shrink-0 px-4 rounded-full text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-wait ${
                   activeCategory === c.id ? "bg-accent text-white" : "bg-card text-foreground"
                 }`}
               >

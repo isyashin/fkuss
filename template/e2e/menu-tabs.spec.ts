@@ -7,6 +7,7 @@ test("табы категорий листаются мышью и колесо�
   await page.goto("/#menu");
   const tabs = page.getByTestId("menu-tabs");
   await expect(tabs).toBeVisible();
+  await expect(tabs.getByRole("tab").first()).toBeEnabled();
   const overflows = await tabs.evaluate((el) => el.scrollWidth > el.clientWidth);
   if (!overflows) {
     console.log("ряд категорий короче контейнера — прокрутка не требуется, пропуск");
@@ -40,6 +41,7 @@ test("табы категорий листаются мышью и колесо�
   await page.reload();
   const first = tabs.getByRole("tab").first();
   await expect(first).toHaveAttribute("data-active", "true"); // предусловие: первая активна
+  await expect(first).toBeEnabled();
   const firstBox = (await first.boundingBox())!;
   await page.mouse.move(firstBox.x + 20, firstBox.y + firstBox.height / 2);
   await page.mouse.down();
@@ -54,6 +56,7 @@ test("табы категорий листаются свайпом на тач-
   await page.goto("/#menu");
   const tabs = page.getByTestId("menu-tabs");
   await expect(tabs).toBeVisible();
+  await expect(tabs.getByRole("tab").first()).toBeEnabled();
   const overflows = await tabs.evaluate((el) => el.scrollWidth > el.clientWidth);
   expect(overflows).toBe(true);
 

@@ -121,9 +121,12 @@ export function MenuClient({
     const navigation = navigationRef.current;
     const header = document.querySelector<HTMLElement>("[data-site-header]");
     if (!navigation) return;
+    let previous = { ...measureNavigation(), width: navigation.getBoundingClientRect().width };
     const resize = () => {
-      measureNavigation();
-      revealActiveCategory();
+      const next = { ...measureNavigation(), width: navigation.getBoundingClientRect().width };
+      if (next.headerHeight === previous.headerHeight && next.navHeight === previous.navHeight && next.width === previous.width) return;
+      previous = next;
+      if (!dragRef.current) revealActiveCategory();
       if (scrollTarget.current) scrollToCategory(scrollTarget.current, false);
     };
     measureNavigation();

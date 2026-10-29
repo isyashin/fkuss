@@ -72,3 +72,12 @@ test('МГ-03: правка во время сохранения не теряе
  await page.waitForTimeout(1500);expect(saves).toBe(2);
  await page.reload();await page.getByRole('tab',{name:/Магнит · 50/}).click();await expect(editor.getByLabel('Фраза над акцентом')).toHaveValue(lead);await expect(editor.getByLabel('Крупный акцент')).toHaveValue(accent);
 });
+
+test('МГ-04: предпросмотр восстанавливается после сетевой ошибки без изменения текста',async({page})=>{
+ await page.goto('/admin/login');await loginAdminUi(page);
+ await page.route('**/api/admin/magnet',route=>route.request().postDataJSON()?.action==='preview'?route.abort('failed'):route.continue());
+ await gotoAdmin(page,'/admin/settings?section=print');await page.getByRole('tab',{name:/Магнит · 50/}).click();const editor=page.getByTestId('magnet-editor');
+ await expect(editor.getByRole('button',{name:'Повторить предпросмотр'})).toBeVisible({timeout:20_000});const text=await editor.getByLabel('Название',{exact:true}).inputValue();
+ await page.unroute('**/api/admin/magnet');await editor.getByRole('button',{name:'Повторить предпросмотр'}).click();
+ await expect(editor.getByRole('img',{name:/Предпросмотр/})).toBeVisible();await expect(editor.getByRole('button',{name:'Повторить предпросмотр'})).not.toBeVisible();await expect(editor.getByLabel('Название',{exact:true})).toHaveValue(text);
+});

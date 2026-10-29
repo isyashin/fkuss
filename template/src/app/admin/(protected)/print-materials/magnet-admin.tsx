@@ -67,10 +67,10 @@ export function MagnetAdmin({data}:{data:MagnetEditorData}){
   const ready=!dirty&&status==='Сохранено'&&draft.photos.every(p=>p&&p.dpi>=150)&&!exporting&&!previewError;
   return <div className={styles.editor} data-testid="magnet-editor">
     <aside className={styles.preview}>
-      <div className={styles.paper}>{preview?<img src={preview} alt="Предпросмотр магнита 50 × 70 мм"/>:<div className={styles.placeholder}>Готовим предпросмотр…</div>}</div>
+      <div className={styles.paper}>{preview?<img src={preview} alt="Предпросмотр магнита 50 × 70 мм"/>:<div className={styles.placeholder}>{previewError?'Предпросмотр недоступен':'Готовим предпросмотр…'}</div>}</div>
       <p className={styles.dimensions}>50 × 70 мм · вылеты в PDF по 3 мм</p>
       <p className={styles.destination}>QR откроет <a href={data.qrUrl} target="_blank" rel="noreferrer">{new URL(data.qrUrl).host}</a></p>
-      {previewError&&<p role="alert" className={styles.error}>{previewError}</p>}
+      {previewError&&<div><p role="alert" className={styles.error}>{previewError}</p><button type="button" className={styles.secondary} onClick={()=>{setPreviewError("");setRetry(v=>v+1);}}>Повторить предпросмотр</button></div>}
     </aside>
     <div className={styles.controls}>
       <section className={styles.section}>
@@ -118,3 +118,4 @@ export function MagnetAdmin({data}:{data:MagnetEditorData}){
     </dialog>
   </div>;
 }
+

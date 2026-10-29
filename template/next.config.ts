@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Standalone нужен Docker; локальный/CI build запускается через next start.
   output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
+  outputFileTracingIncludes: { "/api/admin/magnet": ["./assets/print-fonts/**/*"] },
   images: { formats: ["image/avif", "image/webp"] },
   async headers() {
     // HTML ревалидируется; персональные ответы заказов вообще не хранятся.

@@ -13,6 +13,8 @@ import { GalleryAdmin } from "../gallery/gallery-admin";
 import { BanquetsAdmin } from "../banquets/banquets-admin";
 import { PagesAdmin } from "../pages/pages-admin";
 import { SyncAdmin } from "../sync/sync-admin";
+import { MagnetAdmin } from "../print-materials/magnet-admin";
+import { magnetEditorData } from "@/lib/magnet-server";
 import { PrintMaterialsAdmin } from "../print-materials/print-materials-admin";
 import { DeliveryTabs } from "../delivery/delivery-tabs";
 import { geocodeAddress } from "@/lib/delivery/geocoder";
@@ -126,9 +128,10 @@ async function SectionPrint() {
     card: withCanonicalQrUrl(normalized.card, settings.domains.canonical),
     magnet: withCanonicalQrUrl(normalized.magnet, settings.domains.canonical),
   };
+  const magnetData = await magnetEditorData();
   const brand: PrintBrand = { name: restaurant.name, phone: restaurant.phone, address: restaurant.address, logoUrl: restaurant.logo ? contentAssetUrl(restaurant.logo) : "" };
   return <div className={styles.legacyCard}><h2>Печатные материалы</h2><p className={styles.editorHint}>Визитка и магнит с QR-ссылкой</p>
-    <PrintMaterialsAdmin initialSettings={printSettings} brand={brand} restaurantSlug={restaurant.slug} /></div>;
+    <PrintMaterialsAdmin initialSettings={printSettings} brand={brand} restaurantSlug={restaurant.slug} hasLegacyMagnet={!!(printStored?.value as Record<string, unknown> | null)?.magnet} magnetEditor={<MagnetAdmin data={magnetData} />} /></div>;
 }
 
 async function SectionDeliveryZones({ settings }: { settings: Awaited<ReturnType<typeof getSiteSettings>> }) {

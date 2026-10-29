@@ -52,3 +52,6 @@ playwright-report/
 # Локальные QA-артефакты и прототип (хранятся только локально)
 /test-front/
 /qa-artifacts/
+
+# Неизменяемые runtime-снимки фото для печатных макетов
+/template/content/images/print-assets/

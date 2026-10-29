@@ -1,0 +1,20 @@
+[
+  {
+    "id": "roboto-condensed",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/robotocondensed/RobotoCondensed%5Bwght%5D.ttf",
+    "weight": 700,
+    "sha256": "c9cf0f81795ee7490161567c2130048039b0958c6b62442375fb8079ee17a42f"
+  },
+  {
+    "id": "oswald",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/oswald/Oswald%5Bwght%5D.ttf",
+    "weight": 700,
+    "sha256": "c7c8b61916ead54a1d203853e1ddefdea276e3c5f81069a3b918c7556004346d"
+  },
+  {
+    "id": "pt-sans",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/ptsans/PT_Sans-Web-Bold.ttf",
+    "weight": 700,
+    "sha256": "3128bd5ecf01816e59a23d54c57a7a6b14615b07db53ff277c77376010265b05"
+  }
+]

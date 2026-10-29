@@ -1,14 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { loginAdminUi } from "./login-admin";
-
-// router.refresh() админки прерывает goto (RSC-стриминг) — повторяем переход один раз.
-async function gotoStable(page: Page, path: string) {
-  await page.goto(path, { waitUntil: "commit" }).catch(async () => {
-    await page.waitForLoadState("load").catch(() => {});
-    await page.goto(path, { waitUntil: "commit" });
-  });
-  await page.waitForLoadState("networkidle").catch(() => {});
-}
+import { loginAdminUi, gotoAdmin as gotoStable } from "./login-admin";
 
 async function assertResponsivePage(page: Page, path: string) {  const brokenAssets: string[] = [];
   const onResponse = (response: { url: () => string; status: () => number }) => {
@@ -20,14 +11,21 @@ async function assertResponsivePage(page: Page, path: string) {  const brokenAss
 
   page.on("response", onResponse);
   try {
-    // waitUntil: "commit" — убирает гонку с router.refresh() админки (RSC-стриминг
-    // прерывал goto ошибкой «interrupted by another navigation»); готовность ниже
-    // всё равно ждём опросом readyState. При прерывании повторяем переход один раз.
-    await page.goto(path, { waitUntil: "commit" }).catch(async () => {
-      await page.waitForLoadState("load").catch(() => {});
-      await page.goto(path, { waitUntil: "commit" });
-    });
-    await expect.poll(() => page.evaluate(() => document.readyState)).toBe("complete");
+    // Use DOM + the existing hydration contract, independently of background
+    // downloads. Validate visible local content assets explicitly below.
+    await gotoStable(page, path);
+    const menu = page.getByTestId("menu-navigation");
+    if (await menu.count()) await expect(menu).toHaveAttribute("aria-busy", "false");
+    await page.evaluate(async () => { await document.fonts.ready; });
+    await expect.poll(() => page.locator('img[src*="/content-asset/"]').evaluateAll((images) => images
+      .filter((element) => {
+        const r = element.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && r.top < innerHeight && r.bottom > 0 && r.left < innerWidth && r.right > 0;
+      })
+      .filter((element) => !(element as HTMLImageElement).complete || (element as HTMLImageElement).naturalWidth === 0)
+      .map((element) => (element as HTMLImageElement).currentSrc || (element as HTMLImageElement).src)), {
+      timeout: 15_000, message: `${path} visible content images failed to load`,
+    }).toEqual([]);
     const layout = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
       content: document.documentElement.scrollWidth,

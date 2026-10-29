@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useDirtyGuard } from "../admin-dirty";
 import QRCode from "qrcode";
 import {
@@ -19,9 +19,9 @@ import {
 import { savePrintMaterial } from "./actions";
 import styles from "./print-materials-admin.module.css";
 
-const MATERIALS: { kind: PrintMaterialKind; label: string; hint: string }[] = [
+const MATERIALS: { kind: PrintMaterialKind | "magnet50"; label: string; hint: string }[] = [
   { kind: "card", label: "Визитка", hint: "Вкладыш 90 × 50 мм" },
-  { kind: "magnet", label: "Магнит", hint: "Квадрат 70 × 70 мм" },
+  { kind: "magnet50", label: "Магнит", hint: "50 × 70 мм" },
 ];
 
 const STYLES: { value: PrintMaterialStyle; label: string }[] = [
@@ -40,21 +40,26 @@ export function PrintMaterialsAdmin({
   initialSettings,
   brand,
   restaurantSlug,
+  magnetEditor,
+  hasLegacyMagnet,
 }: {
   initialSettings: PrintMaterialsSettings;
   brand: PrintBrand;
   restaurantSlug: string;
+  magnetEditor: ReactNode;
+  hasLegacyMagnet: boolean;
 }) {
   const [settings, setSettings] = useState(initialSettings);
   const [savedSettings, setSavedSettings] = useState(initialSettings);
   useDirtyGuard(JSON.stringify(settings) !== JSON.stringify(savedSettings));
-  const [kind, setKind] = useState<PrintMaterialKind>("card");
+  const [kind, setKind] = useState<PrintMaterialKind | "magnet50">("card");
   const [qrPreview, setQrPreview] = useState({ url: "", data: "" });
   const [message, setMessage] = useState("");
   const [exporting, setExporting] = useState<PrintExportFormat | null>(null);
   const [pending, startTransition] = useTransition();
-  const design = settings[kind];
-  const spec = PRINT_MATERIAL_SPECS[kind];
+  const legacyKind = kind === "magnet50" ? "card" : kind;
+  const design = settings[legacyKind];
+  const spec = PRINT_MATERIAL_SPECS[legacyKind];
   const validation = useMemo(() => printMaterialDesignSchema.safeParse(design), [design]);
   const trackedUrl = useMemo(() => {
     if (!validation.success) return "";
@@ -91,7 +96,7 @@ export function PrintMaterialsAdmin({
     setMessage("");
     setSettings((current) => ({
       ...current,
-      [kind]: { ...current[kind], ...patch, kind },
+      [legacyKind]: { ...current[legacyKind], ...patch, kind: legacyKind },
     }));
   }
 
@@ -103,7 +108,7 @@ export function PrintMaterialsAdmin({
     startTransition(async () => {
       try {
         await savePrintMaterial(validation.data);
-        setSavedSettings((current) => ({ ...current, [kind]: validation.data }));
+        setSavedSettings((current) => ({ ...current, [legacyKind]: validation.data }));
         setMessage("Настройки сохранены");
       } catch {
         setMessage("Не удалось сохранить настройки");
@@ -154,7 +159,7 @@ export function PrintMaterialsAdmin({
   return (
     <div className={styles.editor}>
       <div className={styles.tabs} role="tablist" aria-label="Тип макета">
-        {MATERIALS.map((material) => (
+        {[...MATERIALS, ...(hasLegacyMagnet ? [{ kind: "magnet" as const, label: "Сохранённый магнит", hint: "70 × 70 мм" }] : [])].map((material) => (
           <button
             key={material.kind}
             type="button"
@@ -171,7 +176,8 @@ export function PrintMaterialsAdmin({
         ))}
       </div>
 
-      <div className={styles.layoutGrid}>
+      <div hidden={kind !== "magnet50"}>{magnetEditor}</div>
+      {kind !== "magnet50" && <div className={styles.layoutGrid}>
         <div className="space-y-5 min-w-0">
           <section className={styles.section}>
             <div>
@@ -335,7 +341,7 @@ export function PrintMaterialsAdmin({
             </p>
           </div>
         </aside>
-      </div>
+      </div>}
     </div>
   );
 }

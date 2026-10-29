@@ -38,7 +38,7 @@ async function aligned(page: Page, g: number, c: number) {
   await expect(page.getByRole('heading',{name:categoryName(g,c),exact:true})).toBeInViewport();
 }
 
-test("SSR navigation is disabled while scripts load; the first enabled tap switches and scrolls", async ({ page }) => {
+test("SSR navigation is disabled while scripts load; the first enabled tap switches and scrolls", async ({ page }, testInfo) => {
   let release!: () => void;
   const blocked = new Promise<void>(resolve => { release=resolve; });
   await page.route('**/_next/static/**/*.js', async route => { await blocked; await route.continue(); });
@@ -51,15 +51,19 @@ test("SSR navigation is disabled while scripts load; the first enabled tap switc
     await expect(category).toBeDisabled();
     await expect(page.getByTestId('menu-navigation')).toHaveAttribute('aria-busy','true');
     const box=(await other.boundingBox())!;
-    await page.mouse.click(box.x+box.width/2,box.y+box.height/2);
+    if (testInfo.project.name === "webkit-mobile") await page.touchscreen.tap(box.x+box.width/2,box.y+box.height/2);
+    else await page.mouse.click(box.x+box.width/2,box.y+box.height/2);
     await expect(other).toHaveAttribute('aria-selected','false');
     release();
     await expect(other).toBeEnabled();
     // No CSS-variable, font, timeout or network-idle wait before this first tap.
-    await other.click();
+    if (testInfo.project.name === "webkit-mobile") await other.tap();
+    else await other.click();
     await expect(other).toHaveAttribute('aria-selected','true');
     await expect(page.getByRole('heading',{name:categoryName(1,0),exact:true})).toBeVisible();
-    await page.getByTestId('menu-tabs').getByRole('tab').nth(2).click();
+    const target = page.getByTestId('menu-tabs').getByRole('tab').nth(2);
+    if (testInfo.project.name === "webkit-mobile") await target.tap();
+    else await target.click();
     await aligned(page,1,2);
   } finally { release(); }
 });

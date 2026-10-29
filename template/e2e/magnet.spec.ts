@@ -4,7 +4,7 @@ test.use({serviceWorkers:'block'});
 import sharp from 'sharp';import jsQR from 'jsqr';import {PDFDocument}from'pdf-lib';
 
 test('МГ-01: четыре блюда, оба меню, текст и шрифты, автосохранение и настоящий QR',async({page})=>{
- test.setTimeout(120_000);
+ test.setTimeout(180_000);
  await page.goto('/admin/login');await loginAdminUi(page);await gotoAdmin(page,'/admin/settings?section=print');
  await page.getByRole('tab',{name:/Магнит · 50/}).click();const editor=page.getByTestId('magnet-editor');
  await expect(editor.getByRole('img',{name:/Предпросмотр/})).toBeVisible();
@@ -28,7 +28,15 @@ test('МГ-01: четыре блюда, оба меню, текст и шриф�
  await page.reload();await page.getByRole('tab',{name:/Магнит · 50/}).click();await expect(editor.getByLabel('Название',{exact:true})).toHaveValue('Ресторан тестов');await expect(editor.getByLabel('Фраза над акцентом')).toHaveValue('На нашем сайте на');
  const url=await editor.locator('a[target="_blank"]').getAttribute('href');
  for(const format of ['PNG','для печати']){
-  const waiting=page.waitForEvent('download');await editor.getByRole('button',{name:`Скачать ${format}`,exact:true}).click();const download=await waiting;const chunks:Buffer[]=[];
+  const action=format==='PNG'?'png':'pdf';
+  const [download]=await Promise.all([
+    page.waitForEvent('download',{timeout:130_000}),
+    page.waitForResponse(r=>r.url().endsWith('/api/admin/magnet')&&r.request().postDataJSON()?.action===action).then(async response=>{
+      expect(response.ok(),`${action} HTTP ${response.status()}: ${response.ok()?'':await response.text()}`).toBe(true);
+    }),
+    editor.getByRole('button',{name:`Скачать ${format}`,exact:true}).click(),
+  ]);
+  const chunks:Buffer[]=[];
   for await(const chunk of await download.createReadStream())chunks.push(Buffer.from(chunk));const bytes=Buffer.concat(chunks);
   if(format==='PNG'){const{data,info}=await sharp(bytes).ensureAlpha().raw().toBuffer({resolveWithObject:true});expect(jsQR(new Uint8ClampedArray(data),info.width,info.height)?.data).toBe(url);}
   else{const pdf=await PDFDocument.load(bytes);expect(pdf.getSubject()).toBe(url);expect(pdf.getPage(0).getTrimBox().width).toBeCloseTo(50/25.4*72);}
@@ -64,4 +72,3 @@ test('МГ-03: правка во время сохранения не теряе
  await page.waitForTimeout(1500);expect(saves).toBe(2);
  await page.reload();await page.getByRole('tab',{name:/Магнит · 50/}).click();await expect(editor.getByLabel('Фраза над акцентом')).toHaveValue(lead);await expect(editor.getByLabel('Крупный акцент')).toHaveValue(accent);
 });
-

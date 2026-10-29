@@ -8,7 +8,7 @@ import styles from "./magnet-admin.module.css";
 const fingerprint=(input:MagnetInput)=>JSON.stringify({headline:input.headline.trim(),lead:input.lead.trim(),accent:input.accent.trim(),tail:input.tail.trim(),font:input.font,photos:input.photos.map(p=>p?{dishId:p.dishId,snapshot:p.snapshot}:null)});
 async function request(action:string,body:object,signal?:AbortSignal){
   let res:Response;
-  try{res=await fetch('/api/admin/magnet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body}),signal:signal??AbortSignal.timeout(15_000)});}
+  try{res=await fetch('/api/admin/magnet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body}),signal:signal??AbortSignal.timeout(action==='pdf'?120_000:action==='png'?60_000:15_000)});}
   catch(e){if(e instanceof DOMException&&e.name==='AbortError')throw e;throw new Error('Нет связи с сервером. Изменения остаются на экране');}
   if(!res.ok){const data=await res.json().catch(()=>({}));throw new Error(data.error??'Не удалось выполнить запрос');}return res;
 }
@@ -59,7 +59,7 @@ export function MagnetAdmin({data}:{data:MagnetEditorData}){
     setExporting(format);setError('');
     try{
       const res=await request(format,{revision:draft.revision});const blob=await res.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');
-      a.href=url;a.download=/filename="([^"]+)"/.exec(res.headers.get('Content-Disposition')??'')?.[1]??`magnet-50x70mm.${format}`;a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+      a.href=url;a.download=/filename="([^"]+)"/.exec(res.headers.get('Content-Disposition')??'')?.[1]??`magnet-50x70mm.${format}`;document.body.appendChild(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),30_000);
     }catch(e){setError(e instanceof Error?e.message:'Не удалось скачать файл');}finally{setExporting('');}
   }
   const menus=[...new Set(data.dishes.map(d=>d.menu))];const query=search.trim().toLocaleLowerCase('ru');

@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import sharp from "sharp";
 import jsQR from "jsqr";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, PDFRawStream, PDFName, PDFNumber } from "pdf-lib";
 import { defaultMagnet, magnetQrUrl, magnetInputSchema } from "../src/lib/magnet";
 import { exportMagnet, magnetArtwork, magnetText } from "../src/lib/magnet-renderer";
 
@@ -30,6 +30,10 @@ describe("50×70 magnet artwork",()=>{
     expect(p.getSize().width).toBeCloseTo(mm(56));expect(p.getSize().height).toBeCloseTo(mm(76));
     for(const [key,value] of Object.entries({x:mm(3),y:mm(3),width:mm(50),height:mm(70)}))expect(p.getTrimBox()[key as "x"|"y"|"width"|"height"]).toBeCloseTo(value,8);
     expect(p.getBleedBox().width).toBeCloseTo(mm(56));expect(pdf.getSubject()).toBe(url);
+    const images=pdf.context.enumerateIndirectObjects().map(([,o])=>o).filter((o):o is PDFRawStream=>o instanceof PDFRawStream && o.dict.get(PDFName.of('Subtype'))===PDFName.of('Image'));
+    expect(images.length).toBeGreaterThan(0);
+    for(const image of images){expect((image.dict.get(PDFName.of('Width')) as PDFNumber).asNumber()).toBeLessThanOrEqual(1323);expect((image.dict.get(PDFName.of('Height')) as PDFNumber).asNumber()).toBeLessThanOrEqual(1795);}
+    expect(bytes.length).toBeLessThan(10*1024*1024);
   },30000);
   it.each(['roboto-condensed','oswald','pt-sans'] as const)('uses one outlined Cyrillic font for all text: %s',async font=>{
     const result=await magnetArtwork({...draft,font},'https://bistro.example.com/');
@@ -52,3 +56,4 @@ describe("50×70 magnet artwork",()=>{
     expect(magnetQrUrl('a.test/')).toBe('https://a.test/');
   });
 });
+

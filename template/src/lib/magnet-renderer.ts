@@ -91,7 +91,9 @@ export async function exportMagnet(draft: MagnetDraft, qrUrl: string, format: "p
   const font=await pdf.embedFont(artwork.text.face.bytes,{subset:true});
   const page=pdf.addPage([mmPt(56),mmPt(76)]);
   page.setTrimBox(mmPt(3),mmPt(3),mmPt(50),mmPt(70));page.setBleedBox(0,0,mmPt(56),mmPt(76));
-  const png=await sharp(Buffer.from(artwork.svg),{density:600}).png().toBuffer();const image=await pdf.embedPng(png);
+  const png=await sharp(Buffer.from(artwork.svg),{density:600})
+    .resize(Math.round(MAGNET_SPEC.pageWidth/25.4*600),Math.round(MAGNET_SPEC.pageHeight/25.4*600),{fit:'fill'})
+    .flatten({background:'#000000'}).png().toBuffer();const image=await pdf.embedPng(png);
   page.drawImage(image,{x:0,y:0,width:mmPt(56),height:mmPt(76)});
   const color=(hex:string)=>rgb(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255);
   page.drawRectangle({x:mmPt(6.5),y:mmPt(76-3-15-.72),width:mmPt(43),height:mmPt(.72),color:color('#ef4938')});
@@ -104,3 +106,4 @@ export async function exportMagnet(draft: MagnetDraft, qrUrl: string, format: "p
   pdf.setTitle('Магнит 50 × 70 мм');pdf.setSubject(qrUrl);pdf.setCreator('Fkuss');
   return Buffer.from(await pdf.save());
 }
+

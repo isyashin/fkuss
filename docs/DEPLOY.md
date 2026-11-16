@@ -1,5 +1,26 @@
 # DEPLOY.md — сервер, домены, деплой, бэкапы
 
+## Актуальные окружения и канонический процесс
+
+На 2026-11-16 действующий публичный dev — `fkuss.online` и сайты
+`buxara/kunak/fuji/batono.fkuss.online` (`217.65.3.251`). Последний
+задокументированный dev-релиз — `87fa22de91f5` от 2026-10-29. Последующие
+коммиты `main` на момент аудита меняли только документацию и skill-файлы.
+Публичные HTTPS-приложения доступны; текущие OCI/миграции/диск/Caddy требуют
+SSH-сверки и не утверждаются по историческим записям.
+
+**Для этого dev каноничен `docs/TOPOLOGY-OPERATIONS.md`:** приватный
+`topology.json`, `check`, snapshot через `topology.py backup --apply`, сборка
+чистого `origin/main` через `build-release.py`, затем последовательные
+миграции и rollout каждого сервиса с health/perf-проверками. Не запускайте
+`update.sh`, `deploy.sh` или `provision-site.sh` с дефолтами legacy shared-PG
+на этой раскладке. Production обновляется только по отдельной явной команде.
+
+Ниже сохранены сведения о production и исторические/legacy-инструкции. Даты и
+SHA в них описывают соответствующий выпуск, а не автоматически текущее состояние.
+Актуальный baseline и ограничения последней проверки — в `docs/PLAN.md` и
+`docs/qa/2026-11-16-project-audit.md`.
+
 ## Ёмкость сервера (измерено на dev-ВМ, idle)
 
 - Сайт ресторана: ~60–65 МБ RAM (пик под нагрузкой ~200–350 МБ)
@@ -111,7 +132,7 @@
   платформа). Откат при проблемах: три compose на
   `resto-template:v1.1-rollback` + `up -d`.
 
-## Текущее состояние (dev-ВМ, LAN)
+## Legacy: прежний dev-LAN и shared-PG (история, не текущий dev)
 
 Хост: `RESTOSITE` (192.168.88.153), Ubuntu 26.04, Docker 29, Caddy 2.6.
 Доступ по SSH-ключу (`secrets/server.env`).
@@ -129,12 +150,15 @@
 └── *.old-tar/              # архив до перехода на git-поток (можно удалить)
 ```
 
-**Обновление всех сервисов одной командой:**
+**Обновление legacy shared-PG (только для описанной ниже исторической раскладки):**
 
 ```bash
 bash ~/resto/src/scripts/update.sh            # pull → build → restart
 bash ~/resto/src/scripts/update.sh --no-restart  # только сборка
 ```
+
+Для актуального `fkuss.online` эти команды не применяются: используйте
+`docs/TOPOLOGY-OPERATIONS.md` и `scripts/build-release.py`.
 
 Работающие сервисы:
 - `buxara-app-1` — :3001, БД `buxara`, content volume, образ пинается в
@@ -361,7 +385,8 @@ Seed пишет PWA-иконки в `content/icons` каталога `CONTENT_DI
   можно и `scripts/backfill-vapid-keys.sh`) — одноразовый идемпотентный backfill:
   дописывает только полностью отсутствующие ключи, неполную пару заменяет целиком,
   значения не выводятся. После него — `docker compose up -d` в каталогах сайтов
-  (или штатный `update.sh`).
+  (или последовательный `docker compose up -d` затронутых tenant-ов по
+  действующему runbook).
 - На новом dev, где сайты лежат в `/home/ilya/deploy/<slug>/.env`, передайте
   `RESTO_SITE_ENV_DIR=/home/ilya/deploy` и перечислите только tenant-slug:
   `RESTO_SITE_ENV_DIR=/home/ilya/deploy bash scripts/backfill-vapid-keys.sh buxara marco kunak`.
@@ -373,8 +398,9 @@ Seed пишет PWA-иконки в `content/icons` каталога `CONTENT_DI
 - Endpoint подписки принимается только на HTTPS-доменах push-служб Google,
   Mozilla, Apple и Microsoft; проверка повторяется при доставке. Это исключает
   отправку на произвольный DNS-хост из сохранённой подписки.
-- Cron: `* * * * *` → `POST /api/jobs/push-delivery` (ставит
-  `install-site-jobs.sh`, переустановка — через `update.sh`).
+- Cron: `* * * * *` → `POST /api/jobs/push-delivery`. В legacy его ставит
+  `install-site-jobs.sh`; в актуальной explicit topology задания управляются
+  через `install-topology-jobs.py` согласно `docs/TOPOLOGY-OPERATIONS.md`.
 - HTTPS обязателен: на LAN-стенде (`http://192.168.x.x`) интерфейс проверяется,
   но доставку на телефоны это не подтверждает. iOS: web push только для
   приложения, установленного на экран «Домой» (iOS/iPadOS 16.4+), и после

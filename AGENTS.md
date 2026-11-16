@@ -28,14 +28,16 @@ worktree, пересборке или переносе интерфейса. Е�
 
 | Документ | Когда открывать |
 |---|---|
-| `docs/PLAN.md` | Полный план, этапы, чек-листы приёмки, статус |
+| `docs/PLAN.md` | Текущий baseline, полный план, этапы, чек-листы приёмки, история |
 | `docs/ARCHITECTURE.md` | Стек, структура, изоляция тенантов, домены, потоки данных |
 | `docs/CONTENT-SCHEMA.md` | Формат `content/*.json`, zod-схемы, примеры |
-| `docs/DEPLOY.md` | VPS, Docker, Caddy, TLS, домены, бэкапы |
+| `docs/TOPOLOGY-OPERATIONS.md` | Актуальный dev с явной топологией: backup, сборка main, последовательный rollout, jobs |
+| `docs/DEPLOY.md` | Окружения, legacy shared-PG, Docker, Caddy, TLS, домены, бэкапы |
 | `docs/CHANNELS.md` | Telegram / MAX / email / WhatsApp: получение токенов и подключение |
 | `docs/PAYMENTS.md` | PaymentProvider, ЮKassa и другие эквайринги |
 | `docs/BILLING.md` | Платформа владельца: биллинг сайтов, метрики, счета, экспорт |
 | `docs/GITHUB-SETUP.md` | Настройка репозитория: права, защита main, приватность |
+| `docs/qa/2026-11-16-project-audit.md` | Последняя сверка документации, GitHub, локальных файлов и dev |
 
 ## Жёсткие правила
 
@@ -56,7 +58,7 @@ worktree, пересборке или переносе интерфейса. Е�
 
 ## Команды проекта
 
-Будут заполняться по мере появления (этапы 1–2):
+Выполнять из `template/` (для платформы — из `platform/`), не из корня:
 
 ```bash
 npm run dev        # локальная разработка
@@ -87,12 +89,18 @@ npx tsx scripts/seed-test.ts       # тестовые тариф/сайт/вла
 Скрипты сервера (в `scripts/` корня):
 
 ```bash
-scripts/deploy.sh <subdomain> [--domain=<домен>]   # базовый деплой (реестр портов, БД, compose)
-scripts/provision-site.sh <slug> <content.tar.gz>  # НОВЫЙ сайт, legacy shared-PG: deploy → seed → владелец → платформа → Caddy (approvedBy, journal; --dry-run/--rollback). Явная топология: docs/TOPOLOGY-OPERATIONS.md
-scripts/backup.sh                                   # бэкап всех тенантов (14 последних)
+python3 scripts/topology.py <config> check                # актуальная топология: read-only проверка конфига
+sudo python3 scripts/topology.py <config> backup --apply  # snapshot БД/content/env перед выпуском
+sudo python3 scripts/build-release.py <clean-main> --revision <SHA>  # immutable release-образы только из origin/main
+scripts/deploy.sh <subdomain> [--domain=<домен>]   # LEGACY shared-PG: реестр портов, БД, compose
+scripts/provision-site.sh <slug> <content.tar.gz>  # LEGACY shared-PG: новый сайт; для explicit topology — runbook выше
+scripts/backup.sh                                   # LEGACY shared-PG: бэкап тенантов (14 последних)
 scripts/export-site.sh <slug>                       # экспорт сайта для клиента
-scripts/update.sh [--no-restart]                    # git pull → сборка → рестарт всех сервисов
+scripts/update.sh [--no-restart]                    # LEGACY shared-PG; на новой топологии НЕ запускать
 ```
+
+Актуальный dev обновляется только по `docs/TOPOLOGY-OPERATIONS.md`:
+`check → backup → build-release → последовательные миграции/rollout/health`.
 
 ## Git-поток
 
@@ -104,8 +112,10 @@ scripts/update.sh [--no-restart]                    # git pull → сборка 
   отклоняется — не пытайся, сразу делай ветку и PR.
 - Код правится в своём ворктри → коммит → пуш ветки → PR →
   squash-merge после зелёного CI. docs/PLAN.md — в том же коммите.
-- На сервере исходники живут в `~/resto/src` (clone); обновление —
-  `update.sh` (pull → build → restart). tar-синк больше не используется.
+- На сервере исходники живут в `~/resto/src` (clone). Актуальный dev
+  обновляется по `docs/TOPOLOGY-OPERATIONS.md` из отдельного чистого
+  checkout `origin/main`; legacy `update.sh` на новой раскладке не используется.
+  tar-синк больше не используется.
 - Перед каждым коммитом: секреты только в `secrets/` и env-файлах —
   репозиторий публичный, утечка невосполнима.
 
@@ -147,11 +157,11 @@ scripts/update.sh [--no-restart]                    # git pull → сборка 
 
 - Образы для dev/prod собираются ТОЛЬКО из main после мержа PR
   (чекаут `origin/main`, а не рабочей ветки).
-- На dev-ВМ сборка work-образов — из `~/resto/admin-pr10-checkout`
-  (detached на origin/main); `~/resto/src` может быть на чьей-то ветке —
-  не деплоить оттуда.
-- Деплои выполняются по одному: сборка → up -d → проверки
-  (perf-smoke, ключевые сценарии) → следующий.
+- На dev-ВМ release-образы собираются `scripts/build-release.py` из
+  `~/resto/admin-pr10-checkout` (detached на `origin/main`);
+  `~/resto/src` может быть на чьей-то ветке — не деплоить оттуда.
+- Деплои выполняются по одному: backup → миграции → up -d → проверки
+  (health, perf-smoke, ключевые сценарии) → следующий.
 
 ## Кастомные агенты и команды OpenCode
 
